@@ -11,7 +11,12 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/compassionate-lovelace-s20gwv]
+    # The scaffold branch is the default branch today. `main` is listed too so
+    # deploys keep running after a merge or a default-branch rename, instead of
+    # silently stopping with no failed run to notice.
+    branches:
+      - claude/compassionate-lovelace-s20gwv
+      - main
   workflow_dispatch:
 
 permissions:
