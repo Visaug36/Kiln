@@ -51,7 +51,36 @@ pnpm format       # prettier --write
 ```
 
 `pnpm build` writes a static site to `out/`. Deploy that directory anywhere that
-serves files — the Vercel project needs no framework runtime.
+serves files — there is no framework runtime to provision.
+
+## Deploying
+
+### GitHub Pages
+
+`.github/workflows/deploy.yml` builds the export and publishes it on every push
+to the default branch. Two things have to be true before the first run:
+
+1. **Settings → Pages → Source** must be set to **GitHub Actions**.
+2. **The repository must be public**, unless the account is on a paid plan.
+   GitHub does not serve Pages for private repositories on the free tier.
+
+The site then lands at `https://<user>.github.io/<repo>/`.
+
+A project site is served from a subpath, so the workflow sets
+`NEXT_PUBLIC_BASE_PATH` to `/<repo>` and `next.config.ts` feeds that to
+`basePath`. Next prefixes everything under `_next/` on its own; the one thing it
+does not prefix is the path in `metadata.icons`, which `app/layout.tsx` handles
+explicitly. The variable is empty in every other context, so `pnpm dev` and a
+root deploy are unaffected.
+
+`public/.nojekyll` stops GitHub from stripping the `_next` directory, whose name
+Jekyll would otherwise treat as private.
+
+### Vercel
+
+Import the repository and deploy — the static export is detected with no
+configuration, and `NEXT_PUBLIC_BASE_PATH` stays unset, so the site is served
+from the root.
 
 ## The converter registry
 

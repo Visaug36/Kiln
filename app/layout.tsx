@@ -18,11 +18,18 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 });
 
+/**
+ * Next applies `basePath` to everything under `_next/`, but not to a path given
+ * in `metadata.icons` — that one has to be prefixed here or it 404s on a Pages
+ * project site. Empty string in dev and on Vercel, so the path is unchanged.
+ */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
 export const metadata: Metadata = {
   title: 'Kiln — convert documents in your browser',
   description:
     'Convert between PDF, DOCX, Markdown, plain text and RTF. Every conversion runs in your browser; files never leave your machine.',
-  icons: { icon: '/icon.svg' },
+  icons: { icon: `${basePath}/icon.svg` },
 };
 
 export const viewport: Viewport = {
