@@ -58,13 +58,12 @@ serves files — there is no framework runtime to provision.
 ### GitHub Pages
 
 `.github/workflows/deploy.yml` builds the export and publishes it on every push
-to the default branch. Two things have to be true before the first run:
+to the default branch. The workflow turns Pages on itself, so there is no
+setting to flip first — but **the repository must be public** unless the account
+is on a paid plan, because GitHub does not serve Pages for private repositories
+on the free tier.
 
-1. **Settings → Pages → Source** must be set to **GitHub Actions**.
-2. **The repository must be public**, unless the account is on a paid plan.
-   GitHub does not serve Pages for private repositories on the free tier.
-
-The site then lands at `https://<user>.github.io/<repo>/`.
+The site lands at `https://<user>.github.io/<repo>/`.
 
 A project site is served from a subpath, so the workflow sets
 `NEXT_PUBLIC_BASE_PATH` to `/<repo>` and `next.config.ts` feeds that to

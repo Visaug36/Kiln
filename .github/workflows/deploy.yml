@@ -1,8 +1,8 @@
 # Builds the static export and publishes it to GitHub Pages.
 #
-# Before the first run, set Settings → Pages → Source to "GitHub Actions".
-# GitHub Pages on a private repository requires a paid plan; on the free plan
-# the repository has to be public for the site to be served.
+# configure-pages turns Pages on by itself (enablement: true), so there is no
+# setting to flip first. GitHub Pages on a private repository still requires a
+# paid plan; on the free plan the repository has to be public to be served.
 name: Deploy to GitHub Pages
 
 on:
@@ -47,7 +47,11 @@ jobs:
           # silently break every asset URL.
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
 
+      # enablement: true switches Pages on and sets its build type to Actions,
+      # so a fresh clone of this repo deploys without anyone opening Settings.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
