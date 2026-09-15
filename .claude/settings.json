@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm typecheck",
+            "timeout": 120,
+            "statusMessage": "Typechecking"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm test && pnpm build && pnpm check:bundle",
+            "timeout": 600,
+            "statusMessage": "Running tests and checking the bundle budget"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -4,7 +4,7 @@ import { MAX_PDF_COLUMNS, blocksToPdfContent, pdfTable } from './_blocks-to-pdf'
 import { parseRtf, rtfToPlainText, writeRtf } from './_rtf';
 import { blocksToMarkdown } from './_blocks-to-md';
 import { parseDelimited, sniffDelimiter, toCsv, toPipeTable } from './_sheet';
-import { stripInline } from './_md';
+import { parseMarkdown, stripInline } from './_md';
 import type { Block } from './_md';
 import { KilnError, describeFailure } from '../shared';
 
@@ -262,5 +262,55 @@ describe('tables too wide for the page', () => {
       table: { body: unknown[][] };
     };
     expect(table.table.body[0]).toHaveLength(MAX_PDF_COLUMNS);
+  });
+});
+
+describe('nested lists in Markdown', () => {
+  const itemsOf = async (md: string) =>
+    (await parseMarkdown(md)).map((b) => [
+      (b as { text?: string }).text,
+      (b as { ordered?: boolean }).ordered,
+    ]);
+
+  it('splits a nested list out of its parent item', async () => {
+    // marked leaves the sublist inside `item.text`, so taking that whole gave
+    // one bullet reading "one 1. one-a" — the item merged into its parent and
+    // the raw marker came with it. The HTML reader has always split these; the
+    // two paths must agree.
+    expect(await itemsOf('1. one\n    1. one-a\n2. two\n')).toEqual([
+      ['one', true],
+      ['one-a', true],
+      ['two', true],
+    ]);
+
+    expect(await itemsOf('- outer\n    - inner\n- after\n')).toEqual([
+      ['outer', false],
+      ['inner', false],
+      ['after', false],
+    ]);
+  });
+
+  it('keeps each list’s own kind when they are mixed', async () => {
+    expect(await itemsOf('1. one\n    - inner\n2. two\n')).toEqual([
+      ['one', true],
+      ['inner', false],
+      ['two', true],
+    ]);
+  });
+
+  it('handles nesting more than one deep', async () => {
+    expect(await itemsOf('- a\n    - b\n        - c\n- d\n')).toEqual([
+      ['a', false],
+      ['b', false],
+      ['c', false],
+      ['d', false],
+    ]);
+  });
+
+  it('leaves a flat list exactly as it was', async () => {
+    expect(await itemsOf('- one\n- two\n')).toEqual([
+      ['one', false],
+      ['two', false],
+    ]);
   });
 });

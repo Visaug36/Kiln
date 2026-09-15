@@ -68,6 +68,32 @@ const PAIRS = [
   ['sample.pptx', ['txt', 'md']],
 ];
 
+/**
+ * Words that must appear in the downloaded file, per source.
+ *
+ * Magic bytes only prove a file is the shape it claims to be. These prove the
+ * document actually arrived: every fixture carries the marker, and each source
+ * carries something specific to it. Checked on the formats that are readable as
+ * text — the compressed ones are covered by the unit suite, which can open them.
+ */
+const MARKER = 'Kiln fixture marker 4711';
+const EXPECTED = {
+  'sample.docx': [MARKER, 'Quarterly report', 'Emphasis cell'],
+  'sample.md': [MARKER, 'Kiln test document'],
+  'sample.txt': [MARKER],
+  'sample.rtf': [MARKER, 'Plain paragraph text.'],
+  'sample.pdf': [MARKER, 'A printed heading'],
+  'sample.xlsx': [MARKER, 'North'],
+  'sample.csv': [MARKER, 'North'],
+  'sample.pptx': [MARKER, 'Opening slide'],
+};
+
+/** Formats whose bytes are readable as text without a parser. */
+const READABLE = new Set(['md', 'txt', 'csv', 'rtf']);
+
+/** Markdown punctuation that must never reach a format that cannot render it. */
+const LEAKED_MARKERS = /\*\*|`[^`]|\]\(http/;
+
 const SIGNATURE = {
   pdf: [0x25, 0x50, 0x44, 0x46],
   docx: [0x50, 0x4b, 0x03, 0x04],
@@ -142,13 +168,29 @@ for (const [fixtureName, targets] of PAIRS) {
       const expected = SIGNATURE[suffix];
       const headOk = !expected || expected.every((b, i) => bytes[i] === b);
 
+      // Read the words, not just the shape. A file of the right type holding
+      // the wrong document passes every other check in this script.
+      //
+      // Keyed off what actually downloaded, not off the target: a conversion
+      // that honestly produces several files (a multi-sheet workbook going to
+      // CSV) is offered as one zip, which is not readable as text.
+      let contentNote = '';
+      if (READABLE.has(suffix)) {
+        const text = new TextDecoder().decode(bytes);
+        const missing = (EXPECTED[fixtureName] ?? []).filter((w) => !text.includes(w));
+        if (missing.length > 0) contentNote = `missing ${missing.join(', ')}`;
+        else if (target !== 'md' && LEAKED_MARKERS.test(text)) {
+          contentNote = 'Markdown punctuation leaked into a non-Markdown output';
+        }
+      }
+
       outcome = {
         pair: `${fixtureName.replace('sample.', '')} → ${target}`,
         file: download.suggestedFilename(),
         bytes: bytes.length,
         ms: Date.now() - started,
-        ok: bytes.length > 0 && headOk,
-        note: headOk ? '' : `wrong magic bytes for .${suffix}`,
+        ok: bytes.length > 0 && headOk && !contentNote,
+        note: headOk ? contentNote : `wrong magic bytes for .${suffix}`,
       };
     } catch (error) {
       const failedText = await page

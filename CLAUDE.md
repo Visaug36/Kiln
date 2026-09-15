@@ -46,9 +46,29 @@ Kiln's tokens win** — including the common advice to avoid Inter because it is
 overused. Inter was chosen for this product. Do not swap the typeface, the
 palette or the curve to satisfy a design skill.
 
+## Hooks that run on your machine
+
+`.claude/settings.json` is committed, so cloning this repo means these run for
+you too. Both call the repo's own package scripts and nothing else — no network,
+no third-party service, no proxy.
+
+| When                          | Runs                                           | Costs  |
+| ----------------------------- | ---------------------------------------------- | ------ |
+| After every `Write` or `Edit` | `pnpm typecheck`                               | ~2.5 s |
+| When a turn ends              | `pnpm test && pnpm build && pnpm check:bundle` | ~7.7 s |
+
+The typecheck catches a type error while whoever made it still has the context
+to fix it, instead of at the end of a long turn. The Stop hook is there so a turn
+cannot end on a red build or a blown entry chunk; it builds first because
+`check:bundle` reads `out/`, and checking a stale build is worse than not
+checking. Both write only to gitignored paths (`out/`, `public/kiln-worker/`), so
+neither dirties the tree.
+
+Disable them with `/hooks`, or delete the file — nothing else depends on them.
+
 ## Where things stand
 
-25 pairs, 223 tests, entry chunk ~177 KB gzipped. Static export, deployed to
+25 pairs, 227 tests, entry chunk ~177 KB gzipped. Static export, deployed to
 GitHub Pages. Seven pairs are deliberately unsupported and listed with reasons in
 `lib/registry/unsupported.ts`: the value of their output is its visual layout, and
 rebuilding that means either a rendering engine too large to ship or a server,
@@ -70,6 +90,10 @@ is the bug it was written for.
   numbers from a phone.
 - **`xlsx → pdf` clips past 12 columns.** It warns now, but the layout is
   unchanged.
+- **Merged table cells flatten with no warning.** A Word cell spanning two
+  columns becomes two cells, one of them empty. The text survives; the structure
+  does not, and nothing says so. Reporting it needs a warnings channel
+  `htmlToBlocks` does not have, which touches six engines — raised, not decided.
 - The x2t question is unresolved. `docs/x2t-spike.md` records how far it got; it
   needs Docker on a real machine to finish.
 - The default branch still needs flipping to `main`.

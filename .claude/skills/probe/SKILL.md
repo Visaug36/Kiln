@@ -1,6 +1,6 @@
 ---
 name: probe
-description: Use when auditing, debugging, or stress-testing Kiln's conversion output — checking whether an engine is actually correct rather than merely producing a file, hunting a suspected fidelity bug, or reviewing a new or changed converter before it ships.
+description: Use when checking whether a Kiln conversion is actually correct rather than merely producing a file — auditing an engine, chasing a reported fidelity bug ("the output looks wrong", "characters are mangled", "the table is broken", "text went missing"), reviewing a new or changed converter before it ships, or running a verification pass over some or all of the 25 format pairs.
 ---
 
 # Probing a converter
@@ -9,49 +9,63 @@ description: Use when auditing, debugging, or stress-testing Kiln's conversion o
 
 Kiln's stage-2 suite was green while five real bugs sat under it, because the
 tests asked "did this produce a non-empty blob of the right type" and never asked
-"is the output correct". Notes landed on the wrong slide. Two bullets merged into
-one. Every non-ASCII RTF run gained a stray `?`. All of it looked plausible.
+"is the output correct". Speaker notes landed on the wrong slide. Two bullets
+merged into one. Every non-ASCII RTF run gained a stray `?`. All of it looked
+plausible, and all of it shipped.
 
-So: open the output and read it. Assert on the words, the order and the
-structure, never on the byte count.
+So: open the output and read it. Assert on the words, their order and the
+structure — never on the byte count, the MIME type or the magic bytes alone.
+Those tests already exist and they are the floor, not the check.
 
-## The checklist
+## The loop
 
-**Text and encoding.** Emoji and other astral-plane characters, in and out. CJK.
-Greek and Cyrillic. Right-to-left text in Arabic or Hebrew. Accented Latin.
-Ligatures such as `fi`. A very long unbroken line.
+1. **Write a throwaway probe and watch the bug happen.** A vitest file or a
+   script that calls the engine directly and prints what came out. Do not fix
+   anything you have not seen fail: half of what gets reported as a bug is
+   correct behaviour seen through a bad reader.
+2. **Read the output, do not summarise it.** `JSON.stringify` the string so
+   stray whitespace and invisible characters show up. For a PDF, pull the text
+   layer back with `readPdf` from `_pdfread.ts`. For a DOCX, read it back with
+   `readDocx`. For a render you have to look at, rasterise with pdfjs in
+   Chromium — CI has no rasteriser, so a checked-in PNG is the record.
+3. **Find the root cause, not the symptom.** The nested-list bug was a non-greedy
+   regex; stripping the stray bullet afterwards would have passed and left the
+   next case broken. If the fix is a `.replace()` on the output, it is almost
+   certainly wrong.
+4. **Fix the path, not the instance.** Ask which other pairs reach the same code.
+   The `**`-in-table-cells bug was one function ignoring its caller's argument,
+   and it affected three pairs — the two it was reported on and one nobody
+   noticed.
+5. **Promote every confirmed probe into a permanent regression test.**
+   `lib/registry/converters/helpers.test.ts` for a parsing rule,
+   `converters.test.ts` for a whole pair, `lib/files/*.test.ts` for detection and
+   capacity, `lib/jobs/runner.test.ts` for queue behaviour.
+6. **Prove the test would have caught it.** Revert the fix, watch the new test
+   fail, restore it. A regression test that passes against the broken code is
+   worse than none — twice during the last audit a test passed for the wrong
+   reason and had to be rewritten.
+7. Finish with `pnpm test` and `pnpm verify:browser`.
 
-**Structure.** Nested ordered and unordered lists — and a list that _continues_
-after a nested one, which is where numbering silently stops. Tables with merged
-cells. Inline formatting inside table cells. Headings at every level. A document
-that is only images.
+## What to probe
 
-**Files themselves.** An empty file. A `.docx` that is really a legacy `.doc`. A
-file whose extension disagrees with its bytes. A corrupt or truncated archive. A
-password-protected document. A PDF that is a scan with no text layer.
+`references/checklist.md` is the working document: every case with the exact
+input, what correct output looks like, and which pairs it applies to. Work from
+it rather than from memory — it covers text and encoding, structure, the files
+themselves, spreadsheets and slides.
 
-**Spreadsheets.** A single-cell sheet. Multiple sheets. Formulas, which must
-export as computed values, never as formula strings. A CSV delimited by
-semicolons or tabs.
+`references/known-bugs.md` records every bug found so far: how it was detected,
+what the root cause turned out to be, and which test now pins it. Read it before
+hunting something new. These recur in shape, not in detail — a reader that
+mispairs two numbered sequences, a regex that stops at the first closing tag, an
+encoding assumption that holds for ASCII.
 
-**Slides.** Speaker notes, which must reach the correct slide via the
-relationships file — PowerPoint numbers notes independently of slides, so pairing
-`slide5.xml` with `notesSlide5.xml` is wrong and looks right.
+## Rules that are not negotiable
 
-## How to work
-
-1. **Write a throwaway probe first and confirm the bug exists.** A script in the
-   scratchpad that calls the engine directly and prints what came out. Do not fix
-   anything you have not watched fail.
-2. **Fix the root cause, not the symptom.** The nested-list bug was a non-greedy
-   regex; stripping the stray bullet afterwards would have "passed" and left the
-   next case broken.
-3. **Promote every confirmed probe into a permanent regression test**, in
-   `lib/registry/converters/helpers.test.ts` for a parsing rule, or
-   `converters.test.ts` for a whole pair.
-4. Finish with `pnpm test` and `pnpm verify:browser`.
-
-The last audit turned five confirmed bugs into 26 regression tests. That ratio is
-the expected shape of the work — a bug is one wrong line and several cases that
-prove it stays fixed. Two of Kiln's known bugs (mojibake in PDF output, `**`
-leaking into table cells) were found this way and are still open.
+- **Silent loss is a bug.** If an engine discards something, it goes in
+  `warnings`. A conversion that quietly drops a column, an image or a script is
+  the worst failure Kiln has, worse than refusing.
+- **No raw exception text reaches the interface.** Errors are sentences saying
+  what happened and what to do.
+- **Never weaken a test to make it pass.** If an assertion is now wrong, the
+  behaviour changed and that needs saying out loud.
+- **A green suite proves nothing on its own.** It proved nothing twice already.

@@ -1,80 +1,71 @@
 ---
 name: kiln-design
-description: Use when building or changing any Kiln interface — a component, a screen, a colour, a typeface, a radius, a shadow, a transition, or user-facing copy. The canonical reference for Kiln's tokens, type scale, motion and voice.
+description: Use when building or changing anything a person sees in Kiln — a component, a screen, a colour, a typeface, spacing, a radius, a shadow, a transition, a focus ring, dark mode, or user-facing copy in the interface, a warning or an error message. Also use when a design skill, a style guide or a review suggests changing Kiln's typeface or palette.
 ---
 
 # Kiln's design system
 
-Nine colours, one typeface, one accent, one curve. The canonical source is
-`app/globals.css`; this file is what it means.
+Nine colours, one typeface, one accent, one curve. `app/globals.css` is the
+implementation; `references/tokens.md` is the canonical written copy of every
+value, verbatim.
+
+## Two rules that override everything else
 
 **No component may contain a hardcoded colour.** Reference the Tailwind token
 (`bg-surface`, `text-secondary`, `border-separator`) or the CSS variable. A hex
-literal in a component is a bug even when it matches.
+literal in a component file is a bug even when it happens to match.
 
 **Inter is a deliberate choice for this product, not a default reached for out of
-habit.** Design skills commonly advise against it as overused. Kiln's tokens win;
-see `CLAUDE.md`. Interface is Inter, code and filenames are IBM Plex Mono, both
-self-hosted through `next/font` — no font CDN is ever contacted.
+habit.** Design skills commonly advise against it as overused, and `frontend-design`
+says so explicitly. **Kiln's tokens win** — `CLAUDE.md` states this as a standing
+rule. Do not swap the typeface, the palette or the motion curve to satisfy a
+design skill, a general best practice, or your own instinct that the identity
+could be fresher. If you think a token is wrong, say so and leave it alone.
 
-## Tokens
+Interface type is Inter; code, filenames and format badges are IBM Plex Mono.
+Both are self-hosted through `next/font` — **no font CDN is ever contacted**,
+which is a privacy requirement, not a performance one.
 
-| Token        | Light     | Dark      | Use                            |
-| ------------ | --------- | --------- | ------------------------------ |
-| `canvas`     | `#fcfcfa` | `#161513` | Page background                |
-| `surface`    | `#ffffff` | `#1f1e1c` | Cards, rows, raised things     |
-| `fill`       | `#f3f2ef` | `#262522` | Inset wells, secondary buttons |
-| `separator`  | `#e6e4df` | `#33322e` | Every border                   |
-| `label`      | `#1d1c1a` | `#f5f4f1` | Primary text                   |
-| `secondary`  | `#6e6c68` | `#a5a29c` | Supporting text                |
-| `tertiary`   | `#a5a29c` | `#6e6c68` | Hints, disabled                |
-| `ember`      | `#d2551f` | `#ff7a45` | The accent: fills, focus ring  |
-| `ember-tint` | `#fbeee7` | `#2a1a12` | The accent's background wash   |
-| `ember-text` | `#b8491a` | `#ff7a45` | Ember carrying small text      |
+## Working rules
 
-`#d2551f` reaches only 4.04:1 on canvas — short of AA for 15px text — so
-`ember-text` is a darker step used **solely** where ember has to carry small
-text. As a fill, border, tint or focus ring, ember is unchanged.
-
-Dark mode follows `prefers-color-scheme` and can be forced with `.dark` or
-`.light` on `<html>`. Tokens are exposed through `@theme inline`, which keeps the
-`var()` reference intact so utilities follow the live theme rather than baking in
-a light-mode value.
-
-**Ember appears at most once per screen** — spent on the single firing job, and
-nothing else. Everything else is warm neutral. Two ember elements on screen is a
-regression; enforce it in review.
-
-## Type
-
-| Step      | Size | Line | Weight | Tracking |
-| --------- | ---- | ---- | ------ | -------- |
-| `hero`    | 48px | 1.08 | 600    | -0.025em |
-| `heading` | 19px | 26px | 500    | —        |
-| `body`    | 15px | 24px | 400    | —        |
-
-## Shape and depth
-
-- **Radius 12** on controls (`rounded-control`), **radius 20** on the drop zone
-  (`rounded-drop`). Nothing else.
+- **Ember appears at most once per screen.** It is spent on the single firing
+  job and nothing else. Everything else is warm neutral. Two ember elements on
+  screen at once is a regression; catch it in review.
+- **Ember on small text uses `ember-text`.** `#d2551f` reaches only 4.04:1 on
+  canvas, short of AA for 15px. As a fill, border, tint or focus ring, ember is
+  unchanged.
+- **Radius 12 on controls, 20 on the drop zone.** Nothing else has a radius.
 - **Hairline borders only** — 1px, always `separator`. Depth comes from the
-  border and the shadow, never from a heavier rule.
-- **One shadow**, two layers:
-  `0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06)` (`shadow-kiln`).
-- Focus is a 2px `ember` outline at 2px offset. Never remove it.
-
-## Motion
-
-**One curve, one duration: `cubic-bezier(0.32, 0.72, 0, 1)` at 250 ms.** Applied
-through `.kiln-motion`. Do not introduce a second easing or duration.
-
-Under `prefers-reduced-motion: reduce`, transitions keep colour and opacity and
-drop transform: the drop zone stops scaling, and the row entrance becomes a
-linear fade over the same 250 ms. Reduced motion means less movement, not an
-instant cut.
+  border and the one shadow, never from a heavier rule.
+- **One motion curve, one duration**: `cubic-bezier(0.32, 0.72, 0, 1)` at 250 ms,
+  applied through `.kiln-motion`. Do not introduce a second easing or duration.
+- **Reduced motion means less movement, not an instant cut.** Under
+  `prefers-reduced-motion: reduce`, transitions keep colour and opacity and drop
+  transform, and the row entrance becomes a linear fade over the same 250 ms.
+- **Focus is a 2px ember outline at 2px offset.** Never remove it.
+- **Dark mode follows `prefers-color-scheme`**, and can be forced with `.dark` or
+  `.light` on `<html>`. Tokens go through `@theme inline`, which keeps the
+  `var()` reference intact so utilities follow the live theme instead of baking
+  in a light-mode value.
 
 ## Copy
 
 Sentence case. Active voice. No exclamation marks. Say what happened and what to
-do about it — never a raw exception, never "Oops, something went wrong". State
-limits plainly instead of hiding them; there is no "coming soon" in this product.
+do about it — never a raw exception, never "Oops, something went wrong."
+
+State limits plainly instead of hiding them. There is no "coming soon" in this
+product, no waitlist, and no disabled menu item standing in for a feature that
+does not exist. When an engine drops something, the row says so.
+
+## Quality floor
+
+Every screen: full keyboard operation with a visible focus ring, usable at 375px
+wide, accessible names on every control, and WCAG AA contrast. A format picker is
+a `radiogroup`; a job list is a list.
+
+## Reference
+
+`references/tokens.md` — the complete light and dark token sets, the type scale,
+the shape and shadow values, and the motion definitions, copied verbatim from
+`globals.css`. Use it as the source when writing a component, and update both if
+a token ever genuinely changes.

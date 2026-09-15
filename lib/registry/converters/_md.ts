@@ -16,7 +16,7 @@ type Token = {
   text?: string;
   raw?: string;
   ordered?: boolean;
-  items?: { text: string }[];
+  items?: { text: string; tokens?: Token[] }[];
   tokens?: Token[];
   header?: { text: string }[];
   rows?: { text: string }[][];
@@ -59,11 +59,26 @@ export async function parseMarkdown(source: string): Promise<Block[]> {
 
         case 'list':
           for (const item of token.items ?? []) {
+            // A nested list is a `list` token inside the item. Left in
+            // `item.text` it collapses into its parent, carrying its own raw
+            // marker: `1. one` + `1. one-a` arrived as one bullet reading
+            // "one 1. one-a". The HTML reader splits these; this has to match.
+            const nested = (item.tokens ?? []).filter((t) => t.type === 'list');
+            const own = nested.length
+              ? (item.tokens ?? [])
+                  .filter((t) => t.type !== 'list')
+                  .map((t) => t.text ?? '')
+                  .join(' ')
+              : (item.text ?? '');
+
             blocks.push({
               kind: 'bullet',
               ordered: Boolean(token.ordered),
-              text: stripInline(item.text ?? ''),
+              text: stripInline(own),
             });
+
+            // Flattened, like every other nesting Kiln reads: Block has no depth.
+            walk(nested);
           }
           break;
 
