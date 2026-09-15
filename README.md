@@ -80,6 +80,28 @@ mammoth's CommonJS interop. All of them passed the unit tests.
 `pnpm build` writes a static site to `out/`. Deploy that directory anywhere that
 serves files — there is no framework runtime to provision.
 
+## Recommended tooling
+
+Kiln commits its own operating instructions — `CLAUDE.md`, three skills under
+`.claude/skills/`, and one verifier agent under `.claude/agents/`. Three
+third-party skills are worth installing **globally**, and are deliberately not
+vendored here:
+
+- **`frontend-design`** (Anthropic)
+- **Web Design Guidelines** from `vercel-labs/agent-skills`
+- **`systematic-debugging`** and **`verification-before-completion`**, from the
+  Superpowers plugin on the official marketplace
+
+They are not committed because a skill is a set of instructions an agent follows,
+and any script it bundles runs with that agent's permissions. Vendoring
+third-party skills into a repository means everyone who clones it runs them,
+having agreed to nothing. Install the ones you trust into your own environment
+instead.
+
+One conflict worth knowing about: `frontend-design` discourages Inter as
+overused. Inter is a deliberate choice for Kiln, and `CLAUDE.md` overrides that
+advice.
+
 ## Deploying
 
 ### GitHub Pages
