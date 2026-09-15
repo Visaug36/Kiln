@@ -322,8 +322,54 @@ so a cell holding `=SUM(C2:C3)` converts as `4000`. Kiln does not recalculate.
 
 **Warnings, not silence.** When an engine has to drop something — charts, images,
 pivot tables, a page with no text layer, a CSV that turned out to be
-semicolon-separated — it says so under the finished row instead of pretending
-the conversion was clean.
+semicolon-separated, a table too wide for the page, a script the PDF font cannot
+draw — it says so under the finished row instead of pretending the conversion was
+clean.
+
+### Which scripts survive a PDF
+
+PDF output embeds pdfmake's Roboto: **Latin, Latin Extended, Greek and Cyrillic**,
+927 code points across four styles. Everything else — Chinese, Japanese, Korean,
+Arabic, Hebrew, Indic scripts, emoji — Kiln cannot draw. It does not pretend to:
+those characters are replaced with `U+FFFD`, named in `warnings`, and a document
+with nothing else in it is refused with a note that Markdown and plain text keep
+every character.
+
+This replaced the base-14 Helvetica, which is never embedded and is addressed
+through a single-byte encoding roughly the size of Latin-1. Anything above U+00FF
+had no glyph to reach, so `Καλημέρα` was written as `9£±;³·;Ã-<` and the
+conversion reported success. `docs/pdf-scripts/` has the two renders side by side.
+
+It costs 855 KB raw / 469 KB gzipped, against Helvetica's 300 KB / 54 KB. That
+lands in its own chunk, fetched once per session and only when a PDF conversion
+actually runs — the entry chunk is unchanged.
+
+CJK and right-to-left are not oversights. A CJK font is several megabytes even
+subset, and Arabic and Hebrew need bidirectional ordering and, for Arabic,
+contextual letter shaping — neither of which is a font swap. They are listed here
+rather than half-done.
+
+### Files too large for the browser
+
+Every conversion happens in memory, so a large enough file can exhaust the tab.
+On iOS this is not an error you can catch: the operating system kills the tab and
+the page disappears. `lib/files/capacity.ts` estimates the working memory a
+conversion needs, from a per-format multiplier measured by sampling the heap
+during real conversions, and compares it against what the browser will admit to
+having — `performance.memory` where Chromium exposes it, `navigator.deviceMemory`
+otherwise, and a conservative constant on iOS, which exposes neither.
+
+For DOCX, XLSX and PPTX the multiplier is applied to the **unpacked** size, which
+the detection step reads out of the zip headers while identifying the file.
+Multiplying the compressed size is wrong in both directions: Word XML compresses
+by ten to a hundred times, so it cries wolf over a small text-heavy document and
+says nothing about a large one full of already-compressed images.
+
+Over the threshold, the row says so **before** the conversion starts, says it is
+an estimate rather than a measurement, and says what to try instead. It does not
+refuse: the estimate is far too rough to block work on.
+
+The iOS thresholds are provisional guesses awaiting a real device.
 
 ## What Kiln will not do
 

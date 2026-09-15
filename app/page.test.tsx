@@ -25,9 +25,9 @@ class DetectWorker {
 
   async postMessage(request: { kind?: string; jobId: string; file: File }) {
     if (request.kind !== 'detect') return;
-    const detected = await sniffOoxml(request.file);
+    const { format, expanded } = await sniffOoxml(request.file);
     for (const handler of this.listeners.get('message') ?? []) {
-      handler({ data: { jobId: request.jobId, detected } });
+      handler({ data: { jobId: request.jobId, detected: format, expanded } });
     }
   }
 

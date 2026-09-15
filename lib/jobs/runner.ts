@@ -10,6 +10,13 @@ export const DETECT_TIMEOUT_MS = 15_000;
 
 let detectCounter = 0;
 
+/** What the worker could tell us about a dropped archive. */
+export interface ArchiveAnswer {
+  format: Format | undefined;
+  /** The archive's unpacked size, when the zip headers recorded it. */
+  expanded?: number;
+}
+
 /**
  * The worker is built separately into public/kiln-worker/ and referenced by
  * URL. Next's bundler does not compile `new Worker(new URL('./x.ts', ...))` for
@@ -20,6 +27,15 @@ let detectCounter = 0;
 const WORKER_URL = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/kiln-worker/convert.worker.js`;
 
 let worker: Worker | null = null;
+
+/**
+ * Anything waiting on the current worker that is not a queued conversion.
+ *
+ * A dedicated worker the browser kills — out of memory, say — fires no event at
+ * all, so a caller holding a listener on it would simply wait. Killing the
+ * worker settles them instead of leaving them to time out.
+ */
+const pending = new Set<() => void>();
 
 /** One worker, replaced whenever a job has to be killed. */
 function getWorker(): Worker {
@@ -32,6 +48,8 @@ function getWorker(): Worker {
 function replaceWorker() {
   worker?.terminate();
   worker = null;
+  for (const abandon of [...pending]) abandon();
+  pending.clear();
 }
 
 /**
@@ -53,6 +71,7 @@ function runOne(request: WorkerRequest): Promise<void> {
       clearTimeout(timer);
       active.removeEventListener('message', onMessage);
       active.removeEventListener('error', onError);
+      active.removeEventListener('messageerror', onError);
       resolve();
       return false;
     };
@@ -69,6 +88,8 @@ function runOne(request: WorkerRequest): Promise<void> {
       }
     };
 
+    // `error` is a throw inside the worker; `messageerror` is a message that
+    // could not be handed across at all. Both end this job the same way.
     const onError = () => {
       if (finish()) return;
       replaceWorker();
@@ -89,12 +110,13 @@ function runOne(request: WorkerRequest): Promise<void> {
         .getState()
         .setError(
           request.jobId,
-          'This file took more than a minute and was stopped. It may be very large or unusually complex.',
+          'This file took more than a minute and was stopped. It may be very large or unusually complex, or this browser may have run out of memory holding it.',
         );
     }, TIMEOUT_MS);
 
     active.addEventListener('message', onMessage);
     active.addEventListener('error', onError);
+    active.addEventListener('messageerror', onError);
     active.postMessage(request);
   });
 }
@@ -129,40 +151,55 @@ export function enqueue(id: string): void {
  *
  * Detection lives in the worker because answering needs a zip library, and the
  * worker already has one — keeping it off the page saves every visitor who
- * drops an Office file a second copy of JSZip. Serialised through the same
- * queue as conversions, so a detect cannot overtake a running job.
+ * drops an Office file a second copy of JSZip.
+ *
+ * Deliberately not queued behind conversions: dropping a file has to stay
+ * responsive, and a detect that waited out a minute-long conversion would be
+ * useless. It shares the worker, so it is registered in `pending` and settles
+ * immediately if that worker is killed underneath it.
  */
-export function detectArchive(file: File): Promise<Format | undefined> {
+export function detectArchive(file: File): Promise<ArchiveAnswer> {
   return new Promise((resolve) => {
     const jobId = `detect-${detectCounter++}`;
     let settled = false;
 
     const active = getWorker();
 
-    const finish = (format: Format | undefined) => {
+    const finish = (answer: ArchiveAnswer) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      pending.delete(abandon);
       active.removeEventListener('message', onMessage);
       active.removeEventListener('error', onError);
-      resolve(format);
+      active.removeEventListener('messageerror', onError);
+      resolve(answer);
     };
+
+    /** The worker went away. Fall back to "cannot tell" rather than waiting. */
+    const abandon = () => finish({ format: undefined });
 
     const onMessage = (event: MessageEvent<ConvertResponse>) => {
       if (event.data.jobId !== jobId) return;
-      finish('detected' in event.data ? event.data.detected : undefined);
+      finish(
+        'detected' in event.data
+          ? { format: event.data.detected, expanded: event.data.expanded }
+          : { format: undefined },
+      );
     };
 
     const onError = () => {
       replaceWorker();
-      finish(undefined);
+      finish({ format: undefined });
     };
 
     // A damaged archive should not hold up the drop; fall back to "unreadable".
-    const timer = setTimeout(() => finish(undefined), DETECT_TIMEOUT_MS);
+    const timer = setTimeout(() => finish({ format: undefined }), DETECT_TIMEOUT_MS);
 
+    pending.add(abandon);
     active.addEventListener('message', onMessage);
     active.addEventListener('error', onError);
+    active.addEventListener('messageerror', onError);
     active.postMessage({ kind: 'detect', jobId, file } satisfies WorkerRequest);
   });
 }

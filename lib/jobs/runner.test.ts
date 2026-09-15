@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useJobs } from './store';
-import { TIMEOUT_MS, enqueue, resetWorker } from './runner';
+import { TIMEOUT_MS, detectArchive, enqueue, resetWorker } from './runner';
 
 /**
  * A stand-in for the conversion worker.
@@ -12,7 +12,7 @@ import { TIMEOUT_MS, enqueue, resetWorker } from './runner';
  */
 class FakeWorker {
   static instances: FakeWorker[] = [];
-  static behaviour: 'reply' | 'hang' | 'error' = 'reply';
+  static behaviour: 'reply' | 'hang' | 'error' | 'messageerror' = 'reply';
 
   terminated = false;
   private listeners = new Map<string, Set<(event: unknown) => void>>();
@@ -41,6 +41,10 @@ class FakeWorker {
     queueMicrotask(() => {
       if (FakeWorker.behaviour === 'error') {
         this.emit('error', new Event('error'));
+        return;
+      }
+      if (FakeWorker.behaviour === 'messageerror') {
+        this.emit('messageerror', new Event('messageerror'));
         return;
       }
       this.emit('message', {
@@ -212,5 +216,79 @@ describe('when something inside the runner itself throws', () => {
     expect(useJobs.getState().jobs[1]?.state, 'the job behind the throw never ran').toBe(
       'done',
     );
+  });
+});
+
+describe('when the worker dies without saying so', () => {
+  it('reports a message that could not be handed across at all', async () => {
+    // A worker the browser kills fires nothing, but a payload it cannot clone
+    // fires `messageerror` — which used to be ignored, leaving the job to sit
+    // at "Firing…" for the full minute.
+    FakeWorker.behaviour = 'messageerror';
+
+    const id = useJobs.getState().addJob({ file: file('a.md'), from: 'md', to: 'txt' });
+    enqueue(id);
+    await settle();
+
+    const job = useJobs.getState().jobs[0];
+    expect(job?.state).toBe('failed');
+    expect(job?.error).toMatch(/Something went wrong/);
+  });
+
+  it('blames memory as one possibility when a job has to be killed', async () => {
+    vi.useFakeTimers();
+    FakeWorker.behaviour = 'hang';
+
+    const id = useJobs
+      .getState()
+      .addJob({ file: file('huge.docx'), from: 'docx', to: 'pdf' });
+    enqueue(id);
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 10);
+
+    expect(useJobs.getState().jobs[0]?.error).toMatch(/run out of memory/);
+  });
+
+  it('settles a detection left behind by a killed worker instead of waiting', async () => {
+    vi.useFakeTimers();
+    FakeWorker.behaviour = 'hang';
+
+    const stuck = useJobs
+      .getState()
+      .addJob({ file: file('huge.pdf'), from: 'pdf', to: 'txt' });
+    enqueue(stuck);
+
+    // A file dropped near the end of a wedged conversion. A timeout kill fires
+    // no `error` event, so nothing tells this detect its worker is gone: it used
+    // to wait out its own 15 seconds for an answer that could never arrive.
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS - 1000);
+    let answered = false;
+    const detecting = detectArchive(file('mystery.zip')).then((answer) => {
+      answered = true;
+      return answer;
+    });
+
+    await vi.advanceTimersByTimeAsync(1100);
+
+    expect(answered, 'the kill did not settle the detection').toBe(true);
+    await expect(detecting).resolves.toEqual({ format: undefined });
+  });
+
+  it('keeps converting after a detection is abandoned', async () => {
+    vi.useFakeTimers();
+    FakeWorker.behaviour = 'hang';
+
+    void detectArchive(file('mystery.zip'));
+    const stuck = useJobs
+      .getState()
+      .addJob({ file: file('a.pdf'), from: 'pdf', to: 'txt' });
+    enqueue(stuck);
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 10);
+
+    FakeWorker.behaviour = 'reply';
+    const next = useJobs.getState().addJob({ file: file('b.md'), from: 'md', to: 'txt' });
+    enqueue(next);
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(useJobs.getState().jobs[1]?.state).toBe('done');
   });
 });

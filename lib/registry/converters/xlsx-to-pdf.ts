@@ -1,7 +1,7 @@
 import type { ConversionResult } from '../types';
 import { outputFile } from '../shared';
 import { readWorkbook } from './_sheet';
-import { MAX_PDF_COLUMNS, pdfTable, tableWasClipped } from './_blocks-to-pdf';
+import { clippedWarning, pdfTable, tableWasClipped } from './_blocks-to-pdf';
 import { pdfDocument, renderPdf, requireContent } from './_pdf';
 
 export async function convert(input: File): Promise<ConversionResult> {
@@ -24,19 +24,15 @@ export async function convert(input: File): Promise<ConversionResult> {
     content.push(pdfTable(sheet.rows));
   }
 
-  const bytes = await renderPdf(
+  const render = await renderPdf(
     pdfDocument(requireContent(content, 'data'), { pageOrientation: 'landscape' }),
   );
 
-  const notes = [...warnings];
-  if (clipped) {
-    notes.unshift(
-      `Sheets wider than ${MAX_PDF_COLUMNS} columns were cut off at that point — a page can only hold so much.`,
-    );
-  }
+  const notes = [...warnings, ...render.warnings];
+  if (clipped) notes.unshift(clippedWarning('Sheets'));
 
   return {
-    files: [outputFile(input.name, 'pdf', bytes)],
+    files: [outputFile(input.name, 'pdf', render.bytes)],
     warnings: notes.length ? notes : undefined,
   };
 }

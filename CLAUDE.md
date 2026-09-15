@@ -48,18 +48,28 @@ palette or the curve to satisfy a design skill.
 
 ## Where things stand
 
-25 pairs, 181 tests, entry chunk ~176 KB gzipped. Static export, deployed to
+25 pairs, 223 tests, entry chunk ~177 KB gzipped. Static export, deployed to
 GitHub Pages. Seven pairs are deliberately unsupported and listed with reasons in
 `lib/registry/unsupported.ts`: the value of their output is its visual layout, and
 rebuilding that means either a rendering engine too large to ship or a server,
 which Kiln will not have.
 
+PDF output embeds pdfmake's Roboto, which covers Latin, Greek and Cyrillic and
+nothing else. `lib/registry/converters/_pdf.ts` holds the exact coverage: text it
+cannot draw is replaced and named in `warnings`, and a document with nothing
+renderable in it is refused. Never let that check be bypassed — silent mojibake
+is the bug it was written for.
+
 ## Known open issues
 
-- Greek and Cyrillic render as mojibake in PDF output.
-- Literal `**` leaks into PDF and DOCX table cells.
-- Mobile Safari is entirely untested, and is the tightest memory environment Kiln
-  will meet.
+- **CJK and right-to-left scripts have no PDF path.** They are reported, not
+  rendered. CJK needs a multi-megabyte font; Arabic and Hebrew need bidirectional
+  ordering and contextual shaping on top of one. Neither is started.
+- **Mobile Safari is still untested on a real device.** The memory thresholds in
+  `lib/files/capacity.ts` are provisional guesses, marked as such, waiting on
+  numbers from a phone.
+- **`xlsx → pdf` clips past 12 columns.** It warns now, but the layout is
+  unchanged.
 - The x2t question is unresolved. `docs/x2t-spike.md` records how far it got; it
   needs Docker on a real machine to finish.
 - The default branch still needs flipping to `main`.

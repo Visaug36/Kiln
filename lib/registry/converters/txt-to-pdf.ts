@@ -19,6 +19,10 @@ export async function convert(input: File): Promise<ConversionResult> {
     margin: [0, 0, 0, 8],
   }));
 
-  const bytes = await renderPdf(pdfDocument(content));
-  return { files: [outputFile(input.name, 'pdf', bytes)] };
+  const { bytes, warnings } = await renderPdf(pdfDocument(content));
+
+  return {
+    files: [outputFile(input.name, 'pdf', bytes)],
+    warnings: warnings.length ? warnings : undefined,
+  };
 }

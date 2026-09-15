@@ -7,8 +7,13 @@ import { pdfDocument, renderPdf, requireContent } from './_pdf';
 export async function convert(input: File): Promise<ConversionResult> {
   const source = await readText(input);
   const blocks = await parseMarkdown(source);
-  const content = requireContent(blocksToPdfContent(blocks), 'text');
+  const { content, warnings } = blocksToPdfContent(blocks);
 
-  const bytes = await renderPdf(pdfDocument(content));
-  return { files: [outputFile(input.name, 'pdf', bytes)] };
+  const render = await renderPdf(pdfDocument(requireContent(content, 'text')));
+  const notes = [...warnings, ...render.warnings];
+
+  return {
+    files: [outputFile(input.name, 'pdf', render.bytes)],
+    warnings: notes.length ? notes : undefined,
+  };
 }

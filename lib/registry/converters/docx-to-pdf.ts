@@ -7,12 +7,13 @@ import { pdfDocument, renderPdf, requireContent } from './_pdf';
 export async function convert(input: File): Promise<ConversionResult> {
   const { html, warnings } = await readDocx(input);
   const blocks = htmlToBlocks(html);
-  const content = requireContent(blocksToPdfContent(blocks), 'text');
+  const { content, warnings: clipping } = blocksToPdfContent(blocks);
 
-  const bytes = await renderPdf(pdfDocument(content));
+  const render = await renderPdf(pdfDocument(requireContent(content, 'text')));
+  const notes = [...warnings, ...clipping, ...render.warnings];
 
   return {
-    files: [outputFile(input.name, 'pdf', bytes)],
-    warnings: warnings.length ? warnings : undefined,
+    files: [outputFile(input.name, 'pdf', render.bytes)],
+    warnings: notes.length ? notes : undefined,
   };
 }

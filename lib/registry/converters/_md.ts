@@ -112,22 +112,59 @@ function flattenText(tokens: Token[]): string {
     .trim();
 }
 
+type Rule = [RegExp, (...groups: string[]) => string];
+
+/** Refuses a match whose content is space-padded: `a * b * c` is not emphasis. */
+const keep = (whole: string, inner: string) => (/^\s|\s$/.test(inner) ? whole : inner);
+
+/**
+ * The inline markers, in the order they are unwrapped.
+ *
+ * The `**` pattern tolerates a single `*` inside itself, which is what lets
+ * `**outer *inner* outer**` come apart instead of leaving a stray pair behind.
+ *
+ * Written with capture groups rather than lookbehind: iOS Safari only gained
+ * lookbehind in 16.4, and an unsupported one is a syntax error that takes the
+ * whole chunk down rather than failing a single conversion.
+ */
+const INLINE_RULES: Rule[] = [
+  [/!\[([^\]]*)\]\([^)]*\)/g, (_w, alt) => alt!], // images → alt text
+  [/\[([^\]]+)\]\([^)]*\)/g, (_w, label) => label!], // links → label
+  [/`([^`]+)`/g, (_w, code) => code!],
+  [/~~([\s\S]+?)~~/g, (w, inner) => keep(w!, inner!)],
+  [/\*\*\*((?:[^*]|\*(?!\*))+?)\*\*\*/g, (w, inner) => keep(w!, inner!)],
+  [/\*\*((?:[^*]|\*(?!\*))+?)\*\*/g, (w, inner) => keep(w!, inner!)],
+  [/\*([^*]+?)\*/g, (w, inner) => keep(w!, inner!)],
+  // `_` only counts as a marker at a word boundary, so snake_case survives.
+  [/(^|[^\w])__([\s\S]+?)__(?!\w)/g, (w, before, inner) => before! + keep(w!, inner!)],
+  [/(^|[^\w])_([^_]+?)_(?!\w)/g, (w, before, inner) => before! + keep(w!, inner!)],
+];
+
 /**
  * Removes inline Markdown punctuation, leaving the words. Used when writing to
  * a format that will carry the text as plain runs.
+ *
+ * Repeats until nothing changes: one pass cannot unwrap nesting, and a cell
+ * reading `**outer *inner* outer**` in a PDF is the bug this exists to prevent.
  */
+function stripMarkers(text: string): string {
+  let out = text;
+  let previous: string;
+
+  do {
+    previous = out;
+    for (const [pattern, replace] of INLINE_RULES) {
+      out = out.replace(pattern, (...args: unknown[]) =>
+        replace(...(args.slice(0, -2) as string[])),
+      );
+    }
+  } while (out !== previous);
+
+  return out;
+}
+
 export function stripInline(text: string): string {
-  return text
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1') // images → alt text
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // links → label
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return stripMarkers(text).replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -172,13 +209,5 @@ export function markdownToPlainText(source: string): string {
 
 /** Like stripInline, but keeps the line's own leading indentation and spacing. */
 function stripInlineKeepingSpacing(text: string): string {
-  return text
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1');
+  return stripMarkers(text);
 }

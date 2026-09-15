@@ -300,3 +300,202 @@ describe('slide notes', () => {
     expect(out).not.toMatch(/## First slide[\s\S]*> Notes for slide two[\s\S]*## Second/);
   });
 });
+
+describe('scripts in PDF output', () => {
+  /** The text layer of a PDF, as one string. */
+  async function pdfText(blob: Blob): Promise<string> {
+    const { readPdf } = await import('./_pdfread');
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const { lines } = await readPdf(new File([bytes], 'read.pdf'));
+    return lines.map((line) => line.text).join('\n');
+  }
+
+  it('carries Greek and Cyrillic through unharmed', async () => {
+    // With the base-14 Helvetica these came back as "9£±;³·;Ã-<": the glyphs
+    // were never embedded, and everything above U+00FF was written as raw
+    // UTF-16 code units read back as Latin-1.
+    const source = 'Καλημέρα κόσμε\n\nЗдравствуй, мир';
+    const convert = await engineFor('txt', 'pdf')!();
+    const result = await convert(new File([source], 'scripts.txt'));
+
+    const text = await pdfText(result.files[0]!.blob);
+    expect(text).toContain('Καλημέρα κόσμε');
+    expect(text).toContain('Здравствуй, мир');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('carries Latin Extended and the punctuation set', async () => {
+    const source = 'Łódź Ğüneş čeština — “curly” €100 … ½';
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(new File([source], 'latin.md'));
+
+    expect(await pdfText(result.files[0]!.blob)).toContain(source);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('names what it could not draw instead of inventing glyphs', async () => {
+    const convert = await engineFor('txt', 'pdf')!();
+    const result = await convert(
+      new File(['Quarterly report\n\nsales in 日本語 and مرحبا'], 'mixed.txt'),
+    );
+
+    const notes = result.warnings?.join(' ') ?? '';
+    expect(notes).toMatch(/Arabic/);
+    expect(notes).toMatch(/Chinese, Japanese or Korean/);
+    expect(notes).toMatch(/replaced/);
+    // What it does not do is emit something that looks like text.
+    const text = await pdfText(result.files[0]!.blob);
+    expect(text).toContain('Quarterly report');
+    expect(text).not.toContain('日本語');
+  });
+
+  it('refuses a document it could only render as replacement characters', async () => {
+    const convert = await engineFor('txt', 'pdf')!();
+
+    await expect(
+      convert(new File(['日本語のテキストです'], 'all-cjk.txt')),
+    ).rejects.toThrow(/Chinese, Japanese or Korean[\s\S]*Markdown or plain text/);
+  });
+
+  it('counts only the document, not pdfmake’s own configuration', async () => {
+    // The style names and font family in the document definition are Latin. If
+    // they counted as content, a page of Japanese would never look unrenderable.
+    const convert = await engineFor('md', 'pdf')!();
+
+    await expect(convert(new File(['中文文件'], 'cjk.md'))).rejects.toThrow(
+      /cannot draw/,
+    );
+  });
+});
+
+describe('no Markdown punctuation leaks into a table cell', () => {
+  const MARKERS = /\*\*|`[^`]|\]\(http/;
+
+  for (const to of ['txt', 'rtf'] as const) {
+    it(`docx → ${to} writes the words, not the markers`, async () => {
+      const convert = await engineFor('docx', to)!();
+      const out = await textOf((await convert(fixture('sample.docx'))).files[0]!.blob);
+
+      expect(out).toContain('Emphasis cell');
+      expect(out).toContain('Linked cell');
+      expect(out).not.toMatch(MARKERS);
+    });
+  }
+
+  it('docx → pdf writes the words, not the markers', async () => {
+    const { readPdf } = await import('./_pdfread');
+    const convert = await engineFor('docx', 'pdf')!();
+    const blob = (await convert(fixture('sample.docx'))).files[0]!.blob;
+    const { lines } = await readPdf(
+      new File([new Uint8Array(await blob.arrayBuffer())], 'r.pdf'),
+    );
+    const text = lines.map((line) => line.text).join('\n');
+
+    expect(text).toContain('Emphasis cell');
+    expect(text).not.toMatch(MARKERS);
+  });
+
+  it('docx → md keeps them, because Markdown is the point there', async () => {
+    const convert = await engineFor('docx', 'md')!();
+    const out = await textOf((await convert(fixture('sample.docx'))).files[0]!.blob);
+
+    expect(out).toContain('| *Emphasis cell* |');
+    expect(out).toContain('[Linked cell](https://example.com)');
+  });
+
+  it('md → docx puts the words in the cells', async () => {
+    const source =
+      '| **bold** | *italic* |\n| --- | --- |\n| `code()` | [l](https://x) |';
+    const convert = await engineFor('md', 'docx')!();
+    const blob = (await convert(new File([source], 'table.md'))).files[0]!.blob;
+
+    const { readDocx } = await import('./_docx');
+    const { html } = await readDocx(
+      new File([new Uint8Array(await blob.arrayBuffer())], 'r.docx'),
+    );
+
+    expect(html).toContain('code()');
+    expect(html).not.toContain('**');
+    expect(html).not.toContain('`');
+  });
+});
+
+describe('wide tables', () => {
+  it('md → pdf says when a table lost columns', async () => {
+    const header = Array.from({ length: 15 }, (_, i) => `c${i}`).join(' | ');
+    const rule = Array.from({ length: 15 }, () => '---').join(' | ');
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(
+      new File([`| ${header} |\n| ${rule} |\n| ${header} |`], 'wide.md'),
+    );
+
+    expect(result.warnings?.join(' ')).toMatch(/wider than 12 columns/);
+  });
+
+  it('md → pdf stays quiet when the table fits', async () => {
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(
+      new File(['| a | b |\n| --- | --- |\n| 1 | 2 |'], 'n.md'),
+    );
+
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('xlsx → pdf still says when a sheet lost columns', async () => {
+    const wide = [Array.from({ length: 20 }, (_, i) => `h${i}`).join(',')].join('\n');
+    const toXlsx = await engineFor('csv', 'xlsx')!();
+    const book = (await toXlsx(new File([wide], 'wide.csv'))).files[0]!;
+
+    const convert = await engineFor('xlsx', 'pdf')!();
+    const result = await convert(new File([book.blob], 'wide.xlsx'));
+
+    expect(result.warnings?.join(' ')).toMatch(/Sheets wider than 12 columns/);
+  });
+});
+
+describe('pictures in a Word document', () => {
+  /** A .docx with one paragraph of text and one inline image. */
+  async function withImage(text: string): Promise<File> {
+    const { Document, Packer, Paragraph, ImageRun } = await import('docx');
+    const png = Uint8Array.from(
+      atob(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      ),
+      (c) => c.charCodeAt(0),
+    );
+
+    const children = [
+      new Paragraph({
+        children: [
+          new ImageRun({
+            type: 'png',
+            data: png,
+            transformation: { width: 40, height: 40 },
+          }),
+        ],
+      }),
+    ];
+    if (text) children.unshift(new Paragraph({ text }));
+
+    const doc = new Document({ sections: [{ children }] });
+    return new File([await Packer.toArrayBuffer(doc)], 'pictures.docx');
+  }
+
+  it('says an image was dropped instead of losing it in silence', async () => {
+    // The warning used to be keyed off a mammoth message that mammoth never
+    // sends — it inlines a picture as a data URI and says nothing — so every
+    // writer stripped the tag and nobody was told.
+    const convert = await engineFor('docx', 'md')!();
+    const result = await convert(await withImage('Some words here.'));
+
+    expect(result.warnings?.join(' ')).toMatch(/1 image .* not carried over/);
+  });
+
+  it('refuses a document that is nothing but pictures', async () => {
+    // Converting it "successfully" hands back an empty file.
+    for (const to of ['md', 'txt'] as const) {
+      const convert = await engineFor('docx', to)!();
+      await expect(convert(await withImage(''))).rejects.toThrow(/no text in it/i);
+    }
+  });
+});

@@ -23,7 +23,22 @@ export const MARKER = 'Kiln fixture marker 4711';
 
 // ---- DOCX -------------------------------------------------------------
 {
-  const { Document, Packer, Paragraph, HeadingLevel, TextRun } = await import('docx');
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    HeadingLevel,
+    TextRun,
+    Table,
+    TableRow,
+    TableCell,
+    ExternalHyperlink,
+  } = await import('docx');
+
+  /** One cell, from runs. */
+  const cell = (...children) =>
+    new TableCell({ children: [new Paragraph({ children })] });
+
   const doc = new Document({
     sections: [
       {
@@ -34,6 +49,40 @@ export const MARKER = 'Kiln fixture marker 4711';
           new Paragraph({ text: 'Revenue rose in every region.' }),
           new Paragraph({ text: 'First bullet', bullet: { level: 0 } }),
           new Paragraph({ text: 'Second bullet', bullet: { level: 0 } }),
+          // Formatted cells: the writers that take plain text must not receive
+          // Markdown punctuation here, and the ones that take Markdown must.
+          new Table({
+            rows: [
+              new TableRow({
+                children: [
+                  cell(new TextRun({ text: 'Metric', bold: true })),
+                  cell(new TextRun({ text: 'Value', bold: true })),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell(new TextRun({ text: 'Emphasis cell', italics: true })),
+                  cell(
+                    new TextRun({ text: 'mixed ' }),
+                    new TextRun({ text: 'bold', bold: true }),
+                    new TextRun({ text: ' and ' }),
+                    new TextRun({ text: 'italic', italics: true }),
+                  ),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell(
+                    new ExternalHyperlink({
+                      children: [new TextRun({ text: 'Linked cell' })],
+                      link: 'https://example.com',
+                    }),
+                  ),
+                  cell(new TextRun({ text: 'Plain cell' })),
+                ],
+              }),
+            ],
+          }),
           new Paragraph({
             children: [new TextRun({ text: 'Bold closing', bold: true })],
           }),

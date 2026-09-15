@@ -21,7 +21,7 @@ const asFile = (name: string, body = 'hello') => new File([body], name);
 async function resolve(file: File) {
   const detection = await detectFormat(file);
   if (!detection.needsArchiveCheck) return detection;
-  return settleArchive(detection.claimed, await sniffOoxml(file));
+  return settleArchive(detection.claimed, (await sniffOoxml(file)).format);
 }
 
 describe('detecting OOXML from bytes alone', () => {
@@ -121,5 +121,25 @@ describe('extensionOf and baseName', () => {
   it('ignores a leading dot, which is not an extension', () => {
     expect(extensionOf('.gitignore')).toBe('');
     expect(formatFromExtension('.gitignore')).toBeUndefined();
+  });
+});
+
+describe('how big an archive really is', () => {
+  it('reads the unpacked size out of the zip headers', async () => {
+    // Read from the headers, so it costs no decompression — but the field is
+    // JSZip's internal, not part of its published type. If an upgrade takes it
+    // away, this fails rather than the memory estimate quietly getting worse.
+    const { expanded } = await sniffOoxml(fixture('sample.docx'));
+    const packed = fixture('sample.docx').size;
+
+    expect(expanded).toBeGreaterThan(packed);
+    expect(expanded).toBeGreaterThan(1024);
+  });
+
+  it('says nothing rather than guessing when the archive will not open', async () => {
+    const { format, expanded } = await sniffOoxml(fixture('corrupt.docx'));
+
+    expect(format).toBeUndefined();
+    expect(expanded).toBeUndefined();
   });
 });

@@ -3,6 +3,7 @@
 import FormatPicker from '@/components/FormatPicker';
 import UnsupportedNote from '@/components/UnsupportedNote';
 import { baseName } from '@/lib/files/detect';
+import { sizeCaution } from '@/lib/files/capacity';
 import type { Job } from '@/lib/jobs/types';
 import { find, targetsFor, type Format } from '@/lib/registry';
 
@@ -25,6 +26,13 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
   const converter = find(job.from, job.to);
   const caveat =
     converter && converter.fidelity !== 'exact' ? converter.caveat : undefined;
+
+  // Worked out before the conversion starts, not after it fails. On iOS a tab
+  // that runs out of memory is killed outright, so there is no "after".
+  const caution =
+    job.state === 'queued'
+      ? sizeCaution(job.file, job.from, { expandedSize: job.expandedSize })
+      : undefined;
 
   const files = job.result?.files ?? [];
   const warnings = job.result?.warnings ?? [];
@@ -111,6 +119,10 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
 
       {job.state === 'queued' && caveat && (
         <p className="mt-2 max-w-prose text-body text-secondary">{caveat}</p>
+      )}
+
+      {caution && (
+        <p className="mt-2 max-w-prose text-body text-secondary">{caution.message}</p>
       )}
 
       {job.state === 'queued' && <UnsupportedNote from={job.from} />}

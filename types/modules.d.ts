@@ -18,8 +18,8 @@ declare module 'pdfmake/build/pdfmake' {
   export default pdfMake;
 }
 
-declare module 'pdfmake/build/standard-fonts/Helvetica' {
-  /** `vfs` holds the AFM metrics; `fonts` declares the family it provides. */
+declare module 'pdfmake/build/fonts/Roboto' {
+  /** `vfs` holds the four TTFs as base64; `fonts` names the family. */
   const fontContainer: {
     vfs: Record<string, unknown>;
     fonts: Record<string, Record<string, string>>;

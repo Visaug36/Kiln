@@ -41,8 +41,11 @@ export default function Home() {
         // map can say which — so that question goes to the worker, where the
         // zip library already lives.
         let detection = await detectFormat(file);
+        let expandedSize: number | undefined;
         if (detection.needsArchiveCheck) {
-          detection = settleArchive(detection.claimed, await detectArchive(file));
+          const archive = await detectArchive(file);
+          expandedSize = archive.expanded;
+          detection = settleArchive(detection.claimed, archive.format);
         }
 
         if (!detection.format) {
@@ -65,6 +68,7 @@ export default function Home() {
           from: detection.format,
           to: first,
           detectedAs: detection.mismatch ? detection.claimed : undefined,
+          expandedSize,
         });
       }
 

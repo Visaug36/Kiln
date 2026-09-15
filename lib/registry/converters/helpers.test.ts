@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { htmlToBlocks } from './_docx';
+import { MAX_PDF_COLUMNS, blocksToPdfContent, pdfTable } from './_blocks-to-pdf';
 import { parseRtf, rtfToPlainText, writeRtf } from './_rtf';
 import { blocksToMarkdown } from './_blocks-to-md';
 import { parseDelimited, sniffDelimiter, toCsv, toPipeTable } from './_sheet';
+import { stripInline } from './_md';
 import type { Block } from './_md';
 import { KilnError, describeFailure } from '../shared';
 
@@ -170,5 +172,95 @@ describe('turning library errors into sentences', () => {
   it('passes a KilnError through untouched, since it is already a sentence', () => {
     const own = new KilnError('This PDF has no text in it.');
     expect(describeFailure(own, 'pdf')).toBe('This PDF has no text in it.');
+  });
+});
+
+describe('inline markers', () => {
+  it('unwraps emphasis nested inside emphasis', () => {
+    // A single pass leaves `*outer inner outer*` behind, and that stray pair is
+    // what reached PDF and DOCX table cells.
+    expect(stripInline('**outer *inner* outer**')).toBe('outer inner outer');
+    expect(stripInline('***all three***')).toBe('all three');
+    expect(stripInline('**bold with `code` inside**')).toBe('bold with code inside');
+    expect(stripInline('**[a link](https://x)**')).toBe('a link');
+  });
+
+  it('leaves an asterisk that is not emphasis alone', () => {
+    expect(stripInline('a * b * c')).toBe('a * b * c');
+    expect(stripInline('5*6 = 30')).toBe('5*6 = 30');
+    expect(stripInline('**unclosed')).toBe('**unclosed');
+  });
+
+  it('treats underscores as markers only at a word boundary', () => {
+    expect(stripInline('_single underscore_')).toBe('single underscore');
+    expect(stripInline('__both__')).toBe('both');
+    expect(stripInline('snake_case_name survives')).toBe('snake_case_name survives');
+  });
+
+  it('handles the ordinary constructs', () => {
+    expect(stripInline('**b** *i* `c` [l](https://x) ~~s~~')).toBe('b i c l s');
+    expect(stripInline('![alt](pic.png)')).toBe('alt');
+  });
+});
+
+describe('table cells take the caller’s formatter', () => {
+  const CELLS =
+    '<table><tr><th><strong>Head</strong></th><th>plain</th></tr>' +
+    '<tr><td><em>emphasis</em></td><td><code>code()</code></td></tr>' +
+    '<tr><td><a href="https://example.com">label</a></td>' +
+    '<td><strong>outer <em>inner</em> outer</strong></td></tr></table>';
+
+  const rowsFor = (inline: 'text' | 'markdown') => {
+    const table = htmlToBlocks(CELLS, { inline }).find((b) => b.kind === 'table');
+    return (table as { rows: string[][] }).rows.flat();
+  };
+
+  it('gives plain text to the writers that set whole blocks', () => {
+    // tableRows used to call inlineToMarkdown whatever the caller asked for, so
+    // `**Head**` reached every PDF, RTF and plain-text conversion while the
+    // paragraphs beside it came out clean.
+    expect(rowsFor('text')).toEqual([
+      'Head',
+      'plain',
+      'emphasis',
+      'code()',
+      'label',
+      'outer inner outer',
+    ]);
+  });
+
+  it('still gives Markdown to the engines that asked for it', () => {
+    expect(rowsFor('markdown')).toEqual([
+      '**Head**',
+      'plain',
+      '*emphasis*',
+      '`code()`',
+      '[label](https://example.com)',
+      '**outer *inner* outer**',
+    ]);
+  });
+});
+
+describe('tables too wide for the page', () => {
+  const wide = (columns: number): Block[] => [
+    { kind: 'table', rows: [Array.from({ length: columns }, (_, i) => `c${i}`)] },
+  ];
+
+  it('says so rather than dropping columns in silence', () => {
+    const { warnings } = blocksToPdfContent(wide(MAX_PDF_COLUMNS + 1));
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(new RegExp(`wider than ${MAX_PDF_COLUMNS} columns`));
+  });
+
+  it('stays quiet when everything fits', () => {
+    expect(blocksToPdfContent(wide(MAX_PDF_COLUMNS)).warnings).toEqual([]);
+  });
+
+  it('keeps the columns it can hold', () => {
+    const table = pdfTable([Array.from({ length: 20 }, (_, i) => `c${i}`)]) as {
+      table: { body: unknown[][] };
+    };
+    expect(table.table.body[0]).toHaveLength(MAX_PDF_COLUMNS);
   });
 });

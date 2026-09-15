@@ -40,7 +40,10 @@ export async function readDocx(input: File): Promise<DocxRead> {
       .filter((m) => m.type === 'warning')
       .map((m) => m.message);
 
-    return { html: result.value, warnings: summariseDocxWarnings(warnings) };
+    return {
+      html: result.value,
+      warnings: summariseDocxWarnings(warnings, result.value),
+    };
   } catch (cause) {
     fail(describeFailure(cause, 'docx'), cause);
   }
@@ -49,10 +52,16 @@ export async function readDocx(input: File): Promise<DocxRead> {
 /**
  * mammoth emits one message per unrecognised style, which for a heavily styled
  * document can be hundreds of near-identical lines. Collapse them.
+ *
+ * Images are counted from the HTML rather than from the messages. mammoth
+ * inlines a picture as a data URI and says nothing about it, so keying the
+ * warning off a message meant it never fired: every writer downstream strips
+ * the tag, and the picture left the document without a word — which is the one
+ * thing an engine may not do.
  */
-function summariseDocxWarnings(messages: string[]): string[] {
+function summariseDocxWarnings(messages: string[], html: string): string[] {
   const unrecognised = messages.filter((m) => m.includes('Unrecognised paragraph style'));
-  const images = messages.filter((m) => m.toLowerCase().includes('image'));
+  const images = [...html.matchAll(/<img\b/gi)];
   const out: string[] = [];
 
   if (unrecognised.length > 0) {
@@ -61,7 +70,9 @@ function summariseDocxWarnings(messages: string[]): string[] {
     );
   }
   if (images.length > 0) {
-    out.push('Images in the document were not carried over.');
+    out.push(
+      `${images.length} image${images.length === 1 ? '' : 's'} in the document ${images.length === 1 ? 'was' : 'were'} not carried over.`,
+    );
   }
   return out;
 }
@@ -189,12 +200,19 @@ function splitNestedItems(html: string): string {
   return out;
 }
 
-/** Pulls `<table>` blocks out as rows of cells. */
-function tableRows(html: string): Row[] {
+/**
+ * Pulls `<table>` blocks out as rows of cells.
+ *
+ * Takes the same `render` the surrounding blocks use. Hardcoding
+ * `inlineToMarkdown` here put `**bold**` into the cells of every PDF, RTF and
+ * plain-text conversion, while the paragraphs beside them came out clean — the
+ * cells were the one path that skipped the caller's choice of formatter.
+ */
+function tableRows(html: string, render: (html: string) => string): Row[] {
   const rows: Row[] = [];
   for (const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
     const cells = [...(row[1] ?? '').matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map(
-      (cell) => inlineToMarkdown(cell[2] ?? ''),
+      (cell) => render(cell[2] ?? ''),
     );
     if (cells.length > 0) rows.push(cells);
   }
@@ -231,7 +249,7 @@ export function htmlToBlocks(
     const body = match[3] ?? '';
 
     if (tag === 'table') {
-      const rows = tableRows(body);
+      const rows = tableRows(body, render);
       if (rows.length > 0) blocks.push({ kind: 'table', rows });
       continue;
     }

@@ -34,7 +34,7 @@ export type WorkerRequest = ConvertRequest | DetectRequest;
 export type ConvertResponse =
   | { jobId: string; result: { files: OutputFile[]; warnings?: string[] } }
   | { jobId: string; error: string }
-  | { jobId: string; detected: Format | undefined };
+  | { jobId: string; detected: Format | undefined; expanded?: number };
 
 /**
  * Conversions run here so the page keeps responding while a large file is being
@@ -52,7 +52,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (request.kind === 'detect') {
     try {
-      reply({ jobId, detected: await sniffOoxml(request.file) });
+      const { format, expanded } = await sniffOoxml(request.file);
+      reply({ jobId, detected: format, expanded });
     } catch {
       reply({ jobId, detected: undefined });
     }

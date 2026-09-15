@@ -18,6 +18,8 @@ export interface NewJob {
   to: Format;
   /** Set when the bytes disagreed with the extension. */
   detectedAs?: Format;
+  /** For an archive, its unpacked size. See `Job`. */
+  expandedSize?: number;
 }
 
 export interface JobsStore {
@@ -46,9 +48,9 @@ function patchJob(jobs: Job[], id: string, patch: Partial<Job>): Job[] {
 export const useJobs = create<JobsStore>((set) => ({
   jobs: [],
 
-  addJob: ({ file, from, to, detectedAs }) => {
+  addJob: ({ file, from, to, detectedAs, expandedSize }) => {
     const id = nextId();
-    const job: Job = { id, file, from, to, state: 'queued', detectedAs };
+    const job: Job = { id, file, from, to, state: 'queued', detectedAs, expandedSize };
     set((s) => ({ jobs: [...s.jobs, job] }));
     return id;
   },
