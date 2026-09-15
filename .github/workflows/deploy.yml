@@ -88,6 +88,12 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Pages only accepts a deployment from the default branch: the github-pages
+    # environment rejects any other ref, instantly and without a log, which
+    # reads as a mysterious red X. Every branch in the trigger list still gets
+    # built and tested — only the publish step is skipped where it could not
+    # have worked. This stays correct whichever branch is the default.
+    if: github.ref_name == github.event.repository.default_branch
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
