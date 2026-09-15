@@ -136,11 +136,57 @@ export function htmlToPlainText(html: string): string {
     .trim();
 }
 
-/** Tags each `<li>` inside an `<ol>` so list kind survives the flattening. */
+/**
+ * Tags each `<li>` that belongs to an `<ol>` so list kind survives flattening.
+ *
+ * Done by walking the tags in order and keeping a stack, rather than matching
+ * `<ol>…</ol>`: a non-greedy match ends at the *first* closing tag, which for
+ * a nested list is the inner one, so every item after it loses its numbering.
+ * A greedy match has the mirror problem across sibling lists.
+ */
 function markOrderedItems(html: string): string {
-  return html.replace(/<ol\b[^>]*>([\s\S]*?)<\/ol>/gi, (_m, inner: string) =>
-    inner.replace(/<li\b/gi, '<li data-kiln-ordered'),
-  );
+  const stack: ('ol' | 'ul')[] = [];
+
+  return html.replace(/<(\/?)(ol|ul|li)\b/gi, (match, closing: string, tag: string) => {
+    const name = tag.toLowerCase();
+
+    if (name === 'li') {
+      // Only the opening tag carries the marker; `</li data-kiln-ordered>`
+      // would be malformed and would confuse the block matcher.
+      if (closing) return match;
+      return stack[stack.length - 1] === 'ol' ? `${match} data-kiln-ordered` : match;
+    }
+    if (closing) {
+      // Tolerate stray closers rather than corrupting the rest of the document.
+      if (stack[stack.length - 1] === name) stack.pop();
+    } else {
+      stack.push(name as 'ol' | 'ul');
+    }
+    return match;
+  });
+}
+
+/**
+ * Closes each `<li>` before any list nested inside it.
+ *
+ * Word writes nested lists as `<li>outer<ul><li>inner</li></ul></li>`. The
+ * non-greedy block matcher stops at the first `</li>`, which is the inner
+ * one — so the outer item swallows its children and two bullets arrive as a
+ * single run of text ("outer• inner"). Splitting the item at the nested list
+ * keeps them separate. Depth is not modelled: Kiln's block list is flat, so
+ * a nested item becomes a sibling bullet rather than being lost.
+ */
+function splitNestedItems(html: string): string {
+  let out = html;
+  let previous: string;
+  do {
+    previous = out;
+    out = out.replace(
+      /<li\b([^>]*)>((?:(?!<\/?li\b)[\s\S])*?)(<(?:ul|ol)\b)/gi,
+      '<li$1>$2</li>$3',
+    );
+  } while (out !== previous);
+  return out;
 }
 
 /** Pulls `<table>` blocks out as rows of cells. */
@@ -168,7 +214,7 @@ export function htmlToBlocks(
 ): Block[] {
   const render = inline === 'markdown' ? inlineToMarkdown : htmlToPlainText;
   const blocks: Block[] = [];
-  const source = markOrderedItems(html);
+  const source = markOrderedItems(splitNestedItems(html));
 
   const pattern =
     /<(h[1-6]|p|li|blockquote|pre|table)\b([^>]*)>([\s\S]*?)<\/\1>|<(hr)\b[^>]*\/?>/gi;
@@ -345,9 +391,4 @@ export async function writeDocx(blocks: Block[], title?: string): Promise<ArrayB
   });
 
   return Packer.toArrayBuffer(doc);
-}
-
-/** Rows of strings straight into a DOCX table, used by the spreadsheet engines. */
-export function tableBlock(rows: Row[]): Block {
-  return { kind: 'table', rows };
 }

@@ -53,6 +53,9 @@ export function parseRtf(source: string): RtfParagraph[] {
   const state = { bold: false, italic: false, fontSize: 24 };
   const stack: (typeof state)[] = [];
 
+  /** Fallback characters written after each \uN, set by \ucN. Defaults to 1. */
+  let skipAfterUnicode = 1;
+
   // Groups whose contents are metadata, not body text.
   const SKIP_GROUPS =
     /^(fonttbl|colortbl|stylesheet|info|pict|object|header|footer|footnote|xmlns|themedata|colorschememapping|latentstyles|datastore|generator)$/;
@@ -158,11 +161,36 @@ export function parseRtf(source: string): RtfParagraph[] {
           state.fontSize = 24;
           break;
         case 'u': {
-          // \uN with a replacement character that follows.
-          if (param !== undefined)
+          if (param !== undefined) {
             text += String.fromCharCode(param < 0 ? param + 65536 : param);
+
+            // \uN is followed by `\ucN` fallback characters for readers that
+            // cannot handle Unicode — one by default. They must be skipped, or
+            // "荤?100" reads back as "€?100" with a stray question mark.
+            let remaining = skipAfterUnicode;
+            while (remaining > 0 && i + 1 < source.length) {
+              const next = source[i + 1]!;
+              if (next === '\\') {
+                // An escape counts as one fallback character, e.g. \'3f.
+                const escape = /^\\(?:'[0-9a-fA-F]{2}|[a-zA-Z]+-?\d*\s?)/.exec(
+                  source.slice(i + 1),
+                );
+                if (!escape) break;
+                i += escape[0].length;
+              } else if (next === '{' || next === '}') {
+                break;
+              } else {
+                i += 1;
+              }
+              remaining -= 1;
+            }
+          }
           break;
         }
+        case 'uc':
+          // How many fallback characters follow each \uN from here on.
+          if (param !== undefined && param >= 0) skipAfterUnicode = param;
+          break;
         case 'tab':
           text += '\t';
           break;
@@ -240,17 +268,30 @@ function medianOf(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)] ?? 24;
 }
 
-/** Escapes a string for inclusion in an RTF document. */
+/**
+ * Escapes a string for inclusion in an RTF document.
+ *
+ * `\uN` carries a *signed 16-bit* integer, so anything above the basic plane —
+ * emoji, most symbols — cannot be written as a single escape. Those are split
+ * into the surrogate pair RTF expects, and values above 32767 are written as
+ * their negative equivalent, which is what Word emits and reads back.
+ */
 function escapeRtf(text: string): string {
+  const unicode = (unit: number) => `\\u${unit > 32767 ? unit - 65536 : unit}?`;
+
   let out = '';
   for (const char of text) {
     const code = char.codePointAt(0) ?? 0;
+
     if (char === '\\') out += '\\\\';
     else if (char === '{') out += '\\{';
     else if (char === '}') out += '\\}';
     else if (char === '\t') out += '\\tab ';
     else if (char === '\n') out += '\\par ';
-    else if (code > 127) out += `\\u${code}?`;
+    else if (code > 0xffff) {
+      // Astral: emit the two UTF-16 code units the character is made of.
+      for (let i = 0; i < char.length; i += 1) out += unicode(char.charCodeAt(i));
+    } else if (code > 127) out += unicode(code);
     else out += char;
   }
   return out;

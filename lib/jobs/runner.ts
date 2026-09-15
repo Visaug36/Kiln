@@ -94,14 +94,28 @@ function runOne(request: ConvertRequest): Promise<void> {
 }
 
 export function enqueue(id: string): void {
-  queue = queue.then(async () => {
-    const store = useJobs.getState();
-    const job = store.jobs.find((j) => j.id === id);
-    if (!job || job.state !== 'queued') return;
+  queue = queue
+    .then(async () => {
+      const store = useJobs.getState();
+      const job = store.jobs.find((j) => j.id === id);
+      if (!job || job.state !== 'queued') return;
 
-    store.setState(id, 'firing');
-    await runOne({ jobId: id, file: job.file, from: job.from, to: job.to });
-  });
+      store.setState(id, 'firing');
+      await runOne({ jobId: id, file: job.file, from: job.from, to: job.to });
+    })
+    // A rejection here would leave `queue` permanently rejected, and every job
+    // queued afterwards would be skipped in silence — one bad file ending the
+    // session. runOne resolves rather than rejects, so this should never fire,
+    // which is exactly why it must not be left to chance.
+    .catch((cause) => {
+      console.error('[kiln] job runner failed', cause);
+      const job = useJobs.getState().jobs.find((j) => j.id === id);
+      if (job && job.state === 'firing') {
+        useJobs
+          .getState()
+          .setError(id, 'Something went wrong while converting this file.');
+      }
+    });
 }
 
 /** Test seam: forget the current worker so the next job builds a fresh one. */

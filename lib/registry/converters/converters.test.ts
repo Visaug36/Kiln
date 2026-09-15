@@ -256,3 +256,46 @@ describe('refusals a person can act on', () => {
     await expect(convert(huge)).rejects.toThrow(/100 MB/);
   });
 });
+
+describe('slide notes', () => {
+  /** A two-slide deck where only the second slide carries notes. */
+  async function deckWithNotesOnSlideTwo(): Promise<File> {
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    const slide = (title: string) =>
+      `<?xml version="1.0"?><p:sld xmlns:a="x"><p:cSld><a:p><a:t>${title}</a:t></a:p></p:cSld></p:sld>`;
+
+    zip.file('[Content_Types].xml', '<Types>presentationml.presentation.main</Types>');
+    zip.file('ppt/slides/slide1.xml', slide('First slide'));
+    zip.file('ppt/slides/slide2.xml', slide('Second slide'));
+    // PowerPoint numbers notes independently: slide 2's notes are notesSlide1.
+    zip.file(
+      'ppt/notesSlides/notesSlide1.xml',
+      '<?xml version="1.0"?><p:notes xmlns:a="x"><a:p><a:t>Notes for slide two</a:t></a:p></p:notes>',
+    );
+    zip.file(
+      'ppt/slides/_rels/slide2.xml.rels',
+      '<?xml version="1.0"?><Relationships><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/></Relationships>',
+    );
+
+    return new File([await zip.generateAsync({ type: 'arraybuffer' })], 'notes.pptx');
+  }
+
+  it('attaches notes to the slide that owns them, not the one with the same number', async () => {
+    const { readPptx } = await import('./_pptx');
+    const { slides } = await readPptx(await deckWithNotesOnSlideTwo());
+
+    expect(slides[0]?.notes, 'slide one has no notes of its own').toEqual([]);
+    expect(slides[1]?.notes).toEqual(['Notes for slide two']);
+  });
+
+  it('carries those notes through to Markdown as quotes', async () => {
+    const convert = await find('pptx', 'md')!.load();
+    const out = await textOf(
+      (await convert(await deckWithNotesOnSlideTwo())).files[0]!.blob,
+    );
+
+    expect(out).toMatch(/## Second slide[\s\S]*> Notes for slide two/);
+    expect(out).not.toMatch(/## First slide[\s\S]*> Notes for slide two[\s\S]*## Second/);
+  });
+});

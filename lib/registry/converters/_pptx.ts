@@ -19,6 +19,33 @@ function slideNumber(path: string): number {
   return Number(/slide(\d+)\.xml$/.exec(path)?.[1] ?? 0);
 }
 
+/**
+ * Finds a slide's notes through its relationships file.
+ *
+ * Notes are numbered independently of slides: a deck where only slide 5 has
+ * notes stores them as `notesSlide1.xml`. Pairing them by number therefore
+ * attaches one slide's notes to a different slide — silently, and with the
+ * text looking perfectly plausible where it lands. Only the slide's own
+ * `_rels` says which notes file is actually its own.
+ */
+async function notesFor(
+  zip: import('jszip'),
+  slidePath: string,
+): Promise<string | undefined> {
+  const name = slidePath.split('/').pop();
+  const relsPath = `ppt/slides/_rels/${name}.rels`;
+  const rels = zip.file(relsPath);
+  if (!rels) return undefined;
+
+  const xml = await rels.async('string');
+  const target = /Target="([^"]*notesSlide\d+\.xml)"/.exec(xml)?.[1];
+  if (!target) return undefined;
+
+  // Targets are relative to ppt/slides/, e.g. "../notesSlides/notesSlide2.xml".
+  const resolved = target.replace(/^\.\.\//, 'ppt/').replace(/^(?!ppt\/)/, 'ppt/slides/');
+  return zip.file(resolved) ? resolved : undefined;
+}
+
 /** Pulls the text out of `<a:t>` runs, which is where PPTX keeps it. */
 function textRuns(xml: string): string[] {
   const runs: string[] = [];
@@ -76,8 +103,8 @@ export async function readPptx(input: File): Promise<PptxRead> {
     const xml = await zip.file(path)!.async('string');
     const runs = textRuns(xml);
 
-    const notesPath = `ppt/notesSlides/notesSlide${slideNumber(path)}.xml`;
-    const notesFile = zip.file(notesPath);
+    const notesPath = await notesFor(zip, path);
+    const notesFile = notesPath ? zip.file(notesPath) : null;
     const notes = notesFile ? textRuns(await notesFile.async('string')) : [];
 
     slides.push({

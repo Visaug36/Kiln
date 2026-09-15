@@ -182,8 +182,3 @@ function stripInlineKeepingSpacing(text: string): string {
     .replace(/__([^_]+)__/g, '$1')
     .replace(/~~([^~]+)~~/g, '$1');
 }
-
-/** Escapes text so it survives a round trip back through a Markdown reader. */
-export function escapeMarkdown(text: string): string {
-  return text.replace(/([\\`*_{}[\]#+\-!])/g, '\\$1');
-}

@@ -174,3 +174,43 @@ describe('when the worker itself fails', () => {
     expect(job?.error).not.toMatch(/\[object/);
   });
 });
+
+describe('when something inside the runner itself throws', () => {
+  it('keeps draining the queue instead of dying silently', async () => {
+    FakeWorker.behaviour = 'reply';
+
+    const first = useJobs
+      .getState()
+      .addJob({ file: file('a.md'), from: 'md', to: 'txt' });
+    const second = useJobs
+      .getState()
+      .addJob({ file: file('b.md'), from: 'md', to: 'txt' });
+
+    // A throw inside one queued turn used to leave the chain permanently
+    // rejected, so every job behind it was skipped without a word.
+    const store = useJobs.getState();
+    const realSetState = store.setState;
+    let thrown = false;
+    useJobs.setState({
+      setState: (id, state) => {
+        if (!thrown && id === first) {
+          thrown = true;
+          throw new Error('boom');
+        }
+        realSetState(id, state);
+      },
+    });
+
+    enqueue(first);
+    enqueue(second);
+    await settle();
+    await settle();
+
+    useJobs.setState({ setState: realSetState });
+
+    expect(thrown).toBe(true);
+    expect(useJobs.getState().jobs[1]?.state, 'the job behind the throw never ran').toBe(
+      'done',
+    );
+  });
+});

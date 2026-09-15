@@ -31,6 +31,19 @@ What that rules out, permanently:
 Keep that last rule in mind when adding engines. It is the one decision that
 cannot be walked back.
 
+### On `pnpm audit`
+
+It reports two high advisories in `image-size`, a transitive dependency of
+pptxgenjs. They are **not reachable in the browser**: `image-size` is used by
+pptxgenjs only on Node, to measure image files on disk, and esbuild drops it
+from the worker bundle. Checked by grepping the shipped chunks — none of the
+affected parsers (ICNS, JXL, HEIF) appear in any of them.
+
+The `xlsx` line is a different story and was worth acting on: npm's `xlsx`
+stops at 0.18.5 with two unpatched high advisories that trigger on _parsing
+untrusted input_, which is the whole job here. Kiln uses `@e965/xlsx`, the
+maintained SheetJS build published to npm.
+
 ## Running it
 
 Requires Node 22 and pnpm.
