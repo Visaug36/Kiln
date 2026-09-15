@@ -39,9 +39,12 @@ export interface Detection {
   mismatch: boolean;
   /** Set when the bytes are a format Kiln does not handle at all. */
   reason?: string;
+  /**
+   * The leading bytes are a ZIP, so which OOXML type it is can only be settled
+   * by opening the archive — which needs a library, and therefore the worker.
+   */
+  needsArchiveCheck?: boolean;
 }
-
-const OOXML_PART = '[Content_Types].xml';
 
 function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
   return signature.every((byte, i) => bytes[offset + i] === byte);
@@ -64,41 +67,14 @@ async function readHead(file: File, length: number): Promise<Uint8Array> {
 }
 
 /**
- * OOXML files are ZIPs. The only honest way to tell a DOCX from an XLSX from a
- * PPTX is to open the archive and read the content-type map, which names the
- * main part. Extensions get swapped by hand and by mail gateways constantly.
- */
-async function sniffOoxml(file: File): Promise<Format | undefined> {
-  const { default: JSZip } = await import('jszip');
-  let zip;
-  try {
-    zip = await JSZip.loadAsync(await file.arrayBuffer());
-  } catch {
-    return undefined;
-  }
-
-  const types = zip.file(OOXML_PART);
-  if (!types) return undefined;
-
-  const xml = await types.async('string');
-  if (xml.includes('wordprocessingml.document.main')) return 'docx';
-  if (xml.includes('spreadsheetml.sheet.main')) return 'xlsx';
-  if (xml.includes('presentationml.presentation.main')) return 'pptx';
-
-  // Macro-enabled and template variants carry the same main part under a
-  // different content type; fall back to looking at the directory layout.
-  const names = Object.keys(zip.files);
-  if (names.some((n) => n.startsWith('word/'))) return 'docx';
-  if (names.some((n) => n.startsWith('xl/'))) return 'xlsx';
-  if (names.some((n) => n.startsWith('ppt/'))) return 'pptx';
-
-  return undefined;
-}
-
-/**
- * Decides what a file really is. Binary formats are identified by their leading
- * bytes and, for OOXML, by the archive's content-type map. The extension is
- * only trusted for the plain-text formats, which have no signature to read.
+ * Decides what a file really is, as far as its leading bytes can say.
+ *
+ * Binary formats are identified by signature; the extension is only trusted for
+ * the plain-text formats, which have none to read. A ZIP could be any of DOCX,
+ * XLSX or PPTX, and telling those apart means opening the archive — so this
+ * returns `needsArchiveCheck` and the caller asks the worker, where the zip
+ * library already lives. Doing it here would put a second copy of JSZip in the
+ * page's bundle, downloaded by everyone who drops an Office file.
  */
 export async function detectFormat(file: File): Promise<Detection> {
   const claimed = formatFromExtension(file.name);
@@ -108,7 +84,11 @@ export async function detectFormat(file: File): Promise<Detection> {
   }
 
   const head = await readHead(file, 8);
+  return detectFromHead(head, claimed);
+}
 
+/** The synchronous part: everything decidable from the first eight bytes. */
+export function detectFromHead(head: Uint8Array, claimed: Format | undefined): Detection {
   const settle = (format: Format | undefined, reason?: string): Detection => ({
     format,
     claimed,
@@ -116,14 +96,10 @@ export async function detectFormat(file: File): Promise<Detection> {
     reason,
   });
 
-  // ZIP — could be any OOXML type, or something else entirely.
+  // ZIP — could be any OOXML type, or something else entirely. Only the
+  // archive's own content-type map can say which.
   if (startsWith(head, [0x50, 0x4b, 0x03, 0x04])) {
-    const ooxml = await sniffOoxml(file);
-    if (ooxml) return settle(ooxml);
-    return settle(
-      undefined,
-      'This is a ZIP archive, not a document Kiln can read. Unzip it and drop what is inside.',
-    );
+    return { claimed, mismatch: false, needsArchiveCheck: true };
   }
 
   if (startsWith(head, [0x25, 0x50, 0x44, 0x46])) return settle('pdf'); // %PDF
@@ -154,4 +130,24 @@ export async function detectFormat(file: File): Promise<Detection> {
   }
 
   return settle(undefined);
+}
+
+/** Folds the worker's answer about an archive back into a Detection. */
+export function settleArchive(
+  claimed: Format | undefined,
+  format: Format | undefined,
+): Detection {
+  if (!format) {
+    return {
+      claimed,
+      mismatch: false,
+      reason:
+        'This is a ZIP archive, not a document Kiln can read. Unzip it and drop what is inside.',
+    };
+  }
+  return {
+    format,
+    claimed,
+    mismatch: Boolean(claimed && format !== claimed),
+  };
 }

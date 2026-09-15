@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FORMATS, converters, find, targetsFor, unsupported } from './index';
+import { engineFor, engines } from './engines';
 import type { Format } from './types';
 
 describe('the registry table', () => {
@@ -27,12 +28,32 @@ describe('the registry table', () => {
 
   it('loads a real engine for every declared pair', async () => {
     for (const converter of converters) {
-      const convert = await converter.load();
+      const load = engineFor(converter.from, converter.to);
+      expect(load, `${converter.from} → ${converter.to} has no engine`).toBeDefined();
+
+      const convert = await load!();
       expect(
         typeof convert,
         `${converter.from} → ${converter.to} did not load a function`,
       ).toBe('function');
     }
+  });
+
+  // The table and the engine map are separate modules now — the table is
+  // reached from the page, the engines only from the worker — so nothing but a
+  // test stops them drifting apart.
+  it('has an engine for every declared pair and no engine without one', () => {
+    const declared = new Set(converters.map((c) => `${c.from}>${c.to}`));
+    const implemented = new Set(Object.keys(engines));
+
+    expect(
+      [...declared].filter((k) => !implemented.has(k)),
+      'declared but no engine',
+    ).toEqual([]);
+    expect(
+      [...implemented].filter((k) => !declared.has(k)),
+      'engine but not declared',
+    ).toEqual([]);
   });
 
   it('never declares a pair that is also on the unsupported list', () => {

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
-import { find } from '@/lib/registry';
+import { sniffOoxml } from '@/lib/files/archive';
+import { engineFor } from '@/lib/registry/engines';
 import { installPolyfills } from './polyfills';
 import { describeFailure } from '@/lib/registry/shared';
 import type { Format, OutputFile } from '@/lib/registry/types';
@@ -8,37 +9,66 @@ import type { Format, OutputFile } from '@/lib/registry/types';
 installPolyfills();
 
 export interface ConvertRequest {
+  kind?: 'convert';
   jobId: string;
   file: File;
   from: Format;
   to: Format;
 }
 
+/**
+ * Asks which of the OOXML formats an archive really is.
+ *
+ * Handled here because answering needs a zip library, and the worker already
+ * has one. Doing it on the page would ship a second copy of JSZip to everyone
+ * who drops an Office file.
+ */
+export interface DetectRequest {
+  kind: 'detect';
+  jobId: string;
+  file: File;
+}
+
+export type WorkerRequest = ConvertRequest | DetectRequest;
+
 export type ConvertResponse =
   | { jobId: string; result: { files: OutputFile[]; warnings?: string[] } }
-  | { jobId: string; error: string };
+  | { jobId: string; error: string }
+  | { jobId: string; detected: Format | undefined };
 
 /**
  * Conversions run here so the page keeps responding while a large file is being
- * chewed on. Engines are reached through the registry's `load()`, which is a
- * dynamic import — so the worker starts as a few kilobytes and only pulls in the
- * megabytes a particular pair actually needs.
+ * chewed on. Engines are reached through `engines.ts`, whose every entry is a
+ * dynamic import — so the worker starts as a few kilobytes and only pulls in
+ * the megabytes a particular pair actually needs.
  */
-self.onmessage = async (event: MessageEvent<ConvertRequest>) => {
-  const { jobId, file, from, to } = event.data;
+self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+  const request = event.data;
+  const { jobId } = request;
 
   const reply = (message: ConvertResponse) => {
     (self as unknown as DedicatedWorkerGlobalScope).postMessage(message);
   };
 
-  const converter = find(from, to);
-  if (!converter) {
+  if (request.kind === 'detect') {
+    try {
+      reply({ jobId, detected: await sniffOoxml(request.file) });
+    } catch {
+      reply({ jobId, detected: undefined });
+    }
+    return;
+  }
+
+  const { file, from, to } = request;
+
+  const load = engineFor(from, to);
+  if (!load) {
     reply({ jobId, error: `Kiln cannot turn .${from} into .${to}.` });
     return;
   }
 
   try {
-    const convert = await converter.load();
+    const convert = await load();
     const result = await convert(file);
 
     if (!result.files || result.files.length === 0) {

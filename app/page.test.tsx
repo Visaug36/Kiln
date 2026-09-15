@@ -1,8 +1,38 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixture } from '@/test/fixtures';
 import { useJobs } from '@/lib/jobs/store';
+import { resetWorker } from '@/lib/jobs/runner';
+import { sniffOoxml } from '@/lib/files/archive';
 import Home from './page';
+
+/**
+ * Identifying a dropped Office file now happens in the worker, so that the
+ * page never ships a zip library. jsdom has no Worker, so this stands in and
+ * answers with the real sniffing code.
+ */
+class DetectWorker {
+  private listeners = new Map<string, Set<(event: unknown) => void>>();
+
+  addEventListener(type: string, handler: (event: unknown) => void) {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type)!.add(handler);
+  }
+
+  removeEventListener(type: string, handler: (event: unknown) => void) {
+    this.listeners.get(type)?.delete(handler);
+  }
+
+  async postMessage(request: { kind?: string; jobId: string; file: File }) {
+    if (request.kind !== 'detect') return;
+    const detected = await sniffOoxml(request.file);
+    for (const handler of this.listeners.get('message') ?? []) {
+      handler({ data: { jobId: request.jobId, detected } });
+    }
+  }
+
+  terminate() {}
+}
 
 /** Detection now reads bytes, so every drop settles asynchronously. */
 async function dropFiles(container: HTMLElement, files: File[]) {
@@ -19,7 +49,14 @@ function errorCount() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('Worker', DetectWorker as unknown as typeof Worker);
+  resetWorker();
   useJobs.getState().clear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  resetWorker();
 });
 
 describe('the screen', () => {

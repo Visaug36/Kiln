@@ -1,20 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import { fixture } from '@/test/fixtures';
-import { baseName, detectFormat, extensionOf, formatFromExtension } from './detect';
+import {
+  baseName,
+  detectFormat,
+  extensionOf,
+  formatFromExtension,
+  settleArchive,
+} from './detect';
+import { sniffOoxml } from './archive';
 
 const asFile = (name: string, body = 'hello') => new File([body], name);
 
+/**
+ * The whole two-stage flow, as the page runs it.
+ *
+ * Identifying a ZIP needs a zip library, so `detectFormat` stops at
+ * "this is an archive" and the page asks the worker. Here the worker's side is
+ * called directly.
+ */
+async function resolve(file: File) {
+  const detection = await detectFormat(file);
+  if (!detection.needsArchiveCheck) return detection;
+  return settleArchive(detection.claimed, await sniffOoxml(file));
+}
+
 describe('detecting OOXML from bytes alone', () => {
   it('tells the three ZIP-based formats apart', async () => {
-    expect((await detectFormat(fixture('sample.docx'))).format).toBe('docx');
-    expect((await detectFormat(fixture('sample.xlsx'))).format).toBe('xlsx');
-    expect((await detectFormat(fixture('sample.pptx'))).format).toBe('pptx');
+    expect((await resolve(fixture('sample.docx'))).format).toBe('docx');
+    expect((await resolve(fixture('sample.xlsx'))).format).toBe('xlsx');
+    expect((await resolve(fixture('sample.pptx'))).format).toBe('pptx');
   });
 
   it('identifies them even when the extension is stripped entirely', async () => {
-    expect((await detectFormat(fixture('sample.docx', 'mystery'))).format).toBe('docx');
-    expect((await detectFormat(fixture('sample.xlsx', 'mystery'))).format).toBe('xlsx');
-    expect((await detectFormat(fixture('sample.pptx', 'mystery'))).format).toBe('pptx');
+    expect((await resolve(fixture('sample.docx', 'mystery'))).format).toBe('docx');
+    expect((await resolve(fixture('sample.xlsx', 'mystery'))).format).toBe('xlsx');
+    expect((await resolve(fixture('sample.pptx', 'mystery'))).format).toBe('pptx');
   });
 });
 
@@ -22,7 +42,7 @@ describe('when the extension disagrees with the contents', () => {
   it('trusts the bytes and reports the mismatch', async () => {
     // A spreadsheet that someone renamed to .docx — all three are ZIPs, so an
     // extension check alone would hand it to the wrong reader.
-    const detection = await detectFormat(fixture('sample.xlsx', 'budget.docx'));
+    const detection = await resolve(fixture('sample.xlsx', 'budget.docx'));
 
     expect(detection.format).toBe('xlsx');
     expect(detection.claimed).toBe('docx');
@@ -30,7 +50,7 @@ describe('when the extension disagrees with the contents', () => {
   });
 
   it('does not flag a mismatch when the name is right', async () => {
-    const detection = await detectFormat(fixture('sample.xlsx'));
+    const detection = await resolve(fixture('sample.xlsx'));
     expect(detection.mismatch).toBe(false);
   });
 
@@ -57,7 +77,7 @@ describe('inputs Kiln will not take', () => {
   });
 
   it('rejects a damaged OOXML archive rather than guessing', async () => {
-    const detection = await detectFormat(fixture('corrupt.docx'));
+    const detection = await resolve(fixture('corrupt.docx'));
     expect(detection.format).toBeUndefined();
   });
 

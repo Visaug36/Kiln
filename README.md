@@ -119,7 +119,37 @@ Every conversion is a self-contained plugin. The interface never names a format
 or a pair; it reads the registry and renders whatever is there. Adding a format
 means adding one file and one entry, and touching no component.
 
-The contract lives in `lib/registry/types.ts`:
+Two modules, deliberately separate.
+
+**`lib/registry/index.ts` — the table.** What Kiln can convert and how well.
+This is what the page imports.
+
+```ts
+export interface Converter {
+  from: Format;
+  to: Format;
+  /** Shown to the user before they commit, when not 'exact'. */
+  fidelity: 'exact' | 'good' | 'lossy';
+  /** Human-readable note about what is lost. Required when fidelity is 'lossy'. */
+  caveat?: string;
+}
+```
+
+**`lib/registry/engines.ts` — the engines.** Only the worker imports this.
+
+```ts
+export const engines: Record<string, () => Promise<ConvertFn>> = {
+  'docx>md': () => import('./converters/docx-to-md').then((m) => m.convert),
+  // …
+};
+```
+
+The split is not tidiness. A dynamic `import()` in a module the _page_ reaches
+makes the page's bundler emit a chunk for every engine — about 4 MB that was
+built and deployed and then never fetched, because conversions happen in the
+worker. Keeping the table free of imports removes all of it.
+
+A conversion returns:
 
 ```ts
 export interface OutputFile {
@@ -132,51 +162,41 @@ export interface ConversionResult {
   /** Populated when the engine had to discard something. Shown after conversion. */
   warnings?: string[];
 }
-
-export interface Converter {
-  from: Format;
-  to: Format;
-  /** Shown to the user before they commit, when not 'exact'. */
-  fidelity: 'exact' | 'good' | 'lossy';
-  /** Human-readable note about what is lost. Required when fidelity is 'lossy'. */
-  caveat?: string;
-  /** Dynamic import of the engine, so heavy libs are never in the initial bundle. */
-  load: () => Promise<(input: File) => Promise<ConversionResult>>;
-}
 ```
 
 A result carries a **list** of files because some conversions honestly produce
 more than one — a three-sheet workbook going to CSV is three CSVs, not one. When
 there is more than one, the row offers a single download that zips them.
 
-`lib/registry/index.ts` exposes three things:
+The registry exposes:
 
-| Export             | Purpose                                                   |
-| ------------------ | --------------------------------------------------------- |
-| `converters`       | The table itself.                                         |
-| `targetsFor(from)` | Every format `from` can become. Drives the format picker. |
-| `find(from, to)`   | The converter for one pair, or `undefined`.               |
+| Export                | Where from   | Purpose                                            |
+| --------------------- | ------------ | -------------------------------------------------- |
+| `converters`          | `index.ts`   | The table itself.                                  |
+| `targetsFor(from)`    | `index.ts`   | Every format `from` can become. Drives the picker. |
+| `find(from, to)`      | `index.ts`   | Fidelity and caveat for one pair, or `undefined`.  |
+| `engineFor(from, to)` | `engines.ts` | The loader for one pair. Worker only.              |
 
-Two properties follow from this and are worth stating plainly:
+Three properties follow, and are worth stating plainly:
 
-- **`load` is called once the user commits, never at import time.** That is the
-  only reason a PDF engine can be added without every visitor downloading it.
-- **A pair that is absent is simply not offered.** There are no disabled options
-  and no "coming soon" — if `targetsFor` does not return it, the user never sees
-  it.
+- **An engine loads only when a conversion using it starts.** Nothing is fetched
+  by opening the page, or by dropping a file, or by picking a target.
+- **Engines that share a library share its chunk.** Converting `docx → md` and
+  then `docx → pdf` downloads mammoth once, not twice.
+- **A pair that is absent is simply not offered.** No disabled options, no
+  "coming soon" — if `targetsFor` does not return it, the user never sees it.
 
 ### Worked example: adding DOCX → RTF
 
-**1. Write the engine** in `lib/registry/converters/docx-to-rtf.ts`. It exports a
-function taking a `File` and returning a `Blob` plus the name to save it under.
+**1. Write the engine** in `lib/registry/converters/docx-to-rtf.ts`:
 
 ```ts
 import type { ConversionResult } from '@/lib/registry/types';
 import { outputFile, readArrayBuffer } from '@/lib/registry/shared';
 
 export async function convert(input: File): Promise<ConversionResult> {
-  // Import the heavy dependency here, inside the engine, not at module top
-  // level of the registry — that is what keeps it out of the initial bundle.
+  // Import the heavy dependency here, inside the engine. This is the only
+  // place an engine dependency may be named.
   const { toRtf } = await import('some-docx-library');
 
   // readArrayBuffer rejects empty and oversized files with a sentence the
@@ -190,7 +210,7 @@ export async function convert(input: File): Promise<ConversionResult> {
 }
 ```
 
-**2. Add one entry** to `converters` in `lib/registry/index.ts`:
+**2. Declare the pair** in `lib/registry/index.ts`:
 
 ```ts
 {
@@ -198,12 +218,21 @@ export async function convert(input: File): Promise<ConversionResult> {
   to: 'rtf',
   fidelity: 'lossy',
   caveat: 'Tables and embedded images are dropped. Text and emphasis survive.',
-  load: () => import('./converters/docx-to-rtf').then((m) => m.convert),
 },
+```
+
+**3. Wire the engine** in `lib/registry/engines.ts`:
+
+```ts
+'docx>rtf': () => import('./converters/docx-to-rtf').then((m) => m.convert),
 ```
 
 That is the whole change. `.rtf` now appears in the picker for any dropped
 `.docx`, the caveat shows before conversion starts, and no component was edited.
+
+Steps 2 and 3 are separate files, so they can drift. They cannot drift silently:
+`lib/registry/index.test.ts` fails if a declared pair has no engine, or an engine
+has no declared pair.
 
 If the new format is one Kiln has never seen, also add it to the `Format` union
 and to `FORMATS` — that array is the canonical display order.
@@ -340,8 +369,10 @@ green while that was true. esbuild bundles it explicitly instead, with
 
 **Detection reads bytes, not names.** `docx`, `xlsx` and `pptx` are all ZIP
 archives, so an extension check cannot tell them apart and mislabelled files are
-common. `lib/files/detect.ts` reads the leading bytes, and for OOXML opens the
-archive and reads `[Content_Types].xml`. When the name and the contents
+common. `lib/files/detect.ts` reads the leading bytes. Identifying _which_ OOXML
+format an archive holds needs a zip library, so that step happens in the worker
+(`lib/files/archive.ts`) — otherwise the page would ship a second copy of JSZip,
+downloaded by everyone who drops an Office file. When the name and the contents
 disagree, the contents win and the row says so.
 
 **Design tokens** are CSS variables in `app/globals.css`, exposed to Tailwind

@@ -3,10 +3,10 @@
 import { useCallback, useState } from 'react';
 import DropZone from '@/components/DropZone';
 import JobList from '@/components/JobList';
-import { detectFormat } from '@/lib/files/detect';
+import { detectFormat, settleArchive } from '@/lib/files/detect';
 import { downloadResult, zipFiles } from '@/lib/files/download';
 import { downloadBlob } from '@/lib/files/download';
-import { enqueue } from '@/lib/jobs/runner';
+import { detectArchive, enqueue } from '@/lib/jobs/runner';
 import { useJobs } from '@/lib/jobs/store';
 import { FORMATS, targetsFor } from '@/lib/registry';
 import { MAX_BYTES } from '@/lib/registry/shared';
@@ -36,9 +36,14 @@ export default function Home() {
           continue;
         }
 
-        // Reads the leading bytes, and the archive map for OOXML files, rather
-        // than believing the extension.
-        const detection = await detectFormat(file);
+        // Reads the leading bytes rather than believing the extension. A ZIP
+        // could be any of DOCX/XLSX/PPTX, and only the archive's content-type
+        // map can say which — so that question goes to the worker, where the
+        // zip library already lives.
+        let detection = await detectFormat(file);
+        if (detection.needsArchiveCheck) {
+          detection = settleArchive(detection.claimed, await detectArchive(file));
+        }
 
         if (!detection.format) {
           problems.push(

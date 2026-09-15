@@ -23,6 +23,14 @@ export interface ConversionResult {
 /** The function an engine module hands back once it has loaded. */
 export type ConvertFn = (input: File) => Promise<ConversionResult>;
 
+/**
+ * One declared pair, as the interface sees it.
+ *
+ * Deliberately has no reference to the engine that performs it: this type is
+ * reached from the page, and anything here that pulls in an `import()` makes
+ * the page's bundler emit a chunk for every engine. The engines are addressed
+ * separately, in `engines.ts`, which only the worker imports.
+ */
 export interface Converter {
   from: Format;
   to: Format;
@@ -30,6 +38,4 @@ export interface Converter {
   fidelity: Fidelity;
   /** Human-readable note about what is lost. Required when fidelity is 'lossy'. */
   caveat?: string;
-  /** Dynamic import of the engine, so heavy libs are never in the initial bundle. */
-  load: () => Promise<ConvertFn>;
 }

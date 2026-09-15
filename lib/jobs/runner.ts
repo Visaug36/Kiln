@@ -1,8 +1,14 @@
-import type { ConvertRequest, ConvertResponse } from '@/lib/workers/convert.worker';
+import type { ConvertResponse, WorkerRequest } from '@/lib/workers/convert.worker';
+import type { Format } from '@/lib/registry/types';
 import { useJobs } from './store';
 
 /** A conversion that has not finished in this long is treated as wedged. */
 export const TIMEOUT_MS = 60_000;
+
+/** Opening an archive to identify it should be near-instant. */
+export const DETECT_TIMEOUT_MS = 15_000;
+
+let detectCounter = 0;
 
 /**
  * The worker is built separately into public/kiln-worker/ and referenced by
@@ -35,7 +41,7 @@ function replaceWorker() {
  */
 let queue: Promise<void> = Promise.resolve();
 
-function runOne(request: ConvertRequest): Promise<void> {
+function runOne(request: WorkerRequest): Promise<void> {
   return new Promise<void>((resolve) => {
     const active = getWorker();
     let settled = false;
@@ -58,7 +64,7 @@ function runOne(request: ConvertRequest): Promise<void> {
       const store = useJobs.getState();
       if ('error' in event.data) {
         store.setError(request.jobId, event.data.error);
-      } else {
+      } else if ('result' in event.data) {
         store.setResult(request.jobId, event.data.result);
       }
     };
@@ -116,6 +122,49 @@ export function enqueue(id: string): void {
           .setError(id, 'Something went wrong while converting this file.');
       }
     });
+}
+
+/**
+ * Asks the worker which OOXML format an archive is.
+ *
+ * Detection lives in the worker because answering needs a zip library, and the
+ * worker already has one — keeping it off the page saves every visitor who
+ * drops an Office file a second copy of JSZip. Serialised through the same
+ * queue as conversions, so a detect cannot overtake a running job.
+ */
+export function detectArchive(file: File): Promise<Format | undefined> {
+  return new Promise((resolve) => {
+    const jobId = `detect-${detectCounter++}`;
+    let settled = false;
+
+    const active = getWorker();
+
+    const finish = (format: Format | undefined) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      active.removeEventListener('message', onMessage);
+      active.removeEventListener('error', onError);
+      resolve(format);
+    };
+
+    const onMessage = (event: MessageEvent<ConvertResponse>) => {
+      if (event.data.jobId !== jobId) return;
+      finish('detected' in event.data ? event.data.detected : undefined);
+    };
+
+    const onError = () => {
+      replaceWorker();
+      finish(undefined);
+    };
+
+    // A damaged archive should not hold up the drop; fall back to "unreadable".
+    const timer = setTimeout(() => finish(undefined), DETECT_TIMEOUT_MS);
+
+    active.addEventListener('message', onMessage);
+    active.addEventListener('error', onError);
+    active.postMessage({ kind: 'detect', jobId, file } satisfies WorkerRequest);
+  });
 }
 
 /** Test seam: forget the current worker so the next job builds a fresh one. */

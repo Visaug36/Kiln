@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MARKER, bytesOf, fixture, textOf } from '@/test/fixtures';
-import { converters, find, type Format } from '../index';
+import { converters, type Format } from '../index';
+import { engineFor } from '../engines';
 import { MIME } from '../shared';
 
 /** The fixture that stands in for each source format. */
@@ -29,7 +30,7 @@ describe('every declared converter', () => {
 
     describe(`${from} → ${to}`, () => {
       it('produces a non-empty file with the right type and extension', async () => {
-        const convert = await converter.load();
+        const convert = await engineFor(from, to)!();
         const result = await convert(fixture(SOURCE[from]));
 
         expect(result.files.length).toBeGreaterThan(0);
@@ -42,7 +43,7 @@ describe('every declared converter', () => {
       });
 
       it('writes real bytes for the target format', async () => {
-        const convert = await converter.load();
+        const convert = await engineFor(from, to)!();
         const result = await convert(fixture(SOURCE[from]));
         const signature = SIGNATURE[to];
 
@@ -56,7 +57,7 @@ describe('every declared converter', () => {
       });
 
       it('fails with a readable sentence on a corrupt file', async () => {
-        const convert = await converter.load();
+        const convert = await engineFor(from, to)!();
         // Valid ZIP magic, garbage inside — every reader has to cope.
         const broken = fixture('corrupt.docx', `broken.${from}`);
 
@@ -76,7 +77,7 @@ describe('every declared converter', () => {
 
 describe('pairs declared exact', () => {
   it('md → txt keeps every word', async () => {
-    const convert = await find('md', 'txt')!.load();
+    const convert = await engineFor('md', 'txt')!();
     const out = await textOf((await convert(fixture('sample.md'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
@@ -88,7 +89,7 @@ describe('pairs declared exact', () => {
   });
 
   it('txt → md passes the bytes through untouched', async () => {
-    const convert = await find('txt', 'md')!.load();
+    const convert = await engineFor('txt', 'md')!();
     const source = fixture('sample.txt');
     const out = await textOf((await convert(source)).files[0]!.blob);
 
@@ -96,7 +97,7 @@ describe('pairs declared exact', () => {
   });
 
   it('csv → txt passes the bytes through untouched', async () => {
-    const convert = await find('csv', 'txt')!.load();
+    const convert = await engineFor('csv', 'txt')!();
     const source = fixture('sample.csv');
     const out = await textOf((await convert(source)).files[0]!.blob);
 
@@ -104,10 +105,10 @@ describe('pairs declared exact', () => {
   });
 
   it('csv → xlsx round-trips back to the same rows', async () => {
-    const toXlsx = await find('csv', 'xlsx')!.load();
+    const toXlsx = await engineFor('csv', 'xlsx')!();
     const workbook = (await toXlsx(fixture('sample.csv'))).files[0]!;
 
-    const toCsv = await find('xlsx', 'csv')!.load();
+    const toCsv = await engineFor('xlsx', 'csv')!();
     const back = await toCsv(new File([workbook.blob], 'roundtrip.xlsx'));
     const text = await textOf(back.files[0]!.blob);
 
@@ -119,7 +120,7 @@ describe('pairs declared exact', () => {
 
 describe('content actually survives', () => {
   it('docx → md keeps the words and the heading structure', async () => {
-    const convert = await find('docx', 'md')!.load();
+    const convert = await engineFor('docx', 'md')!();
     const out = await textOf((await convert(fixture('sample.docx'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
@@ -128,7 +129,7 @@ describe('content actually survives', () => {
   });
 
   it('docx → txt keeps the words', async () => {
-    const convert = await find('docx', 'txt')!.load();
+    const convert = await engineFor('docx', 'txt')!();
     const out = await textOf((await convert(fixture('sample.docx'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
@@ -136,7 +137,7 @@ describe('content actually survives', () => {
   });
 
   it('pdf → txt pulls the text layer back out', async () => {
-    const convert = await find('pdf', 'txt')!.load();
+    const convert = await engineFor('pdf', 'txt')!();
     const out = await textOf((await convert(fixture('sample.pdf'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
@@ -144,7 +145,7 @@ describe('content actually survives', () => {
   });
 
   it('rtf → txt keeps the words and drops the control words', async () => {
-    const convert = await find('rtf', 'txt')!.load();
+    const convert = await engineFor('rtf', 'txt')!();
     const out = await textOf((await convert(fixture('sample.rtf'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
@@ -154,7 +155,7 @@ describe('content actually survives', () => {
   });
 
   it('pptx → md gives one heading per slide', async () => {
-    const convert = await find('pptx', 'md')!.load();
+    const convert = await engineFor('pptx', 'md')!();
     const out = await textOf((await convert(fixture('sample.pptx'))).files[0]!.blob);
 
     expect(out).toMatch(/^##\s+Opening slide/m);
@@ -163,7 +164,7 @@ describe('content actually survives', () => {
   });
 
   it('pptx → txt keeps slide text in order', async () => {
-    const convert = await find('pptx', 'txt')!.load();
+    const convert = await engineFor('pptx', 'txt')!();
     const out = await textOf((await convert(fixture('sample.pptx'))).files[0]!.blob);
 
     expect(out.indexOf('Opening slide')).toBeLessThan(out.indexOf('Second slide'));
@@ -173,7 +174,7 @@ describe('content actually survives', () => {
 
 describe('spreadsheets', () => {
   it('exports computed values, never formula strings', async () => {
-    const convert = await find('xlsx', 'csv')!.load();
+    const convert = await engineFor('xlsx', 'csv')!();
     const result = await convert(fixture('sample.xlsx'));
     const text = await textOf(result.files[0]!.blob);
 
@@ -183,7 +184,7 @@ describe('spreadsheets', () => {
   });
 
   it('returns one file per sheet for a multi-sheet workbook', async () => {
-    const convert = await find('xlsx', 'csv')!.load();
+    const convert = await engineFor('xlsx', 'csv')!();
     const result = await convert(fixture('sample.xlsx'));
 
     expect(result.files).toHaveLength(2);
@@ -195,10 +196,10 @@ describe('spreadsheets', () => {
   });
 
   it('gives a single-sheet workbook a plain name and no sheet warning', async () => {
-    const toXlsx = await find('csv', 'xlsx')!.load();
+    const toXlsx = await engineFor('csv', 'xlsx')!();
     const single = (await toXlsx(fixture('sample.csv'))).files[0]!;
 
-    const toCsv = await find('xlsx', 'csv')!.load();
+    const toCsv = await engineFor('xlsx', 'csv')!();
     const result = await toCsv(new File([single.blob], 'one.xlsx'));
 
     expect(result.files).toHaveLength(1);
@@ -206,7 +207,7 @@ describe('spreadsheets', () => {
   });
 
   it('heads each sheet in the Markdown when there is more than one', async () => {
-    const convert = await find('xlsx', 'md')!.load();
+    const convert = await engineFor('xlsx', 'md')!();
     const out = await textOf((await convert(fixture('sample.xlsx'))).files[0]!.blob);
 
     expect(out).toMatch(/^##\s+Sales/m);
@@ -215,7 +216,7 @@ describe('spreadsheets', () => {
   });
 
   it('detects a semicolon-separated export and says so', async () => {
-    const convert = await find('csv', 'md')!.load();
+    const convert = await engineFor('csv', 'md')!();
     const result = await convert(fixture('semicolons.csv'));
     const out = await textOf(result.files[0]!.blob);
 
@@ -227,7 +228,7 @@ describe('spreadsheets', () => {
 
 describe('refusals a person can act on', () => {
   it('names the old binary .doc rather than complaining about a zip', async () => {
-    const convert = await find('docx', 'md')!.load();
+    const convert = await engineFor('docx', 'md')!();
 
     await expect(convert(fixture('actually-a-doc.docx'))).rejects.toThrow(
       /old binary \.doc file/i,
@@ -235,13 +236,13 @@ describe('refusals a person can act on', () => {
   });
 
   it('refuses an empty file by name', async () => {
-    const convert = await find('txt', 'docx')!.load();
+    const convert = await engineFor('txt', 'docx')!();
 
     await expect(convert(fixture('empty.txt'))).rejects.toThrow(/empty/i);
   });
 
   it('explains a damaged archive without leaking library internals', async () => {
-    const convert = await find('xlsx', 'csv')!.load();
+    const convert = await engineFor('xlsx', 'csv')!();
 
     await expect(convert(fixture('corrupt.docx', 'broken.xlsx'))).rejects.toThrow(
       /damaged|could not read/i,
@@ -249,7 +250,7 @@ describe('refusals a person can act on', () => {
   });
 
   it('refuses a file over the memory limit before reading it', async () => {
-    const convert = await find('txt', 'md')!.load();
+    const convert = await engineFor('txt', 'md')!();
     const huge = new File(['x'], 'huge.txt');
     Object.defineProperty(huge, 'size', { value: 200 * 1024 * 1024 });
 
@@ -290,7 +291,7 @@ describe('slide notes', () => {
   });
 
   it('carries those notes through to Markdown as quotes', async () => {
-    const convert = await find('pptx', 'md')!.load();
+    const convert = await engineFor('pptx', 'md')!();
     const out = await textOf(
       (await convert(await deckWithNotesOnSlideTwo())).files[0]!.blob,
     );
