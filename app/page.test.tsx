@@ -1,12 +1,21 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { fixture } from '@/test/fixtures';
 import { useJobs } from '@/lib/jobs/store';
 import Home from './page';
 
-function dropFile(container: HTMLElement, file: File) {
+/** Detection now reads bytes, so every drop settles asynchronously. */
+async function dropFiles(container: HTMLElement, files: File[]) {
   const input = container.querySelector('input[type="file"]');
   if (!input) throw new Error('no file input');
-  fireEvent.change(input, { target: { files: [file] } });
+  fireEvent.change(input, { target: { files } });
+  await waitFor(() =>
+    expect(useJobs.getState().jobs.length + errorCount()).toBeGreaterThan(0),
+  );
+}
+
+function errorCount() {
+  return screen.queryAllByText(/Kiln cannot read|old binary Office|ZIP archive/).length;
 }
 
 beforeEach(() => {
@@ -19,7 +28,9 @@ describe('the screen', () => {
 
     expect(screen.getByRole('heading', { name: 'Drop a document' })).toBeInTheDocument();
     expect(screen.getByText('Files never leave your browser')).toBeInTheDocument();
-    expect(screen.getByText('PDF · DOCX · MD · TXT · RTF')).toBeInTheDocument();
+    expect(
+      screen.getByText('PDF · DOCX · PPTX · XLSX · CSV · MD · TXT · RTF'),
+    ).toBeInTheDocument();
   });
 
   it('has no job list until a file arrives', () => {
@@ -29,53 +40,101 @@ describe('the screen', () => {
 });
 
 describe('dropping a file', () => {
-  it('creates a row whose picker offers exactly the registry targets', () => {
+  it('creates a row whose picker offers exactly the registry targets', async () => {
     const { container } = render(<Home />);
-    dropFile(container, new File(['x'], 'report.docx'));
+    await dropFiles(container, [fixture('sample.docx')]);
 
-    const picker = screen.getByRole('radiogroup', { name: 'Convert report.docx to' });
+    const picker = await screen.findByRole('radiogroup', {
+      name: 'Convert sample.docx to',
+    });
     const options = within(picker)
       .getAllByRole('radio')
       .map((node) => node.textContent);
 
-    expect(options).toEqual(['.pdf', '.md', '.txt']);
-    expect(screen.getByText(/report\.docx/)).toBeInTheDocument();
+    expect(options).toEqual(['.pdf', '.md', '.txt', '.rtf']);
   });
 
-  it('changes the target when another format is chosen', () => {
+  it('changes the target when another format is chosen', async () => {
     const { container } = render(<Home />);
-    dropFile(container, new File(['x'], 'report.docx'));
+    await dropFiles(container, [fixture('sample.docx')]);
 
-    fireEvent.click(screen.getByRole('radio', { name: '.txt' }));
+    fireEvent.click(await screen.findByRole('radio', { name: '.txt' }));
 
     expect(useJobs.getState().jobs[0]?.to).toBe('txt');
   });
 
-  it('shows the caveat for a lossy pair', () => {
+  it('shows the caveat for a lossy pair', async () => {
     const { container } = render(<Home />);
-    dropFile(container, new File(['x'], 'paper.pdf'));
+    await dropFiles(container, [fixture('sample.pdf')]);
 
-    expect(screen.getByText(/Headings are inferred from type size/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Headings are inferred from type size/),
+    ).toBeInTheDocument();
   });
 
-  it('explains a file it cannot read, without creating a row', () => {
+  it('accepts the spreadsheet and slide formats end to end', async () => {
     const { container } = render(<Home />);
-    dropFile(container, new File(['x'], 'budget.xlsx'));
+    await dropFiles(container, [fixture('sample.xlsx'), fixture('sample.pptx')]);
 
-    expect(screen.getByText(/Kiln cannot read budget\.xlsx/)).toBeInTheDocument();
+    await waitFor(() => expect(useJobs.getState().jobs).toHaveLength(2));
+    expect(useJobs.getState().jobs.map((j) => j.from)).toEqual(['xlsx', 'pptx']);
+  });
+});
+
+describe('reading the bytes rather than the name', () => {
+  it('routes a mislabelled file by its contents and says so', async () => {
+    const { container } = render(<Home />);
+    // A workbook someone renamed to .docx: both are ZIPs, so only the
+    // content-type map inside can tell them apart.
+    await dropFiles(container, [fixture('sample.xlsx', 'budget.docx')]);
+
+    await waitFor(() => expect(useJobs.getState().jobs).toHaveLength(1));
+    expect(useJobs.getState().jobs[0]?.from).toBe('xlsx');
+
+    expect(await screen.findByText(/its contents are XLSX/)).toBeInTheDocument();
+  });
+
+  it('names the old binary .doc problem specifically', async () => {
+    const { container } = render(<Home />);
+    await dropFiles(container, [fixture('actually-a-doc.docx')]);
+
+    expect(await screen.findByText(/old binary Office file/i)).toBeInTheDocument();
+    expect(useJobs.getState().jobs).toEqual([]);
+  });
+
+  it('explains a file it cannot read, without creating a row', async () => {
+    const { container } = render(<Home />);
+    await dropFiles(container, [new File(['x'], 'budget.xyz')]);
+
+    expect(await screen.findByText(/Kiln cannot read budget\.xyz/)).toBeInTheDocument();
     expect(useJobs.getState().jobs).toEqual([]);
   });
 });
 
-describe('starting a conversion', () => {
-  it('reports the stub engine message', async () => {
+describe('the unsupported list', () => {
+  it('is reachable from the row and names the missing pairs', async () => {
     const { container } = render(<Home />);
-    dropFile(container, new File(['x'], 'notes.md'));
+    await dropFiles(container, [fixture('sample.pdf')]);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Convert notes.md to .pdf' }));
+    const link = await screen.findByRole('button', {
+      name: /Some formats aren’t available for PDF/,
+    });
+    expect(link).toHaveAttribute('aria-expanded', 'false');
 
-    await waitFor(() => expect(screen.getByText('Failed')).toBeInTheDocument());
-    expect(screen.getByText('Not implemented')).toBeInTheDocument();
-    expect(useJobs.getState().jobs[0]?.state).toBe('failed');
+    fireEvent.click(link);
+
+    expect(link).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/\.pdf → \.docx/)).toBeInTheDocument();
+    expect(screen.getByText(/records where glyphs sit on a page/)).toBeInTheDocument();
+  });
+
+  it('says nothing for a format with no missing targets', async () => {
+    const { container } = render(<Home />);
+    await dropFiles(container, [fixture('sample.txt')]);
+
+    await waitFor(() => expect(useJobs.getState().jobs).toHaveLength(1));
+    expect(
+      screen.queryByRole('button', { name: /aren’t available/ }),
+    ).not.toBeInTheDocument();
   });
 });

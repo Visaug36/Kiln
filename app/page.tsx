@@ -4,43 +4,66 @@ import { useCallback, useState } from 'react';
 import DropZone from '@/components/DropZone';
 import JobList from '@/components/JobList';
 import { detectFormat } from '@/lib/files/detect';
-import { downloadAll, downloadBlob } from '@/lib/files/download';
+import { downloadResult, zipFiles } from '@/lib/files/download';
+import { downloadBlob } from '@/lib/files/download';
 import { enqueue } from '@/lib/jobs/runner';
 import { useJobs } from '@/lib/jobs/store';
 import { FORMATS, targetsFor } from '@/lib/registry';
+import { MAX_BYTES } from '@/lib/registry/shared';
 
 const FORMAT_LINE = FORMATS.map((f) => f.toUpperCase()).join(' · ');
-const FORMAT_SENTENCE = 'It reads PDF, DOCX, MD, TXT and RTF.';
+const FORMAT_SENTENCE = 'It reads PDF, DOCX, PPTX, XLSX, CSV, MD, TXT and RTF.';
 
 export default function Home() {
   const jobs = useJobs((state) => state.jobs);
   const addJob = useJobs((state) => state.addJob);
   const setTarget = useJobs((state) => state.setTarget);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notices, setNotices] = useState<string[]>([]);
 
   const onFiles = useCallback(
-    (files: File[]) => {
-      const rejected: string[] = [];
+    async (files: File[]) => {
+      const problems: string[] = [];
 
       for (const file of files) {
-        const from = detectFormat(file.name);
-        const first = from ? targetsFor(from)[0] : undefined;
-        if (!from || !first) {
-          rejected.push(file.name);
+        if (file.size === 0) {
+          problems.push(`${file.name} is empty.`);
           continue;
         }
-        addJob(file, from, first);
+        if (file.size > MAX_BYTES) {
+          problems.push(
+            `${file.name} is ${Math.round(file.size / 1024 / 1024)} MB. Kiln works in memory and stops at 100 MB.`,
+          );
+          continue;
+        }
+
+        // Reads the leading bytes, and the archive map for OOXML files, rather
+        // than believing the extension.
+        const detection = await detectFormat(file);
+
+        if (!detection.format) {
+          problems.push(
+            detection.reason ?? `Kiln cannot read ${file.name}. ${FORMAT_SENTENCE}`,
+          );
+          continue;
+        }
+
+        const first = targetsFor(detection.format)[0];
+        if (!first) {
+          problems.push(
+            `Kiln can read ${file.name} but has nothing to turn it into yet.`,
+          );
+          continue;
+        }
+
+        addJob({
+          file,
+          from: detection.format,
+          to: first,
+          detectedAs: detection.mismatch ? detection.claimed : undefined,
+        });
       }
 
-      if (rejected.length === 0) {
-        setNotice(null);
-      } else if (rejected.length === 1) {
-        setNotice(`Kiln cannot read ${rejected[0]}. ${FORMAT_SENTENCE}`);
-      } else {
-        setNotice(
-          `Kiln cannot read ${rejected.length} of those files. ${FORMAT_SENTENCE}`,
-        );
-      }
+      setNotices(problems);
     },
     [addJob],
   );
@@ -48,13 +71,21 @@ export default function Home() {
   const onDownload = useCallback(
     (id: string) => {
       const job = jobs.find((j) => j.id === id);
-      if (job?.result) downloadBlob(job.result.blob, job.result.filename);
+      if (!job?.result) return;
+      const stem = job.file.name.replace(/\.[^.]+$/, '');
+      void downloadResult(job.result.files, `${stem}.zip`);
     },
     [jobs],
   );
 
   const onDownloadAll = useCallback(() => {
-    void downloadAll(jobs.flatMap((job) => (job.result ? [job.result] : [])));
+    const files = jobs.flatMap((job) => job.result?.files ?? []);
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      downloadBlob(files[0]!.blob, files[0]!.filename);
+      return;
+    }
+    void zipFiles(files).then((blob) => downloadBlob(blob, 'kiln.zip'));
   }, [jobs]);
 
   return (
@@ -80,10 +111,14 @@ export default function Home() {
           </DropZone>
         </div>
 
-        {notice && (
-          <p role="status" className="mt-4 max-w-prose text-body text-secondary">
-            {notice}
-          </p>
+        {notices.length > 0 && (
+          <ul role="status" className="mt-4 max-w-prose space-y-1">
+            {notices.map((notice) => (
+              <li key={notice} className="text-body text-secondary">
+                {notice}
+              </li>
+            ))}
+          </ul>
         )}
 
         <JobList

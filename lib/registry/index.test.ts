@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORMATS, converters, find, targetsFor } from './index';
+import { FORMATS, converters, find, targetsFor, unsupported } from './index';
 import type { Format } from './types';
 
 describe('the registry table', () => {
@@ -25,21 +25,42 @@ describe('the registry table', () => {
     }
   });
 
-  it('loads stub engines that report they are not implemented', async () => {
-    const converter = find('md', 'txt');
-    const convert = await converter!.load();
-    const file = new File(['# hi'], 'notes.md', { type: 'text/markdown' });
-    await expect(async () => convert(file)).rejects.toThrow('Not implemented');
+  it('loads a real engine for every declared pair', async () => {
+    for (const converter of converters) {
+      const convert = await converter.load();
+      expect(
+        typeof convert,
+        `${converter.from} → ${converter.to} did not load a function`,
+      ).toBe('function');
+    }
+  });
+
+  it('never declares a pair that is also on the unsupported list', () => {
+    for (const pair of unsupported) {
+      expect(
+        find(pair.from, pair.to),
+        `${pair.from} → ${pair.to} is both supported and unsupported`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('gives every unsupported pair a reason', () => {
+    for (const pair of unsupported) {
+      expect(pair.reason.length, `${pair.from} → ${pair.to}`).toBeGreaterThan(20);
+    }
   });
 });
 
 describe('targetsFor', () => {
   it('lists the targets declared for a source format', () => {
-    expect(targetsFor('docx')).toEqual(['pdf', 'md', 'txt']);
-    expect(targetsFor('md')).toEqual(['pdf', 'docx', 'txt']);
+    expect(targetsFor('docx')).toEqual(['pdf', 'md', 'txt', 'rtf']);
+    expect(targetsFor('md')).toEqual(['pdf', 'docx', 'pptx', 'txt']);
     expect(targetsFor('txt')).toEqual(['pdf', 'docx', 'md']);
     expect(targetsFor('rtf')).toEqual(['md', 'txt']);
     expect(targetsFor('pdf')).toEqual(['md', 'txt']);
+    expect(targetsFor('xlsx')).toEqual(['pdf', 'docx', 'csv', 'md', 'txt']);
+    expect(targetsFor('csv')).toEqual(['xlsx', 'md', 'txt']);
+    expect(targetsFor('pptx')).toEqual(['md', 'txt']);
   });
 
   it('returns targets in canonical order, not table order', () => {
@@ -80,5 +101,7 @@ describe('find', () => {
     expect(find('pdf', 'docx')).toBeUndefined();
     expect(find('md', 'rtf')).toBeUndefined();
     expect(find('txt', 'txt')).toBeUndefined();
+    expect(find('pptx', 'pdf')).toBeUndefined();
+    expect(find('xlsx', 'pptx')).toBeUndefined();
   });
 });

@@ -7,16 +7,17 @@
 #
 # GitHub Pages on a private repository also requires a paid plan; on the free
 # plan the repository has to be public for the site to be served.
+#
+# Every action here runs on node24. Node 20 was removed from the runners on
+# 16 September 2026, so a node20 action is a hard failure, not a warning.
 name: Deploy to GitHub Pages
 
 on:
   push:
-    # The scaffold branch is the default branch today. `main` is listed too so
-    # deploys keep running after a merge or a default-branch rename, instead of
-    # silently stopping with no failed run to notice.
     branches:
-      - claude/compassionate-lovelace-s20gwv
       - main
+      # The stage-1 scaffold branch, kept so work in flight on it still deploys.
+      - claude/compassionate-lovelace-s20gwv
   workflow_dispatch:
 
 permissions:
@@ -33,12 +34,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Reads the pnpm version from packageManager in package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -50,17 +51,39 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-      - run: pnpm build
+      - name: Build static export
+        run: pnpm build
         env:
-          # A project site lives at /<repo>. Derived so a rename cannot
-          # silently break every asset URL.
+          # A project site is served from /<repo>. Taken from GITHUB_REPOSITORY
+          # rather than the event payload so it is correct on every trigger,
+          # and so a rename cannot silently break every asset URL.
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
 
-      - uses: actions/configure-pages@v5
+      # The engines are only reachable through the registry's load(), so none of
+      # them may appear in the entry chunk. Fails the build if that regresses.
+      - name: Check bundle budget
+        run: pnpm check:bundle
 
-      - uses: actions/upload-pages-artifact@v3
+      # upload-pages-artifact excludes dotfiles unless told otherwise, and Pages
+      # ignores _next/ without .nojekyll — a combination that publishes a broken
+      # site while reporting success. Assert the file survived the build.
+      - name: Assert .nojekyll is in the export
+        run: |
+          if [ ! -f out/.nojekyll ]; then
+            echo "::error::out/.nojekyll is missing. GitHub Pages would ignore _next/ and serve a broken site."
+            exit 1
+          fi
+          echo "out/.nojekyll present"
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: out
+          # Without this, the action's tar step adds --exclude=.[^/]* and drops
+          # .nojekyll, so the assertion above would pass and the site would
+          # still break. Both halves are needed.
+          include-hidden-files: true
 
   deploy:
     needs: build
@@ -70,4 +93,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

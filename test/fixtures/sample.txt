@@ -1,0 +1,5 @@
+Kiln fixture marker 4711
+
+A second paragraph of plain text.
+
+And a third.

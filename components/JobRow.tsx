@@ -1,6 +1,7 @@
 'use client';
 
 import FormatPicker from '@/components/FormatPicker';
+import UnsupportedNote from '@/components/UnsupportedNote';
 import { baseName } from '@/lib/files/detect';
 import type { Job } from '@/lib/jobs/types';
 import { find, targetsFor, type Format } from '@/lib/registry';
@@ -24,7 +25,16 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
   const converter = find(job.from, job.to);
   const caveat =
     converter && converter.fidelity !== 'exact' ? converter.caveat : undefined;
-  const outputName = job.result?.filename ?? `${baseName(job.file.name)}.${job.to}`;
+
+  const files = job.result?.files ?? [];
+  const warnings = job.result?.warnings ?? [];
+  const outputName = files[0]?.filename ?? `${baseName(job.file.name)}.${job.to}`;
+
+  const downloadLabel = files.length > 1 ? `Download ${files.length}` : 'Download';
+  const downloadTitle =
+    files.length > 1
+      ? `Download ${files.length} files from ${job.file.name} as a zip`
+      : `Download ${outputName}`;
 
   return (
     <li className="kiln-row-enter border-b border-separator py-4 last:border-b-0">
@@ -66,10 +76,10 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
             <button
               type="button"
               onClick={onDownload}
-              aria-label={`Download ${outputName}`}
+              aria-label={downloadTitle}
               className="kiln-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
             >
-              Download
+              {downloadLabel}
             </button>
           )}
 
@@ -79,8 +89,17 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
         </span>
       </div>
 
+      {/* The extension lied. Say which one Kiln believed. */}
+      {job.detectedAs && (
+        <p className="mt-1 max-w-prose text-body text-secondary">
+          This file is named{' '}
+          <span className="font-mono text-[13px]">.{job.detectedAs}</span> but its
+          contents are {job.from.toUpperCase()}. Kiln went with the contents.
+        </p>
+      )}
+
       {job.state === 'queued' && targets.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-start gap-x-3 gap-y-1">
+        <div className="mt-2">
           <FormatPicker
             value={job.to}
             options={targets}
@@ -92,6 +111,18 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
 
       {job.state === 'queued' && caveat && (
         <p className="mt-2 max-w-prose text-body text-secondary">{caveat}</p>
+      )}
+
+      {job.state === 'queued' && <UnsupportedNote from={job.from} />}
+
+      {job.state === 'done' && warnings.length > 0 && (
+        <ul className="mt-2 max-w-prose space-y-1">
+          {warnings.map((warning) => (
+            <li key={warning} className="text-body text-secondary">
+              {warning}
+            </li>
+          ))}
+        </ul>
       )}
 
       {job.state === 'failed' && job.error && (

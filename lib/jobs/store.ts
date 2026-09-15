@@ -12,10 +12,18 @@ function nextId(): string {
   return `job-${counter}`;
 }
 
+export interface NewJob {
+  file: File;
+  from: Format;
+  to: Format;
+  /** Set when the bytes disagreed with the extension. */
+  detectedAs?: Format;
+}
+
 export interface JobsStore {
   jobs: Job[];
   /** Queues a file and returns the new job's id. */
-  addJob: (file: File, from: Format, to: Format) => string;
+  addJob: (job: NewJob) => string;
   /** Changes the chosen target while the job is still queued. */
   setTarget: (id: string, to: Format) => void;
   setState: (id: string, state: JobState) => void;
@@ -38,9 +46,9 @@ function patchJob(jobs: Job[], id: string, patch: Partial<Job>): Job[] {
 export const useJobs = create<JobsStore>((set) => ({
   jobs: [],
 
-  addJob: (file, from, to) => {
+  addJob: ({ file, from, to, detectedAs }) => {
     const id = nextId();
-    const job: Job = { id, file, from, to, state: 'queued' };
+    const job: Job = { id, file, from, to, state: 'queued', detectedAs };
     set((s) => ({ jobs: [...s.jobs, job] }));
     return id;
   },
@@ -54,7 +62,7 @@ export const useJobs = create<JobsStore>((set) => ({
 
   setState: (id, state) => set((s) => ({ jobs: patchJob(s.jobs, id, { state }) })),
 
-  setResult: (id: string, result: ConversionResult) =>
+  setResult: (id, result) =>
     set((s) => ({
       jobs: patchJob(s.jobs, id, { state: 'done', result, error: undefined }),
     })),

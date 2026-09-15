@@ -73,7 +73,7 @@ export default function DropZone({ onFiles, children }: DropZoneProps) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.docx,.md,.markdown,.txt,.text,.rtf"
+        accept=".pdf,.docx,.pptx,.xlsx,.csv,.tsv,.md,.markdown,.txt,.text,.rtf"
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"

@@ -43,12 +43,26 @@ pnpm dev        # http://localhost:3000
 Other scripts:
 
 ```bash
-pnpm build        # static export into out/
-pnpm test         # vitest
-pnpm lint         # eslint
-pnpm typecheck    # tsc --noEmit
-pnpm format       # prettier --write
+pnpm build           # worker bundle + static export into out/
+pnpm test            # vitest
+pnpm lint            # eslint
+pnpm typecheck       # tsc --noEmit
+pnpm format          # prettier --write
+
+pnpm fixtures        # regenerate the binary test fixtures
+pnpm check:bundle    # fail if the initial JS exceeds its budget
+pnpm analyze         # bundle analyzer
+pnpm verify:browser  # run every converter through the real UI in Chromium
 ```
+
+`pnpm verify:browser` is the one that matters most. It serves the built export
+the way a static host would — same MIME rules, same paths — then drops each
+fixture on the page, picks a target, clicks Convert and reads back what the
+browser actually downloaded. It also watches every network request while
+conversions run, so the promise on the front page is checked rather than
+asserted. Several bugs reached that script and nothing earlier: the worker
+shipping as uncompiled TypeScript, `Packer.toBuffer` asking for a Node buffer,
+mammoth's CommonJS interop. All of them passed the unit tests.
 
 `pnpm build` writes a static site to `out/`. Deploy that directory anywhere that
 serves files — there is no framework runtime to provision.
@@ -63,7 +77,7 @@ neither can be automated from the workflow:
 
 1. **Settings → Pages → Source** must be set to **GitHub Actions**. Letting
    `configure-pages` create the site instead (`enablement: true`) fails with
-   *Resource not accessible by integration* — that endpoint needs admin rights,
+   _Resource not accessible by integration_ — that endpoint needs admin rights,
    and a workflow's `GITHUB_TOKEN` does not have them.
 2. **The repository must be public**, unless the account is on a paid plan.
    GitHub does not serve Pages for private repositories on the free tier.
@@ -95,6 +109,17 @@ means adding one file and one entry, and touching no component.
 The contract lives in `lib/registry/types.ts`:
 
 ```ts
+export interface OutputFile {
+  blob: Blob;
+  filename: string;
+}
+
+export interface ConversionResult {
+  files: OutputFile[];
+  /** Populated when the engine had to discard something. Shown after conversion. */
+  warnings?: string[];
+}
+
 export interface Converter {
   from: Format;
   to: Format;
@@ -106,6 +131,10 @@ export interface Converter {
   load: () => Promise<(input: File) => Promise<ConversionResult>>;
 }
 ```
+
+A result carries a **list** of files because some conversions honestly produce
+more than one — a three-sheet workbook going to CSV is three CSVs, not one. When
+there is more than one, the row offers a single download that zips them.
 
 `lib/registry/index.ts` exposes three things:
 
@@ -130,18 +159,20 @@ function taking a `File` and returning a `Blob` plus the name to save it under.
 
 ```ts
 import type { ConversionResult } from '@/lib/registry/types';
-import { baseName } from '@/lib/files/detect';
+import { outputFile, readArrayBuffer } from '@/lib/registry/shared';
 
 export async function convert(input: File): Promise<ConversionResult> {
   // Import the heavy dependency here, inside the engine, not at module top
   // level of the registry — that is what keeps it out of the initial bundle.
   const { toRtf } = await import('some-docx-library');
 
-  const rtf = await toRtf(await input.arrayBuffer());
+  // readArrayBuffer rejects empty and oversized files with a sentence the
+  // interface can show, rather than letting the library fail obscurely.
+  const rtf = await toRtf(await readArrayBuffer(input));
 
   return {
-    blob: new Blob([rtf], { type: 'application/rtf' }),
-    filename: `${baseName(input.name)}.rtf`,
+    files: [outputFile(input.name, 'rtf', rtf)],
+    warnings: ['Images were not carried over.'],
   };
 }
 ```
@@ -179,28 +210,82 @@ import()` inside the engine.
 
 ## Support matrix
 
-Thirteen pairs, all stubs in this phase: `load` resolves to a function that
-throws `Not implemented`. The UI path around them is complete.
+Twenty-five pairs, all implemented and all verified in a real browser
+(`pnpm verify:browser`).
 
-| From | To   | Fidelity | What is lost                                |
-| ---- | ---- | -------- | ------------------------------------------- |
-| docx | md   | good     | Fonts, colours and page layout.             |
-| docx | txt  | good     | All formatting.                             |
-| docx | pdf  | lossy    | Exact pagination, headers and footers.      |
-| md   | docx | good     | Raw HTML blocks.                            |
-| md   | pdf  | good     | Your previewer's typography.                |
-| md   | txt  | exact    | Nothing.                                    |
-| txt  | md   | exact    | Nothing.                                    |
-| txt  | pdf  | good     | Line breaks rewrap to the page.             |
-| txt  | docx | good     | Nothing beyond paragraph structure.         |
-| rtf  | txt  | good     | All formatting.                             |
-| rtf  | md   | lossy    | Tables and images; structure is inferred.   |
-| pdf  | txt  | lossy    | Layout, images, tables. Scans have no text. |
-| pdf  | md   | lossy    | Structure is inferred from type size.       |
+### Text documents
 
-A blank cell in this matrix is deliberate: `pdf → docx` is absent because no
-client-side engine produces a result worth offering, and Kiln would rather not
-offer it than offer it badly.
+| From | To   | Fidelity | What is lost                                                                  |
+| ---- | ---- | -------- | ----------------------------------------------------------------------------- |
+| docx | md   | good     | Fonts, colours and page layout. Emphasis, links and lists survive.            |
+| docx | txt  | good     | All formatting.                                                               |
+| docx | pdf  | lossy    | Styles are approximated; pagination, headers and footers will not match Word. |
+| docx | rtf  | lossy    | Tables, images and precise spacing.                                           |
+| md   | docx | good     | Raw HTML blocks.                                                              |
+| md   | pdf  | good     | Your previewer's typography.                                                  |
+| md   | txt  | exact    | Nothing — only the markers that exist to be rendered.                         |
+| txt  | md   | exact    | Nothing; the bytes pass through.                                              |
+| txt  | docx | good     | Nothing beyond paragraph structure.                                           |
+| txt  | pdf  | good     | Line breaks rewrap to the page.                                               |
+| rtf  | txt  | good     | All formatting.                                                               |
+| rtf  | md   | lossy    | Structure is guessed from font size and weight.                               |
+| pdf  | txt  | lossy    | Layout, images, tables. A scan has no text at all.                            |
+| pdf  | md   | lossy    | Headings inferred from type size — genuinely unreliable.                      |
+
+### Spreadsheets
+
+| From | To   | Fidelity | What is lost                                                        |
+| ---- | ---- | -------- | ------------------------------------------------------------------- |
+| xlsx | csv  | exact    | One CSV per sheet; several sheets means several files.              |
+| xlsx | md   | good     | Formatting, formulas and merged cells.                              |
+| xlsx | txt  | good     | Everything but the values.                                          |
+| xlsx | pdf  | lossy    | Sheets wider than 12 columns are cut off; charts and formatting go. |
+| xlsx | docx | lossy    | Formulas, charts, images and cell formatting.                       |
+| csv  | xlsx | exact    | Nothing.                                                            |
+| csv  | md   | good     | Becomes a pipe table, first row as header.                          |
+| csv  | txt  | exact    | Nothing; the bytes pass through.                                    |
+
+### Slides
+
+| From | To   | Fidelity | What is lost                                              |
+| ---- | ---- | -------- | --------------------------------------------------------- |
+| pptx | txt  | lossy    | Everything visual. Slide text only.                       |
+| pptx | md   | lossy    | One `##` per slide, bullets beneath; notes become quotes. |
+| md   | pptx | good     | Images and tables. Each top-level heading starts a slide. |
+
+**Values, not formulas.** Reading a workbook exports what Excel last computed,
+so a cell holding `=SUM(C2:C3)` converts as `4000`. Kiln does not recalculate.
+
+**Warnings, not silence.** When an engine has to drop something — charts, images,
+pivot tables, a page with no text layer, a CSV that turned out to be
+semicolon-separated — it says so under the finished row instead of pretending
+the conversion was clean.
+
+## What Kiln will not do
+
+Seven pairs are deliberately absent. They are listed in
+`lib/registry/unsupported.ts` and shown in the interface, under a quiet link on
+any row whose format has missing targets.
+
+| From | To   | Why not                                                                           |
+| ---- | ---- | --------------------------------------------------------------------------------- |
+| pptx | pdf  | Rendering slides faithfully needs a full presentation engine.                     |
+| pptx | docx | No honest mapping from positioned slide elements to flowing prose.                |
+| pdf  | docx | A PDF records glyph positions, not paragraphs. Rebuilding structure is guesswork. |
+| pdf  | xlsx | Table detection in a PDF is inference. Wrong numbers are worse than none.         |
+| pdf  | pptx | Two unreliable steps stacked on each other.                                       |
+| xlsx | pptx | Deciding what deserves a slide is editorial, not mechanical.                      |
+| docx | pptx | Splitting prose into slides is a writing task.                                    |
+
+They all reduce to the same constraint: the output's value is its visual layout,
+and reconstructing that means shipping a rendering engine to the browser or
+sending the document to a server. The second is the one thing Kiln will not do,
+and the first is too large to be honest about.
+
+This is not hedging. The constraint that makes Kiln private is the same
+constraint that limits it, and a product that hides the second half while
+advertising the first is not telling the truth. So the limits are in the
+interface, with reasons, and there is no waitlist.
 
 ## How the app is put together
 
@@ -224,9 +309,27 @@ lib/
 Jobs hold real `File` handles, which cannot be serialised meaningfully; a refresh
 clears the page and the files with it. That is the intended behaviour.
 
-**Conversions run one at a time**, serialised through a promise chain in
-`lib/jobs/runner.ts`. Engines do real work on the main thread, so running several
-at once would make the page stutter.
+**Conversions run in a Web Worker**, one at a time, serialised through a promise
+chain in `lib/jobs/runner.ts`. The page stays interactive while a large file is
+being chewed on — measured at ~4ms frame latency mid-conversion. A conversion
+that has not finished in 60 seconds is treated as wedged: the worker is
+terminated, that job fails with an explanation, and a fresh worker is built so
+later jobs still run.
+
+**The worker is built separately**, by `scripts/build-worker.mjs`, into
+`public/kiln-worker/`. This is not a stylistic choice. Next's bundler does not
+compile `new Worker(new URL('./x.ts', import.meta.url))` for the client build —
+it copies the TypeScript source into the output as a static asset, so the
+deployed page fetches raw TypeScript, is handed a non-JavaScript MIME type by
+the host, and fails every conversion. Dev, tests and `pnpm build` all stayed
+green while that was true. esbuild bundles it explicitly instead, with
+`splitting: true` so the engines remain separate chunks fetched on demand.
+
+**Detection reads bytes, not names.** `docx`, `xlsx` and `pptx` are all ZIP
+archives, so an extension check cannot tell them apart and mislabelled files are
+common. `lib/files/detect.ts` reads the leading bytes, and for OOXML opens the
+archive and reads `[Content_Types].xml`. When the name and the contents
+disagree, the contents win and the row says so.
 
 **Design tokens** are CSS variables in `app/globals.css`, exposed to Tailwind
 through `@theme inline` so they follow the live theme. There are no hardcoded

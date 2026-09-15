@@ -26,6 +26,10 @@ export default function JobList({
   if (jobs.length === 0) return null;
 
   const completed = jobs.filter((job) => job.state === 'done');
+  const fileCount = completed.reduce(
+    (total, job) => total + (job.result?.files.length ?? 0),
+    0,
+  );
 
   return (
     <section aria-label="Conversions" className="mt-10">
@@ -43,7 +47,10 @@ export default function JobList({
 
       {completed.length >= 2 && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-separator pt-4 text-body">
-          <span className="text-secondary">{completed.length} documents</span>
+          <span className="text-secondary">
+            {completed.length} documents
+            {fileCount > completed.length && ` · ${fileCount} files`}
+          </span>
           <button
             type="button"
             onClick={onDownloadAll}

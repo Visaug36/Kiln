@@ -1,5 +1,5 @@
 /** Every document format Kiln knows how to read or write. */
-export type Format = 'pdf' | 'docx' | 'md' | 'txt' | 'rtf';
+export type Format = 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'csv' | 'md' | 'txt' | 'rtf';
 
 /**
  * How much of the source survives the trip.
@@ -9,9 +9,15 @@ export type Format = 'pdf' | 'docx' | 'md' | 'txt' | 'rtf';
  */
 export type Fidelity = 'exact' | 'good' | 'lossy';
 
-export interface ConversionResult {
+export interface OutputFile {
   blob: Blob;
   filename: string;
+}
+
+export interface ConversionResult {
+  files: OutputFile[];
+  /** Populated when the engine had to discard something. Shown after conversion. */
+  warnings?: string[];
 }
 
 /** The function an engine module hands back once it has loaded. */

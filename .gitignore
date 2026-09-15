@@ -8,6 +8,9 @@ node_modules/
 out/
 next-env.d.ts
 
+# built by scripts/build-worker.mjs on every build
+public/kiln-worker/
+
 # testing
 coverage/
 

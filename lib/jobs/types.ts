@@ -10,4 +10,6 @@ export interface Job {
   state: JobState;
   result?: ConversionResult;
   error?: string;
+  /** Set when the extension claimed one format and the bytes said another. */
+  detectedAs?: Format;
 }
