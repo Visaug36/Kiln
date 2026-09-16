@@ -1,3 +1,4 @@
+import { MAX_LIST_DEPTH, listCounter } from './_md';
 import type { Block } from './_md';
 import type { Row } from './_sheet';
 
@@ -18,20 +19,11 @@ export interface PdfContentResult {
 export function blocksToPdfContent(blocks: Block[]): PdfContentResult {
   const content: Record<string, unknown>[] = [];
   let clipped = false;
-  let pendingList: { ordered: boolean; items: string[] } | null = null;
-
-  const flushList = () => {
-    if (!pendingList) return;
-    content.push(
-      pendingList.ordered
-        ? { ol: pendingList.items, margin: [0, 0, 0, 8] }
-        : { ul: pendingList.items, margin: [0, 0, 0, 8] },
-    );
-    pendingList = null;
-  };
+  let nextOrdinal = listCounter();
 
   for (const block of blocks) {
-    if (block.kind !== 'bullet') flushList();
+    // A list ends where a block of any other kind begins.
+    if (block.kind !== 'bullet') nextOrdinal = listCounter();
 
     switch (block.kind) {
       case 'heading':
@@ -41,13 +33,19 @@ export function blocksToPdfContent(blocks: Block[]): PdfContentResult {
         });
         break;
 
-      case 'bullet':
-        if (!pendingList || pendingList.ordered !== block.ordered) {
-          flushList();
-          pendingList = { ordered: block.ordered, items: [] };
-        }
-        pendingList.items.push(block.text);
+      case 'bullet': {
+        // pdfmake's own `ul`/`ol` need a nested tree, which a flat block list
+        // cannot give it — and its numbering would restart per node anyway.
+        // The marker is drawn as text instead, so depth and numbering are
+        // exactly what the shared counter says.
+        const level = Math.min(block.depth, MAX_LIST_DEPTH);
+        const ordinal = nextOrdinal(block);
+        content.push({
+          text: `${block.ordered ? `${ordinal}.` : '•'}\u00a0\u00a0${block.text}`,
+          margin: [14 + level * 16, 0, 0, 3],
+        });
         break;
+      }
 
       case 'code':
         content.push({
@@ -90,7 +88,6 @@ export function blocksToPdfContent(blocks: Block[]): PdfContentResult {
     }
   }
 
-  flushList();
   return { content, warnings: clipped ? [clippedWarning()] : [] };
 }
 

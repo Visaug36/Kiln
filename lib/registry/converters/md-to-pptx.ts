@@ -1,10 +1,16 @@
 import type { ConversionResult } from '../types';
 import { MIME, fail, outputFile, readText } from '../shared';
-import { parseMarkdown, type Block } from './_md';
+import { MAX_LIST_DEPTH, parseMarkdown, type Block } from './_md';
+
+interface Line {
+  text: string;
+  /** Nesting level, so a sub-point sits under its parent rather than beside it. */
+  depth: number;
+}
 
 interface Deck {
   title: string;
-  bullets: string[];
+  bullets: Line[];
 }
 
 /** Splits the block list into slides, one per top-level heading. */
@@ -26,18 +32,24 @@ function toSlides(blocks: Block[]): Deck[] {
 
     switch (block.kind) {
       case 'heading':
-        current!.bullets.push(block.text);
+        current!.bullets.push({ text: block.text, depth: 0 });
         break;
       case 'bullet':
+        current!.bullets.push({ text: block.text, depth: block.depth });
+        break;
       case 'paragraph':
       case 'quote':
-        current!.bullets.push(block.text);
+        current!.bullets.push({ text: block.text, depth: 0 });
         break;
       case 'code':
-        current!.bullets.push(...block.text.split('\n').filter(Boolean));
+        for (const line of block.text.split('\n').filter(Boolean)) {
+          current!.bullets.push({ text: line, depth: 0 });
+        }
         break;
       case 'table':
-        for (const row of block.rows) current!.bullets.push(row.join(' — '));
+        for (const row of block.rows) {
+          current!.bullets.push({ text: row.join(' — '), depth: 0 });
+        }
         break;
       default:
         break;
@@ -76,9 +88,13 @@ export async function convert(input: File): Promise<ConversionResult> {
 
     if (slide.bullets.length > 0) {
       page.addText(
-        slide.bullets.map((text) => ({
+        slide.bullets.map(({ text, depth }) => ({
           text,
-          options: { bullet: true, breakLine: true },
+          options: {
+            bullet: true,
+            breakLine: true,
+            indentLevel: Math.min(depth, MAX_LIST_DEPTH),
+          },
         })),
         {
           x: 0.5,

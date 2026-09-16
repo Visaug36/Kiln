@@ -7,6 +7,12 @@ export async function convert(input: File): Promise<ConversionResult> {
   const XLSX = interop(await import('@e965/xlsx'));
 
   const sheet = XLSX.utils.aoa_to_sheet(rows);
+  // The sheet holds the values now. Dropping the source array keeps one copy
+  // of a large spreadsheet alive instead of two while SheetJS writes, which is
+  // the one part of this conversion's memory Kiln controls — the rest is the
+  // workbook XML the writer builds in full before it zips anything.
+  rows.length = 0;
+
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, 'Sheet1');
 

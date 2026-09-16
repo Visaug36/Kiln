@@ -6,11 +6,11 @@ import { pdfDocument, renderPdf, requireContent } from './_pdf';
 
 export async function convert(input: File): Promise<ConversionResult> {
   const { html, warnings } = await readDocx(input);
-  const blocks = htmlToBlocks(html);
+  const { blocks, warnings: dropped } = htmlToBlocks(html);
   const { content, warnings: clipping } = blocksToPdfContent(blocks);
 
   const render = await renderPdf(pdfDocument(requireContent(content, 'text')));
-  const notes = [...warnings, ...clipping, ...render.warnings];
+  const notes = [...warnings, ...dropped, ...clipping, ...render.warnings];
 
   return {
     files: [outputFile(input.name, 'pdf', render.bytes)],

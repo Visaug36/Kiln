@@ -279,22 +279,22 @@ Twenty-five pairs, all implemented and all verified in a real browser
 
 ### Text documents
 
-| From | To   | Fidelity | What is lost                                                                  |
-| ---- | ---- | -------- | ----------------------------------------------------------------------------- |
-| docx | md   | good     | Fonts, colours and page layout. Emphasis, links and lists survive.            |
-| docx | txt  | good     | All formatting.                                                               |
-| docx | pdf  | lossy    | Styles are approximated; pagination, headers and footers will not match Word. |
-| docx | rtf  | lossy    | Tables, images and precise spacing.                                           |
-| md   | docx | good     | Raw HTML blocks.                                                              |
-| md   | pdf  | good     | Your previewer's typography.                                                  |
-| md   | txt  | exact    | Nothing — only the markers that exist to be rendered.                         |
-| txt  | md   | exact    | Nothing; the bytes pass through.                                              |
-| txt  | docx | good     | Nothing beyond paragraph structure.                                           |
-| txt  | pdf  | good     | Line breaks rewrap to the page.                                               |
-| rtf  | txt  | good     | All formatting.                                                               |
-| rtf  | md   | lossy    | Structure is guessed from font size and weight.                               |
-| pdf  | txt  | lossy    | Layout, images, tables. A scan has no text at all.                            |
-| pdf  | md   | lossy    | Headings inferred from type size — genuinely unreliable.                      |
+| From | To   | Fidelity | What is lost                                                                   |
+| ---- | ---- | -------- | ------------------------------------------------------------------------------ |
+| docx | md   | good     | Fonts, colours and page layout. Emphasis, links and lists survive.             |
+| docx | txt  | good     | All formatting.                                                                |
+| docx | pdf  | lossy    | Styles are approximated; pagination, headers and footers will not match Word.  |
+| docx | rtf  | lossy    | Tables, images and precise spacing.                                            |
+| md   | docx | good     | Raw HTML blocks.                                                               |
+| md   | pdf  | good     | Your previewer's typography.                                                   |
+| md   | txt  | exact    | Nothing — only the markers that exist to be rendered.                          |
+| txt  | md   | exact    | Nothing; the bytes pass through.                                               |
+| txt  | docx | good     | Nothing beyond paragraph structure.                                            |
+| txt  | pdf  | good     | Line breaks rewrap to the page.                                                |
+| rtf  | txt  | good     | All formatting.                                                                |
+| rtf  | md   | lossy    | Heading levels ranked by font size; a large pull quote reads as a heading.     |
+| pdf  | txt  | lossy    | Layout, images, tables. A scan has no text at all.                             |
+| pdf  | md   | lossy    | Headings ranked by type size, paragraphs split on line spacing. Both inferred. |
 
 ### Spreadsheets
 
@@ -328,36 +328,58 @@ clean.
 
 ### Which scripts survive a PDF
 
-PDF output embeds pdfmake's Roboto: **Latin, Latin Extended, Greek and Cyrillic**,
-927 code points across four styles. Everything else — Chinese, Japanese, Korean,
-Arabic, Hebrew, Indic scripts, emoji — Kiln cannot draw. It does not pretend to:
-those characters are replaced with `U+FFFD`, named in `warnings`, and a document
-with nothing else in it is refused with a note that Markdown and plain text keep
-every character.
+PDF output embeds pdfmake's Roboto: **Latin, Latin Extended-A, the whole
+Vietnamese block, Greek and Cyrillic** — 927 code points, listed exactly in
+`lib/registry/converters/_pdf.ts` and read out of the font rather than guessed
+from the Unicode blocks it looks like it covers.
+
+When a document contains **Chinese or Japanese**, Kiln fetches a Noto face from
+its own origin and uses it for those characters only, so a document mixing
+Japanese with Greek and Cyrillic keeps all three — a CJK face has no Greek or
+Cyrillic, and Roboto has no CJK, so the text is split into runs per font rather
+than the document being switched wholesale to one of them.
+
+Everything else — Korean, Arabic, Hebrew, Indic scripts, emoji, and the
+dot-below letters Yoruba and Sanskrit transliteration use — Kiln cannot draw. It
+does not pretend to: those characters are replaced with `U+FFFD`, named in
+`warnings`, and a document with nothing else in it is refused with a note that
+Markdown and plain text keep every character.
 
 This replaced the base-14 Helvetica, which is never embedded and is addressed
-through a single-byte encoding roughly the size of Latin-1. Anything above U+00FF
-had no glyph to reach, so `Καλημέρα` was written as `9£±;³·;Ã-<` and the
-conversion reported success. `docs/pdf-scripts/` has the two renders side by side.
+through a single-byte encoding roughly the size of Latin-1. Anything above
+U+00FF had no glyph to reach, so `Καλημέρα` was written as `9£±;³·;Ã-<` and the
+conversion reported success. `docs/pdf-scripts/` has the two renders side by
+side.
 
-It costs 855 KB raw / 469 KB gzipped, against Helvetica's 300 KB / 54 KB. That
-lands in its own chunk, fetched once per session and only when a PDF conversion
-actually runs — the entry chunk is unchanged.
+Roboto costs 855 KB raw / 469 KB gzipped, in its own chunk, fetched once per
+session and only when a PDF conversion runs — the entry chunk is unchanged. The
+CJK faces are 2.25 MB and 2.4 MB and are fetched only by a document that
+contains that script; see `public/fonts/README.md` for why they are TTF rather
+than the half-the-size woff2, and why there are two of them rather than one
+pan-CJK face.
 
-CJK and right-to-left are not oversights. A CJK font is several megabytes even
-subset, and Arabic and Hebrew need bidirectional ordering and, for Arabic,
-contextual letter shaping — neither of which is a font swap. They are listed here
-rather than half-done.
+**Right-to-left is not an oversight.** fontkit can shape Arabic, but nothing in
+the stack implements the Unicode bidirectional algorithm, so a mixed paragraph
+would come out in the wrong visual order — and a bidi bug looks correct to
+anyone who does not read the script. It stays a refusal until someone who reads
+it can check the result.
 
 ### Files too large for the browser
 
 Every conversion happens in memory, so a large enough file can exhaust the tab.
 On iOS this is not an error you can catch: the operating system kills the tab and
 the page disappears. `lib/files/capacity.ts` estimates the working memory a
-conversion needs, from a per-format multiplier measured by sampling the heap
-during real conversions, and compares it against what the browser will admit to
-having — `performance.memory` where Chromium exposes it, `navigator.deviceMemory`
+conversion needs and compares it against what the browser will admit to having —
+`performance.memory` where Chromium exposes it, `navigator.deviceMemory`
 otherwise, and a conservative constant on iOS, which exposes neither.
+
+The multiplier is **per pair**, measured by sampling the heap through real
+conversions. Keyed on the source format it carried the worst target's figure, so
+`md → txt` was judged by `md → pdf`'s ×145 and warned about files it handles in a
+few megabytes. The two heaviest are `csv → xlsx` at ×227 and `xlsx → docx` at
+×181; both are the shape of the library underneath — SheetJS materialises the
+whole workbook XML before it zips anything, and there is no streaming write in
+the build Kiln ships — rather than a mistake to fix.
 
 For DOCX, XLSX and PPTX the multiplier is applied to the **unpacked** size, which
 the detection step reads out of the zip headers while identifying the file.

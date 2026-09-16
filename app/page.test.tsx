@@ -105,7 +105,7 @@ describe('dropping a file', () => {
     await dropFiles(container, [fixture('sample.pdf')]);
 
     expect(
-      await screen.findByText(/Headings are inferred from type size/),
+      await screen.findByText(/Headings are ranked by type size/),
     ).toBeInTheDocument();
   });
 

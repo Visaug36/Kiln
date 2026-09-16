@@ -4,11 +4,34 @@ import type { Row } from './_sheet';
 export type Block =
   | { kind: 'heading'; level: number; text: string }
   | { kind: 'paragraph'; text: string }
-  | { kind: 'bullet'; text: string; ordered: boolean }
+  | { kind: 'bullet'; text: string; ordered: boolean; depth: number }
   | { kind: 'code'; text: string }
   | { kind: 'quote'; text: string }
   | { kind: 'table'; rows: Row[] }
   | { kind: 'rule' };
+
+/** How deep a list may be indented before further nesting stops helping. */
+export const MAX_LIST_DEPTH = 5;
+
+/**
+ * Numbers ordered list items per level.
+ *
+ * `1. one` / `1. one-a` / `2. two` has to come back as 1, 1, 2 — the parent's
+ * count resumes after the nested list ends rather than running straight
+ * through it, which is what flattening used to produce. Every writer shares
+ * this so they cannot number the same document differently.
+ */
+export function listCounter(): (block: { ordered: boolean; depth: number }) => number {
+  const counts: number[] = [];
+
+  return ({ ordered, depth }) => {
+    // Coming back out of a nested list ends it: the deeper counts restart.
+    counts.length = Math.min(counts.length, depth + 1);
+    if (!ordered) return 0;
+    counts[depth] = (counts[depth] ?? 0) + 1;
+    return counts[depth]!;
+  };
+}
 
 type Token = {
   type: string;
@@ -36,7 +59,7 @@ export async function parseMarkdown(source: string): Promise<Block[]> {
   const tokens = marked.lexer(source) as Token[];
   const blocks: Block[] = [];
 
-  const walk = (list: Token[]) => {
+  const walk = (list: Token[], depth = 0) => {
     for (const token of list) {
       switch (token.type) {
         case 'heading':
@@ -74,11 +97,11 @@ export async function parseMarkdown(source: string): Promise<Block[]> {
             blocks.push({
               kind: 'bullet',
               ordered: Boolean(token.ordered),
+              depth,
               text: stripInline(own),
             });
 
-            // Flattened, like every other nesting Kiln reads: Block has no depth.
-            walk(nested);
+            walk(nested, depth + 1);
           }
           break;
 
@@ -110,7 +133,7 @@ export async function parseMarkdown(source: string): Promise<Block[]> {
           break;
 
         default:
-          if (token.tokens) walk(token.tokens);
+          if (token.tokens) walk(token.tokens, depth);
           break;
       }
     }

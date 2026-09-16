@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { MARKER, bytesOf, fixture, textOf } from '@/test/fixtures';
+import { fontRequests } from '@/test/setup';
 import { converters, type Format } from '../index';
 import { engineFor } from '../engines';
 import { MIME } from '../shared';
@@ -301,15 +302,15 @@ describe('slide notes', () => {
   });
 });
 
-describe('scripts in PDF output', () => {
-  /** The text layer of a PDF, as one string. */
-  async function pdfText(blob: Blob): Promise<string> {
-    const { readPdf } = await import('./_pdfread');
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    const { lines } = await readPdf(new File([bytes], 'read.pdf'));
-    return lines.map((line) => line.text).join('\n');
-  }
+/** The text layer of a PDF, as one string. */
+async function pdfText(blob: Blob): Promise<string> {
+  const { readPdf } = await import('./_pdfread');
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const { lines } = await readPdf(new File([bytes], 'read.pdf'));
+  return lines.map((line) => line.text).join('\n');
+}
 
+describe('scripts in PDF output', () => {
   it('carries Greek and Cyrillic through unharmed', async () => {
     // With the base-14 Helvetica these came back as "9£±;³·;Ã-<": the glyphs
     // were never embedded, and everything above U+00FF was written as raw
@@ -333,36 +334,57 @@ describe('scripts in PDF output', () => {
     expect(result.warnings).toBeUndefined();
   });
 
+  it('draws Vietnamese, which lives in a block that is easy to miss', async () => {
+    // Every Vietnamese tone mark is in Latin Extended Additional, and Roboto
+    // carries that block in full — U+1EA0 to U+1EF9, all ninety of them. A
+    // document in Vietnamese must convert with no warning at all.
+    const source = 'Tôi có thể ăn thủy tinh mà không hại gì. Ừ, ữ, ự, ở, ợ, đ.';
+    const convert = await engineFor('txt', 'pdf')!();
+    const result = await convert(new File([source], 'vi.txt'));
+
+    expect(await pdfText(result.files[0]!.blob)).toContain(source);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('names the gaps inside Latin Extended Additional rather than calling them unusual', async () => {
+    // The rest of that block — the dot-below and macron-below letters Yoruba
+    // and Sanskrit transliteration use — is only partly there.
+    const convert = await engineFor('txt', 'pdf')!();
+    const result = await convert(new File(['Yoruba ṣe and Sanskrit ṛṣi'], 'y.txt'));
+
+    expect(result.warnings?.join(' ')).toMatch(/Latin letters with less common accents/);
+  });
+
   it('names what it could not draw instead of inventing glyphs', async () => {
     const convert = await engineFor('txt', 'pdf')!();
     const result = await convert(
-      new File(['Quarterly report\n\nsales in 日本語 and مرحبا'], 'mixed.txt'),
+      new File(['Quarterly report\n\ngreetings in مرحبا and 한국어'], 'mixed.txt'),
     );
 
     const notes = result.warnings?.join(' ') ?? '';
     expect(notes).toMatch(/Arabic/);
-    expect(notes).toMatch(/Chinese, Japanese or Korean/);
+    expect(notes).toMatch(/Korean/);
     expect(notes).toMatch(/replaced/);
     // What it does not do is emit something that looks like text.
     const text = await pdfText(result.files[0]!.blob);
     expect(text).toContain('Quarterly report');
-    expect(text).not.toContain('日本語');
+    expect(text).not.toContain('한국어');
   });
 
   it('refuses a document it could only render as replacement characters', async () => {
     const convert = await engineFor('txt', 'pdf')!();
 
     await expect(
-      convert(new File(['日本語のテキストです'], 'all-cjk.txt')),
-    ).rejects.toThrow(/Chinese, Japanese or Korean[\s\S]*Markdown or plain text/);
+      convert(new File(['한국어 텍스트입니다'], 'all-korean.txt')),
+    ).rejects.toThrow(/Korean[\s\S]*Markdown or plain text/);
   });
 
   it('counts only the document, not pdfmake’s own configuration', async () => {
     // The style names and font family in the document definition are Latin. If
-    // they counted as content, a page of Japanese would never look unrenderable.
+    // they counted as content, a page of Korean would never look unrenderable.
     const convert = await engineFor('md', 'pdf')!();
 
-    await expect(convert(new File(['中文文件'], 'cjk.md'))).rejects.toThrow(
+    await expect(convert(new File(['한국어입니다'], 'ko.md'))).rejects.toThrow(
       /cannot draw/,
     );
   });
@@ -497,5 +519,110 @@ describe('pictures in a Word document', () => {
       const convert = await engineFor('docx', to)!();
       await expect(convert(await withImage(''))).rejects.toThrow(/no text in it/i);
     }
+  });
+});
+
+describe('CJK in PDF output', () => {
+  beforeEach(async () => {
+    // Each test decides for itself whether a face gets fetched.
+    (await import('./_cjk')).resetFaces();
+  });
+
+  it('draws Japanese rather than refusing it', async () => {
+    // Before there was a face to load, this document was refused outright: the
+    // person whose document is in Japanese got a sentence and no file.
+    const source = '日本語のテキストです。ひらがな、カタカナ、漢字。';
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(new File([source], 'jp.md'));
+
+    expect(await pdfText(result.files[0]!.blob)).toContain(source);
+    expect(result.warnings).toBeUndefined();
+    expect(fontRequests).toEqual(['NotoSansJP.ttf']);
+  });
+
+  it('draws Simplified Chinese, and asks for the other face', async () => {
+    const source = '这是简体中文文本。';
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(new File([source], 'sc.md'));
+
+    expect(await pdfText(result.files[0]!.blob)).toContain(source);
+    expect(fontRequests).toEqual(['NotoSansSC.ttf']);
+  });
+
+  it('keeps Latin, Greek and Cyrillic beside the CJK', async () => {
+    // A CJK face carries Latin but no Greek or Cyrillic, and Roboto carries
+    // those but no CJK. Switching the whole document to one font would lose
+    // whatever the other one had, so the text is split into runs per font.
+    const source = '日本語 and Καλημέρα and Здравствуй and Łódź';
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(new File([source], 'mixed.md'));
+
+    expect(await pdfText(result.files[0]!.blob)).toContain(source);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('fetches nothing at all for a document with no CJK in it', async () => {
+    const convert = await engineFor('md', 'pdf')!();
+    await convert(new File(['Just English, and Καλημέρα.'], 'plain.md'));
+
+    expect(fontRequests, 'a Latin document paid for a 2 MB font').toEqual([]);
+  });
+
+  it('asks for one face per session, not per conversion', async () => {
+    const convert = await engineFor('md', 'pdf')!();
+    await convert(new File(['ひらがな'], 'a.md'));
+    await convert(new File(['もっとひらがな'], 'b.md'));
+
+    expect(fontRequests).toEqual(['NotoSansJP.ttf']);
+  });
+
+  it('falls back to the Chinese face for Han with no kana to go on', async () => {
+    // 日本語 is three kanji and no kana, so nothing in it says Japanese. Both
+    // faces carry the shared Han characters, so it renders either way — but
+    // the glyph shapes are the Chinese ones. Recorded rather than guessed at.
+    const convert = await engineFor('md', 'pdf')!();
+    const result = await convert(new File(['日本語'], 'ambiguous.md'));
+
+    expect(fontRequests).toEqual(['NotoSansSC.ttf']);
+    expect(await pdfText(result.files[0]!.blob)).toContain('日本語');
+  });
+
+  it('still refuses Korean, and says Korean', async () => {
+    // Neither face carries a single hangul syllable, so this is honest — and
+    // it must not claim Kiln cannot draw Chinese or Japanese any more.
+    const convert = await engineFor('md', 'pdf')!();
+
+    await expect(convert(new File(['한국어 텍스트입니다'], 'ko.md'))).rejects.toThrow(
+      /written in Korean, which Kiln cannot draw/,
+    );
+  });
+});
+
+describe('choosing a CJK face', () => {
+  it('reads coverage out of the font rather than a table that could drift', async () => {
+    const { readCmap } = await import('./_cjk');
+    const { readFileSync } = await import('node:fs');
+    const bytes = readFileSync('public/fonts/NotoSansJP.ttf');
+    const covers = readCmap(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    );
+
+    for (const character of '日本語のテキストABC') {
+      expect(covers.has(character.codePointAt(0)!), character).toBe(true);
+    }
+    // And it is a real subset, not "everything".
+    expect(covers.has('한'.codePointAt(0)!)).toBe(false);
+    expect(covers.has('Κ'.codePointAt(0)!)).toBe(false);
+  });
+
+  it('picks Japanese only when there is kana', async () => {
+    const { variantFor } = await import('./_cjk');
+    const points = (text: string) => [...text].map((c) => c.codePointAt(0)!);
+
+    expect(variantFor(points('ひらがな漢字'))).toBe('jp');
+    expect(variantFor(points('カタカナ'))).toBe('jp');
+    expect(variantFor(points('简体中文'))).toBe('sc');
+    expect(variantFor(points('漢字だけ'))).toBe('jp');
+    expect(variantFor(points('中文文本'))).toBe('sc');
   });
 });

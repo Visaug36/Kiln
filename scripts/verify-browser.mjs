@@ -13,7 +13,7 @@
  * asserted.
  */
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -34,6 +34,7 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.ttf': 'font/ttf',
   // The trap: a host has no reason to think .ts is JavaScript.
   '.ts': 'video/mp2t',
 };
@@ -109,11 +110,13 @@ const page = await context.newPage();
 const consoleErrors = [];
 const offOrigin = [];
 const uploads = [];
+const fontFetches = [];
 
 page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
 page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
 page.on('request', (request) => {
   const url = request.url();
+  if (url.endsWith('.ttf')) fontFetches.push(url.replace(base, ''));
   if (!url.startsWith(base) && !url.startsWith('data:') && !url.startsWith('blob:')) {
     offOrigin.push(`${request.method()} ${url}`);
   }
@@ -215,6 +218,54 @@ for (const [fixtureName, targets] of PAIRS) {
       `${outcome.ok ? 'ok  ' : 'FAIL'} ${outcome.pair.padEnd(16)} ${String(outcome.bytes).padStart(8)} B  ${String(outcome.ms).padStart(6)} ms  ${outcome.file} ${outcome.note}`,
     );
   }
+}
+
+// --- CJK, where the font is fetched at conversion time ---------------------
+//
+// The worker resolves the face against its own URL. Node tests stub `fetch`,
+// so this is the only thing that proves the path is right in a browser — the
+// same blind spot that once let the worker ship as uncompiled TypeScript.
+{
+  const cjkSource = join(downloads, 'cjk.md');
+  writeFileSync(
+    cjkSource,
+    '# 日本語の文書\n\n日本語のテキストです。Revenue 売上 rose.\n',
+  );
+
+  await page.goto(base, { waitUntil: 'networkidle' });
+  await page.setInputFiles('input[type=file]', cjkSource);
+  await page.getByRole('radiogroup').first().waitFor({ timeout: 15000 });
+  await page.getByRole('radio', { name: '.pdf', exact: true }).first().click();
+  await page
+    .getByRole('button', { name: /^Convert / })
+    .first()
+    .click();
+
+  let cjkNote = '';
+  try {
+    const button = page.getByRole('button', { name: /^Download/ }).first();
+    await button.waitFor({ timeout: 90000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30000 }),
+      button.click(),
+    ]);
+    const saved = join(downloads, 'cjk-out.pdf');
+    await download.saveAs(saved);
+    const size = readFileSync(saved).length;
+    // A PDF that embedded the whole face would be megabytes; a subset is small.
+    cjkNote =
+      size > 1000 && size < 400_000
+        ? `ok (${(size / 1024).toFixed(0)} KB)`
+        : `SUSPICIOUS size ${size}`;
+  } catch (error) {
+    cjkNote = `FAILED ${String(error).slice(0, 90)}`;
+    failures += 1;
+  }
+
+  const fetched =
+    fontFetches.length > 0 ? fontFetches.join(', ') : 'NONE — the face was never fetched';
+  console.log(`\nCJK → pdf: ${cjkNote}; font requested: ${fetched}`);
+  if (fontFetches.length === 0) failures += 1;
 }
 
 // --- The page must stay usable while a conversion runs ---------------------

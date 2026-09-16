@@ -36,15 +36,19 @@ Those tests already exist and they are the floor, not the check.
    The `**`-in-table-cells bug was one function ignoring its caller's argument,
    and it affected three pairs — the two it was reported on and one nobody
    noticed.
-5. **Promote every confirmed probe into a permanent regression test.**
+5. **Then check the sibling path, every time.** Kiln has two readers producing
+   the same block list and five writers consuming it. Three bugs so far were one
+   bug fixed in one implementation and left standing in its twin. The checklist
+   opens with the pairs to check and the assertion that pins them together.
+6. **Promote every confirmed probe into a permanent regression test.**
    `lib/registry/converters/helpers.test.ts` for a parsing rule,
    `converters.test.ts` for a whole pair, `lib/files/*.test.ts` for detection and
    capacity, `lib/jobs/runner.test.ts` for queue behaviour.
-6. **Prove the test would have caught it.** Revert the fix, watch the new test
+7. **Prove the test would have caught it.** Revert the fix, watch the new test
    fail, restore it. A regression test that passes against the broken code is
    worse than none — twice during the last audit a test passed for the wrong
    reason and had to be rewritten.
-7. Finish with `pnpm test` and `pnpm verify:browser`.
+8. Finish with `pnpm test` and `pnpm verify:browser`.
 
 ## What to probe
 

@@ -1,4 +1,5 @@
 import { fail } from '../shared';
+import { loadFace, variantFor, type LoadedFace } from './_cjk';
 
 /**
  * pdfmake with its bundled Roboto, embedded in the file.
@@ -93,6 +94,11 @@ function canDraw(code: number): boolean {
  * Deliberately coarse. `日本語` spans CJK Unified Ideographs and Hiragana, and a
  * warning naming both "Chinese or Japanese" and "Japanese" tells the reader
  * nothing they can act on — one label per writing system is the useful grain.
+ *
+ * Korean is separate from the other two because Kiln now draws Chinese and
+ * Japanese and does not draw Korean: neither face carries a single hangul
+ * syllable, so a Korean document is still refused, and the sentence has to say
+ * Korean rather than lumping it in with two scripts that work.
  */
 const SCRIPTS: [number, number, string][] = [
   [0x0590, 0x05ff, 'Hebrew'],
@@ -106,17 +112,22 @@ const SCRIPTS: [number, number, string][] = [
   [0x0e80, 0x0eff, 'Lao'],
   [0x1000, 0x109f, 'Burmese'],
   [0x10a0, 0x10ff, 'Georgian'],
-  [0x1100, 0x11ff, 'Chinese, Japanese or Korean'],
+  [0x1100, 0x11ff, 'Korean'],
   [0x1200, 0x137f, 'Ethiopic'],
   [0x1780, 0x17ff, 'Khmer'],
+  // Roboto has the Vietnamese block in full, but only part of the rest of
+  // Latin Extended Additional — the dot-below and macron-below letters used by
+  // Yoruba and by Sanskrit transliteration are missing.
+  [0x1e00, 0x1eff, 'Latin letters with less common accents'],
+  [0x1f00, 0x1fff, 'polytonic Greek'],
   [0x2600, 0x27bf, 'emoji'],
-  [0x2e80, 0x9fff, 'Chinese, Japanese or Korean'],
+  [0x2e80, 0x9fff, 'Chinese or Japanese'],
   [0xa000, 0xa4cf, 'Yi'],
-  [0xac00, 0xd7af, 'Chinese, Japanese or Korean'],
-  [0xf900, 0xfaff, 'Chinese, Japanese or Korean'],
+  [0xac00, 0xd7af, 'Korean'],
+  [0xf900, 0xfaff, 'Chinese or Japanese'],
   [0xfb50, 0xfdff, 'Arabic'],
   [0xfe70, 0xfeff, 'Arabic'],
-  [0xff00, 0xffef, 'Chinese, Japanese or Korean'],
+  [0xff00, 0xffef, 'Chinese or Japanese'],
   [0x1f000, 0x1faff, 'emoji'],
 ];
 
@@ -124,7 +135,7 @@ function scriptOf(code: number): string {
   for (const [start, end, name] of SCRIPTS) {
     if (code >= start && code <= end) return name;
   }
-  return 'Unusual';
+  return 'some rarer letters';
 }
 
 /** What replaces a character the font cannot draw. Roboto does have U+FFFD. */
@@ -134,27 +145,66 @@ interface Scan {
   kept: number;
   dropped: number;
   scripts: Set<string>;
+  /** CJK code points seen, so the right face can be chosen before the rewrite. */
+  cjk: number[];
 }
 
-function sanitizeText(text: string, scan: Scan): string {
-  let out = '';
+/** One stretch of text in one font. pdfmake takes an array of these as `text`. */
+interface Run {
+  text: string;
+  font?: string;
+}
+
+/** True for a character a CJK face would be expected to carry. */
+function isCjk(code: number): boolean {
+  return scriptOf(code) === 'Chinese or Japanese';
+}
+
+/**
+ * Splits a string into runs by the font each character needs.
+ *
+ * Returns a plain string when one font covers the whole thing, which is almost
+ * always, so the document stays simple. A CJK face carries Latin but not Greek,
+ * Cyrillic or Latin Extended, and Roboto carries those but no CJK — a document
+ * with both needs the two fonts side by side rather than a choice between them.
+ */
+function sanitizeText(text: string, scan: Scan, face?: LoadedFace): string | Run[] {
+  const runs: Run[] = [];
+
+  const push = (piece: string, font?: string) => {
+    const last = runs[runs.length - 1];
+    if (last && last.font === font) last.text += piece;
+    else runs.push({ text: piece, font });
+  };
+
   for (const character of text) {
     const code = character.codePointAt(0)!;
     const letter = /\p{L}/u.test(character);
 
     if (canDraw(code)) {
       if (letter) scan.kept += 1;
-      out += character;
+      push(character);
       continue;
     }
+
+    if (face && face.covers.has(code)) {
+      if (letter) scan.kept += 1;
+      push(character, face.font);
+      continue;
+    }
+
+    if (isCjk(code)) scan.cjk.push(code);
 
     if (letter || /\p{Emoji_Presentation}|\p{S}/u.test(character)) {
       scan.dropped += 1;
       scan.scripts.add(scriptOf(code));
     }
-    out += REPLACEMENT;
+    push(REPLACEMENT);
   }
-  return out;
+
+  if (runs.length === 0) return '';
+  if (runs.length === 1 && !runs[0]!.font) return runs[0]!.text;
+  return runs;
 }
 
 /**
@@ -165,13 +215,13 @@ function sanitizeText(text: string, scan: Scan): string {
  * converter cannot forget to ask — which is the only reason the four PDF pairs
  * are guaranteed to behave the same way.
  */
-function sanitizeTree(value: unknown, scan: Scan): unknown {
-  if (typeof value === 'string') return sanitizeText(value, scan);
-  if (Array.isArray(value)) return value.map((item) => sanitizeTree(item, scan));
+function sanitizeTree(value: unknown, scan: Scan, face?: LoadedFace): unknown {
+  if (typeof value === 'string') return sanitizeText(value, scan, face);
+  if (Array.isArray(value)) return value.map((item) => sanitizeTree(item, scan, face));
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [key, inner] of Object.entries(value)) {
-      out[key] = sanitizeTree(inner, scan);
+      out[key] = sanitizeTree(inner, scan, face);
     }
     return out;
   }
@@ -217,12 +267,26 @@ export function pdfDocument(
 }
 
 export async function renderPdf(doc: PdfDoc): Promise<PdfRender> {
-  const scan: Scan = { kept: 0, dropped: 0, scripts: new Set() };
+  const fresh = (): Scan => ({ kept: 0, dropped: 0, scripts: new Set(), cjk: [] });
+
   // Only `content` is scanned. The rest of the definition is pdfmake's own
   // configuration — style names, colours, the font family — and counting its
   // Latin letters as document text would stop a page of Japanese from ever
   // looking unrenderable.
-  const safe: PdfDoc = { ...doc, content: sanitizeTree(doc.content, scan) as unknown[] };
+  let scan = fresh();
+  let safe: PdfDoc = { ...doc, content: sanitizeTree(doc.content, scan) as unknown[] };
+
+  // A first pass says whether there is CJK in here at all. Only then is a face
+  // fetched — two and a half megabytes nobody else pays for — and the content
+  // rewritten with it, so those characters become glyphs rather than warnings.
+  let face: LoadedFace | undefined;
+  if (scan.cjk.length > 0) {
+    face = await loadFace(variantFor(scan.cjk)).catch(() => undefined);
+    if (face) {
+      scan = fresh();
+      safe = { ...doc, content: sanitizeTree(doc.content, scan, face) as unknown[] };
+    }
+  }
 
   // A document Kiln could only render as a page of replacement characters is
   // not a conversion. Say what it is and where the text would survive.
@@ -233,6 +297,20 @@ export async function renderPdf(doc: PdfDoc): Promise<PdfRender> {
   }
 
   const pdfMake = await pdfmake();
+  if (face) {
+    // Raw bytes, not base64: the virtual file system stores anything that is
+    // not a string as it is, and base64 would cost a third again for nothing.
+    pdfMake.addVirtualFileSystem({ [`${face.font}.ttf`]: { data: face.bytes } });
+    pdfMake.addFonts({
+      [face.font]: {
+        normal: `${face.font}.ttf`,
+        bold: `${face.font}.ttf`,
+        italics: `${face.font}.ttf`,
+        bolditalics: `${face.font}.ttf`,
+      },
+    });
+  }
+
   // pdfmake 0.3 returns a promise here; the callback form was 0.2's.
   const bytes = new Uint8Array(await pdfMake.createPdf(safe).getBuffer());
 

@@ -66,34 +66,61 @@ neither dirties the tree.
 
 Disable them with `/hooks`, or delete the file — nothing else depends on them.
 
+## Committing
+
+**Never `git add -A` or `git add .` while a subagent is running.** Stage files by
+name. A verification subagent writes throwaway probes into the repo while it
+works, and a blanket add swept one into a commit and pushed it — a file nobody
+had read, containing eight tests with no assertions that could never fail. The
+subagent was doing exactly what it should; the staging was the mistake.
+
+`git status --porcelain` before a commit, and stage what you meant to change.
+
 ## Where things stand
 
-25 pairs, 227 tests, entry chunk ~177 KB gzipped. Static export, deployed to
+25 pairs, 258 tests, entry chunk ~177 KB gzipped. Static export, deployed to
 GitHub Pages. Seven pairs are deliberately unsupported and listed with reasons in
 `lib/registry/unsupported.ts`: the value of their output is its visual layout, and
 rebuilding that means either a rendering engine too large to ship or a server,
 which Kiln will not have.
 
-PDF output embeds pdfmake's Roboto, which covers Latin, Greek and Cyrillic and
-nothing else. `lib/registry/converters/_pdf.ts` holds the exact coverage: text it
-cannot draw is replaced and named in `warnings`, and a document with nothing
-renderable in it is refused. Never let that check be bypassed — silent mojibake
-is the bug it was written for.
+PDF output embeds pdfmake's Roboto: Latin, Latin Extended-A, **the whole
+Vietnamese block**, Greek and Cyrillic — 927 code points, listed exactly in
+`lib/registry/converters/_pdf.ts`. When a document contains Chinese or Japanese,
+a Noto face is fetched from Kiln's own origin (`public/fonts/`) and used for
+those characters only, so a mixed document keeps its Greek and Cyrillic too.
+Anything no available font can draw is replaced and named in `warnings`, and a
+document with nothing renderable left is refused. Never let that check be
+bypassed — silent mojibake is the bug it was written for.
 
 ## Known open issues
 
-- **CJK and right-to-left scripts have no PDF path.** They are reported, not
-  rendered. CJK needs a multi-megabyte font; Arabic and Hebrew need bidirectional
-  ordering and contextual shaping on top of one. Neither is started.
+- **Right-to-left has no PDF path.** Arabic and Hebrew are reported, not
+  rendered. fontkit can shape Arabic, but nothing in the stack implements the
+  Unicode bidirectional algorithm, so a mixed paragraph would come out in the
+  wrong visual order — and a bidi bug looks correct to anyone who does not read
+  the script. Deliberately not started until someone who reads it can check it.
+- **Korean has no PDF path.** Neither shipped face carries a hangul syllable, so
+  a Korean document is refused. A third font is a decision, not an oversight.
+- **A CJK document with no kana gets the Chinese face.** `日本語` is three kanji
+  and nothing in it says Japanese. Both faces carry the shared Han characters so
+  it renders, but with Chinese glyph shapes.
+- **Latin Extended Additional is only half there.** Vietnamese is complete; the
+  dot-below and macron-below letters Yoruba and Sanskrit transliteration use are
+  not. They are replaced and named, not silently dropped.
 - **Mobile Safari is still untested on a real device.** The memory thresholds in
   `lib/files/capacity.ts` are provisional guesses, marked as such, waiting on
   numbers from a phone.
 - **`xlsx → pdf` clips past 12 columns.** It warns now, but the layout is
   unchanged.
-- **Merged table cells flatten with no warning.** A Word cell spanning two
-  columns becomes two cells, one of them empty. The text survives; the structure
-  does not, and nothing says so. Reporting it needs a warnings channel
-  `htmlToBlocks` does not have, which touches six engines — raised, not decided.
+- **`pdf → md` and `rtf → md` infer structure the format does not record, and
+  there is a ceiling.** Heading levels are ranked by size and PDF paragraphs
+  split where the line gap exceeds about twice the type size, which is a real
+  improvement over the fixed ratios they used before. What neither can do: tell
+  a pull quote set large from a heading, or tell two short paragraphs set at
+  normal leading from one wrapped paragraph. Both also assume ordinary body text
+  is the commonest size in the document — a page that is mostly headings reads
+  its own body size wrong. The caveats say so; do not claim more.
 - The x2t question is unresolved. `docs/x2t-spike.md` records how far it got; it
   needs Docker on a real machine to finish.
 - The default branch still needs flipping to `main`.

@@ -107,7 +107,7 @@ export const converters: Converter[] = [
     to: 'md',
     fidelity: 'lossy',
     caveat:
-      'Headings and emphasis are guessed from the font sizes and weights RTF records, so the structure is an estimate. Tables and images are dropped.',
+      'Heading levels are ranked by the font sizes RTF records, largest first, so they are an estimate — a pull quote set large reads as a heading. Tables and images are dropped.',
   },
   {
     from: 'pdf',
@@ -121,7 +121,7 @@ export const converters: Converter[] = [
     to: 'md',
     fidelity: 'lossy',
     caveat:
-      'Headings are inferred from type size, which is unreliable. Images, tables and multi-column layouts are dropped.',
+      'Headings are ranked by type size, and paragraphs are split where the line spacing widens — both are inferences, because a PDF records neither. Two short paragraphs set close together can still run into one. Images, tables and multi-column layouts are dropped.',
   },
 
   // ---- Spreadsheets ----

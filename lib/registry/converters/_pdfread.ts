@@ -6,6 +6,14 @@ export interface PdfLine {
   /** Transformed glyph height, used to guess headings. */
   size: number;
   page: number;
+  /**
+   * Baseline position on the page, measured up from the bottom.
+   *
+   * The gap between two baselines is the one real signal a PDF gives about
+   * where a paragraph ends — it was being computed to group glyphs into lines
+   * and then thrown away, which is why paragraphs used to run together.
+   */
+  y: number;
 }
 
 export interface PdfRead {
@@ -100,9 +108,9 @@ export async function readPdf(input: File): Promise<PdfRead> {
     }
 
     const ordered = [...byBaseline.entries()].sort((a, b) => b[0] - a[0]);
-    for (const [, line] of ordered) {
+    for (const [y, line] of ordered) {
       const text = line.text.replace(/\s+/g, ' ').trim();
-      if (text) lines.push({ text, size: line.size, page: pageNumber });
+      if (text) lines.push({ text, size: line.size, page: pageNumber, y });
     }
 
     page.cleanup();
@@ -136,6 +144,15 @@ export function pdfLinesToBlocks(lines: PdfLine[]): Block[] {
   const sizes = lines.map((l) => l.size).sort((a, b) => a - b);
   const body = sizes[Math.floor(sizes.length / 2)] ?? 10;
 
+  // Sizes are ranked rather than measured against fixed ratios, for the same
+  // reason the RTF reader ranks them: a ratio has to pick a number, and ×1.5
+  // put a 17pt heading over 11pt body — Kiln's own `##` — into h1. The largest
+  // size in the document is h1, whatever it is.
+  const levels = [
+    ...new Set(lines.map((l) => round(l.size)).filter((size) => size > round(body))),
+  ].sort((a, b) => b - a);
+  const levelOf = (size: number) => Math.min(levels.indexOf(round(size)) + 1, 6);
+
   const blocks: Block[] = [];
   let paragraph: string[] = [];
 
@@ -146,27 +163,54 @@ export function pdfLinesToBlocks(lines: PdfLine[]): Block[] {
     }
   };
 
-  for (const line of lines) {
-    if (line.size >= body * 1.5) {
+  for (const [index, line] of lines.entries()) {
+    const previous = lines[index - 1];
+
+    // A gap much wider than the line's own height is where a paragraph ended.
+    // Sentence punctuation alone used to decide this, so a paragraph not
+    // ending in a full stop ran straight into the next one.
+    //
+    // Measured against the line's own size rather than a document-wide median:
+    // the median is dragged upwards by the big gaps around headings, and in a
+    // document of one-line paragraphs every gap is a paragraph gap, so there is
+    // no "normal" for it to represent. Ordinary leading is about 1.2 to 1.5
+    // times the type size; a paragraph break is over 2.
+    const brokeAway =
+      previous !== undefined &&
+      (previous.page !== line.page || previous.y - line.y > line.size * 1.8);
+    if (brokeAway) flush();
+
+    if (round(line.size) > round(body)) {
       flush();
-      blocks.push({ kind: 'heading', level: 1, text: line.text });
-    } else if (line.size >= body * 1.22) {
-      flush();
-      blocks.push({ kind: 'heading', level: 2, text: line.text });
+      blocks.push({ kind: 'heading', level: levelOf(line.size), text: line.text });
     } else if (/^\s*[•·\-*]\s+/.test(line.text)) {
       flush();
       blocks.push({
         kind: 'bullet',
         ordered: false,
+        depth: 0,
         text: line.text.replace(/^\s*[•·\-*]\s+/, ''),
+      });
+    } else if (/^\s*\d+[.)]\s+/.test(line.text)) {
+      flush();
+      blocks.push({
+        kind: 'bullet',
+        ordered: true,
+        depth: 0,
+        text: line.text.replace(/^\s*\d+[.)]\s+/, ''),
       });
     } else {
       paragraph.push(line.text);
-      // A line ending in sentence punctuation usually ends the paragraph.
+      // Still useful as a second signal, for a document whose spacing is flat.
       if (/[.!?:]["')\]]?$/.test(line.text)) flush();
     }
   }
 
   flush();
   return blocks;
+}
+
+/** Sizes come back with floating-point noise; a quarter-point is the real grain. */
+function round(size: number): number {
+  return Math.round(size * 4) / 4;
 }

@@ -1,4 +1,5 @@
 import { fail } from '../shared';
+import { MAX_LIST_DEPTH, listCounter } from './_md';
 import type { Block } from './_md';
 
 /**
@@ -223,9 +224,17 @@ export function rtfToPlainText(source: string): string {
 }
 
 /**
- * RTF carries no notion of "heading" — only size and weight. Anything markedly
- * larger than the body, or short and bold, is treated as one. It is a guess,
- * which is why `rtf → md` is declared lossy.
+ * RTF carries no notion of "heading" — only size and weight.
+ *
+ * Sizes are **ranked**, not compared against fixed ratios. A ratio has to pick a
+ * number, and the one it picked was wrong for the most common input there is: a
+ * document Kiln itself wrote, whose h1 is 18pt against 12pt body. That is ×1.5,
+ * just under the ×1.6 the old rule wanted, so every top-level heading came back
+ * as `##`. Ranking has no such number in it — the largest heading size in the
+ * document is h1, whatever it happens to be.
+ *
+ * It is still a guess: a pull quote set large is indistinguishable from a
+ * heading, which is why `rtf → md` is declared lossy and says so.
  */
 export function rtfToBlocks(source: string): Block[] {
   const paragraphs = parseRtf(source);
@@ -233,20 +242,35 @@ export function rtfToBlocks(source: string): Block[] {
   const sizes = paragraphs.map((p) => p.runs[0]?.fontSize ?? 24);
   const body = medianOf(sizes);
 
+  // Every size used above the body size, largest first. Position in that list
+  // is the heading level.
+  const levels = [...new Set(sizes.filter((size) => size > body))].sort((a, b) => b - a);
+  const levelOf = (size: number) => Math.min(levels.indexOf(size) + 1, 6);
+
   return paragraphs.map((paragraph): Block => {
     const first = paragraph.runs[0];
     const size = first?.fontSize ?? body;
     const allBold = paragraph.runs.length > 0 && paragraph.runs.every((r) => r.bold);
     const short = paragraph.text.length <= 120 && !paragraph.text.endsWith('.');
 
-    if (size >= body * 1.6) return { kind: 'heading', level: 1, text: paragraph.text };
-    if (size >= body * 1.3) return { kind: 'heading', level: 2, text: paragraph.text };
-    if (allBold && short) return { kind: 'heading', level: 3, text: paragraph.text };
+    if (size > body)
+      return { kind: 'heading', level: levelOf(size), text: paragraph.text };
+
+    // Same size as the body, but bold and short: a run-in heading. It sits
+    // below anything that earned its level from size alone.
+    if (allBold && short) {
+      return {
+        kind: 'heading',
+        level: Math.min(levels.length + 1, 6),
+        text: paragraph.text,
+      };
+    }
 
     if (/^\s*[•\-*·]\s+/.test(paragraph.text)) {
       return {
         kind: 'bullet',
         ordered: false,
+        depth: 0,
         text: paragraph.text.replace(/^\s*[•\-*·]\s+/, ''),
       };
     }
@@ -254,6 +278,7 @@ export function rtfToBlocks(source: string): Block[] {
       return {
         kind: 'bullet',
         ordered: true,
+        depth: 0,
         text: paragraph.text.replace(/^\s*\d+[.)]\s+/, ''),
       };
     }
@@ -306,8 +331,11 @@ export function writeRtf(blocks: Block[]): string {
   ];
 
   const HEADING_SIZE = [36, 30, 26, 24, 24, 24];
+  let nextOrdinal = listCounter();
 
   for (const block of blocks) {
+    if (block.kind !== 'bullet') nextOrdinal = listCounter();
+
     switch (block.kind) {
       case 'heading': {
         const size = HEADING_SIZE[block.level - 1] ?? 24;
@@ -316,11 +344,20 @@ export function writeRtf(blocks: Block[]): string {
         );
         break;
       }
-      case 'bullet':
+      case 'bullet': {
+        // RTF has no list model here, so the marker is written as text and the
+        // indent scales with depth. An ordered item used to get no marker at
+        // all, which turned a numbered list into unnumbered paragraphs.
+        const level = Math.min(block.depth, MAX_LIST_DEPTH);
+        const indent = 560 * (level + 1);
+        const marker = block.ordered
+          ? `${escapeRtf(`${nextOrdinal(block)}.`)}\\tab `
+          : '\\bullet\\tab ';
         parts.push(
-          `\\pard\\fi-280\\li560\\sa90 ${block.ordered ? '' : '\\bullet\\tab '}${escapeRtf(block.text)}\\par`,
+          `\\pard\\fi-280\\li${indent}\\sa90 ${marker}${escapeRtf(block.text)}\\par`,
         );
         break;
+      }
       case 'code':
         for (const line of block.text.split('\n')) {
           parts.push(`\\pard\\f1\\fs20 ${escapeRtf(line)}\\par`);

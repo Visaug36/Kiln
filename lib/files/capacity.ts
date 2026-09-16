@@ -15,32 +15,75 @@ import type { Format } from '@/lib/registry/types';
  */
 
 /**
- * Peak working memory as a multiple of the document's size, by source format.
- * The worst declared target for that format, rounded up.
+ * Peak working memory as a multiple of the document's size, **per pair**.
+ *
+ * Keyed on the pair, not the source format. Keyed on the source it had to carry
+ * the worst target's figure, so `md → txt` was judged by `md → pdf`'s ×145 and
+ * warned about files it handles in a few megabytes — the same cry-wolf problem
+ * that multiplying a compressed archive's size caused, arriving by a different
+ * door. The registry is pair-keyed and the measurements were per pair; this
+ * table now matches both.
  *
  * Measured by sampling the heap through real conversions of multi-megabyte
- * inputs. They are order-of-magnitude figures, not constants — the real number
- * depends on what is in the document — and the estimate built on them is a
- * prediction, never a measurement.
+ * inputs, worst of two runs, rounded up for headroom. They are
+ * order-of-magnitude figures: the real number depends on what is in the
+ * document, and the estimate built on them is a prediction, never a
+ * measurement.
  *
- * "Size" here means the bytes an engine actually works on. For the zip formats
- * that is the unpacked size, which `sniffOoxml` reads out of the archive while
- * identifying it. Multiplying the *compressed* size instead is hopeless in both
- * directions: OOXML text compresses by ten to a hundred times, so it cries wolf
- * over a small text-heavy document and stays silent about a large one full of
- * already-compressed images. `ZIP_RATIO` is the fallback for when the zip
- * headers did not record it.
+ * "Size" means the bytes an engine actually works on. For the zip formats that
+ * is the unpacked size, which `sniffOoxml` reads out of the archive while
+ * identifying it — see `ZIP_RATIO` for when the headers did not say.
  */
-export const FOOTPRINT: Record<Format, number> = {
-  txt: 20, // measured ×8–17
-  rtf: 15, // measured ×12–13
-  md: 200, // measured ×79–195 (md → pdf is the worst)
-  csv: 250, // measured ×8–246 (csv → xlsx is the worst)
-  pdf: 70, // measured ×28–70
-  docx: 120, // measured ×50–165 of unpacked size (docx → txt is the worst)
-  xlsx: 30, // measured ×25 of unpacked size (xlsx → docx is the worst)
-  pptx: 5, // measured ×2–3 of unpacked size
+export const FOOTPRINT: Record<string, number> = {
+  // Text documents
+  'docx>md': 85, // measured ×70
+  'docx>txt': 80, // ×64
+  'docx>pdf': 220, // ×186 — pdfmake lays out every line before writing
+  'docx>rtf': 95, // ×77
+  'md>docx': 100, // ×82
+  'md>pdf': 175, // ×145
+  'md>txt': 35, // ×26
+  'md>pptx': 95, // ×79
+  'txt>md': 15, // ×9
+  'txt>docx': 25, // ×18
+  'txt>pdf': 50, // ×38
+  'rtf>txt': 20, // ×12
+  'rtf>md': 20, // ×15
+  'pdf>txt': 90, // ×74 — pdfjs holds the page tree and the text layer
+  'pdf>md': 60, // ×46
+
+  // Spreadsheets
+  'xlsx>csv': 20, // ×12
+  'xlsx>md': 20, // ×12
+  'xlsx>txt': 20, // ×14
+  'xlsx>pdf': 60, // ×47
+  'xlsx>docx': 220, // ×181 — a Word table object per cell
+  'csv>xlsx': 275, // ×227 — see the note below
+  'csv>md': 30, // ×23
+  'csv>txt': 15, // ×9
+
+  // Slides
+  'pptx>txt': 10, // ×5
+  'pptx>md': 10, // ×5
 };
+
+/**
+ * The two heaviest pairs, and why they stay that way.
+ *
+ * `csv → xlsx` at ×227 is SheetJS: `aoa_to_sheet` builds one cell object per
+ * value, and `XLSX.write` then materialises the whole workbook XML before it
+ * zips anything — 270 MB from a 1.2 MB file, of which about 35 MB is the sheet
+ * and the rest is the writer. There is no streaming write in the build Kiln
+ * ships. The one part Kiln controlled was holding the parsed rows alive
+ * alongside the sheet, which it no longer does; that was worth about 10%.
+ *
+ * `md → pdf` at ×145 is pdfmake, which builds a document tree, lays out every
+ * line, and holds the result until the file is serialised. Kiln's own step —
+ * blocks to content nodes — is a few megabytes of the sixty-six.
+ *
+ * Both are the library's shape rather than a mistake in Kiln, so the numbers
+ * are facts to predict with, not bugs to fix.
+ */
 
 /** Formats whose FOOTPRINT is against unpacked, not compressed, bytes. */
 const PACKED: ReadonlySet<Format> = new Set<Format>(['docx', 'xlsx', 'pptx']);
@@ -52,6 +95,11 @@ const PACKED: ReadonlySet<Format> = new Set<Format>(['docx', 'xlsx', 'pptx']);
  * images, which barely expand at all.
  */
 const ZIP_RATIO = 8;
+
+/** The multiplier for one pair, or a cautious default for a pair not measured. */
+export function footprintFor(from: Format, to: Format): number {
+  return FOOTPRINT[`${from}>${to}`] ?? 100;
+}
 
 export interface Capacity {
   /** Bytes of working memory Kiln is willing to assume it can use. */
@@ -151,10 +199,11 @@ export interface SizeCaution {
 export function sizeCaution(
   file: File,
   from: Format,
+  to: Format,
   { expandedSize, limits = capacity() }: CautionOptions = {},
 ): SizeCaution | undefined {
   const content = PACKED.has(from) ? (expandedSize ?? file.size * ZIP_RATIO) : file.size;
-  const estimate = content * FOOTPRINT[from];
+  const estimate = content * footprintFor(from, to);
   if (estimate <= limits.budget) return undefined;
 
   const where = limits.webkitMobile
@@ -165,8 +214,9 @@ export function sizeCaution(
     estimate,
     budget: limits.budget,
     message:
-      `This file may be too large for this browser. A ${readableSize(file.size)} ` +
-      `.${from} can need around ${readableSize(estimate)} of memory to convert, and ` +
+      `This file may be too large for this browser. Turning a ` +
+      `${readableSize(file.size)} .${from} into a .${to} can need around ` +
+      `${readableSize(estimate)} of memory, and ` +
       `${where}. That is an estimate from the file size rather than a measurement, ` +
       `so it may work anyway — but if the page stops responding or closes, this is ` +
       `why. A desktop browser, or a smaller file, is the way around it.`,

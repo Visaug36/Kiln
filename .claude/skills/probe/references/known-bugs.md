@@ -3,6 +3,9 @@
 Every bug Kiln has had, how it was **detected**, what the **root cause** turned
 out to be, and the **test** that now pins it.
 
+Three of the twelve were one bug fixed in one implementation and left standing
+in its twin. That is why the checklist opens with the sibling-path rule.
+
 Read the shapes, not the details. Nothing here was found by a crash: every one
 produced output that looked entirely plausible, and most of them shipped green.
 
@@ -237,18 +240,70 @@ conversion succeeds — and check that "no output" is refused rather than shippe
 
 ---
 
-### 10. Merged cells flatten with no warning — **still open**
+### 10. Merged cells flattened with no warning
 
-**Symptom** A Word cell with `columnSpan: 2` becomes `| Spans two |  |`: a
+**Symptom** A Word cell with `columnSpan: 2` became `| Spans two |  |`: a
 phantom empty cell, no warning.
 
-**Root cause** `tableRows` reads each `<td>` as one cell and ignores `colspan`
-and `rowspan` entirely.
+**Root cause** `tableRows` read each `<td>` as one cell and ignored `colspan`
+and `rowspan` entirely — but the deeper cause was that `htmlToBlocks` had
+**nowhere to put a warning**. It returned `Block[]`. Any loss in the layer
+between the readers and the writers was unreportable by construction.
 
-**Why it is still open** The data survives; only the structure is
-misrepresented. Reporting it properly needs a warnings channel `htmlToBlocks`
-does not have, which touches six engines. That is a design change, and it was
-raised rather than decided.
+**Fix** `htmlToBlocks` returns `{ blocks, warnings }`. Merged cells are counted
+and named; the three `docx → *` engines merge those warnings into their own.
+
+**Pinned by** `helpers.test.ts` → "what the block layer admits to losing".
+
+**Shape to remember** When two different bugs are both "it lost something and
+said nothing", the bug is the missing channel, not either symptom. #9 and this
+one were the same gap eight weeks apart.
+
+---
+
+### 11. Nested lists collapsed — again, in the other reader
+
+**Symptom** `1. one` / `    1. one-a` / `2. two` in **Markdown** came back as two
+items, the first reading `"one 1. one-a"` with the raw marker inside it.
+
+**Detected** By an audit that fed the same document to both readers and compared
+the block lists.
+
+**Root cause** Exactly #5, in the sibling path. marked leaves a nested list
+inside `item.text`, and `parseMarkdown` took that whole. #5 was fixed in the HTML
+reader two stages earlier and nobody looked at the Markdown one.
+
+**Fix** Walk the item's own tokens, recurse into the nested list, carry a depth.
+
+**Pinned by** `helpers.test.ts` → "nested lists in Markdown", and "the two
+readers record the same depths", which asserts both paths produce the identical
+block list rather than testing each alone.
+
+**Shape to remember** This is the reason section 0 of the checklist exists. Two
+implementations of one idea drift, and fixing one hides the other.
+
+---
+
+### 12. Text in an unrecognised element vanished
+
+**Symptom** `<div>`, `<figure>/<figcaption>`, a definition list, an `<h7>` —
+every word inside produced zero blocks and no warning.
+
+**Detected** By probing the block layer with tags mammoth does not usually emit,
+while adding the warnings channel for #10.
+
+**Root cause** `htmlToBlocks` matched a fixed list of block tags. Anything else
+was simply never visited.
+
+**Fix** Record which spans the pattern consumed, and report the words in the
+gaps. Deliberately general rather than a list of tags to extend: it catches
+whatever a reader starts emitting next.
+
+**Pinned by** `helpers.test.ts` → "reports text stranded in an element it does
+not read", with the inverse case so wrapper tags are not false positives.
+
+**Shape to remember** A pattern that matches what it knows is a pattern that
+silently drops what it does not. Ask what falls between the matches.
 
 ---
 

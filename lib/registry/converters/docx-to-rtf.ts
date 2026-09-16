@@ -5,10 +5,13 @@ import { writeRtf } from './_rtf';
 
 export async function convert(input: File): Promise<ConversionResult> {
   const { html, warnings } = await readDocx(input);
-  const rtf = writeRtf(htmlToBlocks(html));
+  const { blocks, warnings: dropped } = htmlToBlocks(html);
+  const rtf = writeRtf(blocks);
+
+  const notes = [...warnings, ...dropped];
 
   return {
     files: [outputFile(input.name, 'rtf', rtf)],
-    warnings: warnings.length ? warnings : undefined,
+    warnings: notes.length ? notes : undefined,
   };
 }

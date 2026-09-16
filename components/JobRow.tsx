@@ -31,7 +31,7 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
   // that runs out of memory is killed outright, so there is no "after".
   const caution =
     job.state === 'queued'
-      ? sizeCaution(job.file, job.from, { expandedSize: job.expandedSize })
+      ? sizeCaution(job.file, job.from, job.to, { expandedSize: job.expandedSize })
       : undefined;
 
   const files = job.result?.files ?? [];

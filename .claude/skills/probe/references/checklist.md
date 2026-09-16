@@ -16,6 +16,48 @@ engine with `engineFor(from, to)` from `lib/registry/engines.ts`.
 
 ---
 
+## 0. The standing rule: check the sibling path
+
+**After fixing anything in a reader, writer or detector, go and look at the other
+implementation of the same idea before you stop.** Record both in the test.
+
+This has caught three bugs and been the cause of three more, which is why it is
+first:
+
+- Nested lists were fixed in the **HTML** reader during the stage-2 audit. The
+  identical bug sat in the **Markdown** reader for two more stages, until an
+  audit fed both the same document and compared. (known-bugs #5, #11)
+- The images warning never fired, and merged table cells flattened silently.
+  Different symptoms, one cause: the layer between readers and writers had
+  nowhere to put a warning. Fixing the first did not fix the second because
+  nobody asked what else was in that position. (known-bugs #9, #10)
+- Markdown punctuation leaked into table cells because `tableRows` ignored the
+  formatter its caller chose. The paragraph path beside it was correct the whole
+  time. (known-bugs #7)
+
+The siblings in this repo, and the question to ask of each:
+
+| You changed                                                                           | Also check                              | Because                                                                |
+| ------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
+| `_md.ts` (Markdown reader)                                                            | `_docx.ts` `htmlToBlocks` (HTML reader) | Both produce `Block[]` and must agree about the same document          |
+| `_docx.ts` `htmlToBlocks`                                                             | `_md.ts` `parseMarkdown`                | The same, in reverse                                                   |
+| Either reader                                                                         | `_pdfread.ts`, `_rtf.ts` `parseRtf`     | Two more producers of `Block[]`, easy to forget                        |
+| One writer (`_blocks-to-md`, `_blocks-to-pdf`, `writeDocx`, `writeRtf`, `md-to-pptx`) | The other four                          | A block field that one writer honours and four ignore is a silent loss |
+| `inlineToMarkdown`                                                                    | `htmlToPlainText`                       | The two inline renderers, chosen by the caller                         |
+| Anything that drops content                                                           | Everything else in that function        | If it can lose one thing silently, ask what else it loses              |
+
+**The test records both.** A regression test that pins only the path you fixed
+leaves the other free to drift again — which is exactly how #5 survived. Assert
+that the two produce the same thing:
+
+```ts
+expect(shape(await parseMarkdown(NESTED_MD))).toEqual(
+  shape(htmlToBlocks(NESTED_HTML).blocks),
+);
+```
+
+---
+
 ## 1. Text and encoding
 
 ### 1.1 Astral-plane characters (emoji)

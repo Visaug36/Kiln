@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FOOTPRINT, capacity, sizeCaution, type Capacity } from './capacity';
+import {
+  FOOTPRINT,
+  capacity,
+  footprintFor,
+  sizeCaution,
+  type Capacity,
+} from './capacity';
 
 /**
  * The pre-flight guard.
@@ -73,15 +79,17 @@ describe('reading what the platform will tell us', () => {
 
 describe('the caution itself', () => {
   it('stays quiet about a file that comfortably fits', () => {
-    expect(sizeCaution(file(0.2), 'docx', { limits: desktop })).toBeUndefined();
-    expect(sizeCaution(file(1, 'notes.txt'), 'txt', { limits: ios })).toBeUndefined();
+    expect(sizeCaution(file(0.2), 'docx', 'pdf', { limits: desktop })).toBeUndefined();
+    expect(
+      sizeCaution(file(1, 'notes.txt'), 'txt', 'pdf', { limits: ios }),
+    ).toBeUndefined();
   });
 
   it('warns on a file the same browser could not hold', () => {
-    const caution = sizeCaution(file(25, 'big.txt'), 'txt', { limits: ios });
+    const caution = sizeCaution(file(25, 'big.txt'), 'txt', 'pdf', { limits: ios });
 
     expect(caution).toBeDefined();
-    expect(caution!.estimate).toBe(25 * MB * FOOTPRINT.txt);
+    expect(caution!.estimate).toBe(25 * MB * footprintFor('txt', 'pdf'));
   });
 
   it('warns sooner on a phone than on a computer', () => {
@@ -89,12 +97,12 @@ describe('the caution itself', () => {
     // necessarily fine on an iPhone, and iOS gives no second chance.
     const modest = file(0.5);
 
-    expect(sizeCaution(modest, 'docx', { limits: desktop })).toBeUndefined();
-    expect(sizeCaution(modest, 'docx', { limits: ios })).toBeDefined();
+    expect(sizeCaution(modest, 'docx', 'pdf', { limits: desktop })).toBeUndefined();
+    expect(sizeCaution(modest, 'docx', 'pdf', { limits: ios })).toBeDefined();
   });
 
   it('says it is a guess, and says what to do instead', () => {
-    const message = sizeCaution(file(4), 'docx', { limits: desktop })!.message;
+    const message = sizeCaution(file(4), 'docx', 'pdf', { limits: desktop })!.message;
 
     expect(message).toMatch(/estimate|may/i);
     expect(message).toMatch(/rather than a measurement/i);
@@ -102,7 +110,7 @@ describe('the caution itself', () => {
   });
 
   it('explains the iOS failure rather than blaming the file', () => {
-    const message = sizeCaution(file(4), 'docx', { limits: ios })!.message;
+    const message = sizeCaution(file(4), 'docx', 'pdf', { limits: ios })!.message;
 
     expect(message).toMatch(/without an error|closes/i);
     expect(message).not.toMatch(/!/); // Kiln's copy has no exclamation marks.
@@ -114,10 +122,13 @@ describe('the caution itself', () => {
     // in both directions.
     const small = file(1);
 
-    const byRatio = sizeCaution(small, 'docx', { limits: ios });
-    const byTruth = sizeCaution(small, 'docx', { expandedSize: 40 * MB, limits: ios });
+    const byRatio = sizeCaution(small, 'docx', 'pdf', { limits: ios });
+    const byTruth = sizeCaution(small, 'docx', 'pdf', {
+      expandedSize: 40 * MB,
+      limits: ios,
+    });
 
-    expect(byTruth!.estimate).toBe(40 * MB * FOOTPRINT.docx);
+    expect(byTruth!.estimate).toBe(40 * MB * footprintFor('docx', 'pdf'));
     expect(byTruth!.estimate).toBeGreaterThan(byRatio!.estimate);
   });
 
@@ -126,8 +137,8 @@ describe('the caution itself', () => {
     // far too high. Knowing the real figure pulls the estimate back down.
     const photos = file(20);
 
-    const guessed = sizeCaution(photos, 'docx', { limits: desktop })!;
-    const known = sizeCaution(photos, 'docx', {
+    const guessed = sizeCaution(photos, 'docx', 'pdf', { limits: desktop })!;
+    const known = sizeCaution(photos, 'docx', 'pdf', {
       expandedSize: 21 * MB,
       limits: desktop,
     })!;
@@ -135,10 +146,29 @@ describe('the caution itself', () => {
     expect(known.estimate).toBeLessThan(guessed.estimate);
   });
 
-  it('has a footprint for every format the registry knows', async () => {
-    const { FORMATS } = await import('@/lib/registry');
-    for (const format of FORMATS) {
-      expect(FOOTPRINT[format], `${format} has no footprint`).toBeGreaterThan(0);
+  it('has a measured footprint for every pair the registry declares', async () => {
+    // Keyed on the source it inherited the worst target's number, so a light
+    // pair warned about files it handles comfortably.
+    const { converters } = await import('@/lib/registry');
+    for (const { from, to } of converters) {
+      expect(
+        FOOTPRINT[`${from}>${to}`],
+        `${from} → ${to} has no footprint`,
+      ).toBeGreaterThan(0);
     }
+  });
+
+  it('judges a pair by its own cost, not its source format’s worst', () => {
+    // md → pdf is the heavy one; md → txt is not, and used to be judged by it.
+    expect(footprintFor('md', 'txt')).toBeLessThan(footprintFor('md', 'pdf') / 3);
+
+    const file = (mb: number) => {
+      const handle = new File(['x'], 'notes.md');
+      Object.defineProperty(handle, 'size', { value: mb * MB });
+      return handle;
+    };
+
+    expect(sizeCaution(file(8), 'md', 'txt', { limits: ios })).toBeUndefined();
+    expect(sizeCaution(file(8), 'md', 'pdf', { limits: ios })).toBeDefined();
   });
 });
