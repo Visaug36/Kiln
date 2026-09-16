@@ -83,25 +83,61 @@ serves files — there is no framework runtime to provision.
 
 ## Recommended tooling
 
-Kiln commits its own operating instructions — `CLAUDE.md`, three skills under
-`.claude/skills/`, and one verifier agent under `.claude/agents/`. Three
-third-party skills are worth installing **globally**, and are deliberately not
-vendored here:
+Kiln commits its own operating instructions: `CLAUDE.md`, the history in `docs/`,
+seven skills under `.claude/skills/`, and one verifier agent under
+`.claude/agents/`. Everything below is worth installing **globally**, and is
+deliberately not vendored here.
 
-- **`frontend-design`** (Anthropic)
-- **Web Design Guidelines** from `vercel-labs/agent-skills`
+### Plugins and MCP servers
+
+- **Playwright** — drives a real browser. Checking 114 pairs by hand is the
+  largest recurring manual cost in this project, and `pnpm verify:browser` is
+  built on it.
+- **Chrome DevTools** — the network tab is how the privacy promise gets checked
+  by eye rather than only by script, and the memory profiler is the only honest
+  way to look at a conversion's peak in the environment it actually runs in.
+- **TypeScript LSP** — real go-to-definition and type information across a
+  codebase where the registry, the engines and the worker are deliberately
+  separate modules.
+- **Context7** — current documentation for SheetJS, pdfmake, mammoth, docx and
+  pdfjs. Several of Kiln's bugs came from an API that had moved since whatever
+  the model last saw.
+
+### Skills
+
+- **`frontend-design`** (Anthropic) — for the interface work.
+- **Web Design Guidelines** from `vercel-labs/agent-skills`.
 - **`systematic-debugging`** and **`verification-before-completion`**, from the
-  Superpowers plugin on the official marketplace
+  Superpowers plugin on the official marketplace. Both earn their place here
+  specifically: most of Kiln's bugs produced output that looked entirely
+  plausible and shipped under a green suite.
 
-They are not committed because a skill is a set of instructions an agent follows,
-and any script it bundles runs with that agent's permissions. Vendoring
-third-party skills into a repository means everyone who clones it runs them,
-having agreed to nothing. Install the ones you trust into your own environment
-instead.
+### Why none of them are committed
+
+A skill is a set of instructions an agent follows, and any script it bundles runs
+with that agent's permissions. Vendoring third-party skills into a repository
+means everyone who clones it runs them, having agreed to nothing. Install the
+ones you trust into your own environment instead.
+
+The same reasoning is why Kiln's own committed hooks in `.claude/settings.json`
+call only the repo's own package scripts — no network, no third-party service, no
+proxy.
 
 One conflict worth knowing about: `frontend-design` discourages Inter as
 overused. Inter is a deliberate choice for Kiln, and `CLAUDE.md` overrides that
 advice.
+
+### The skills in this repo
+
+| Skill            | For                                                            |
+| ---------------- | -------------------------------------------------------------- |
+| `orient`         | Starting or resuming a session — routes a question to one file |
+| `add-converter`  | Adding a format or a conversion edge                           |
+| `probe`          | Checking a conversion is correct, not merely producing a file  |
+| `interface-copy` | Anything a person reads: buttons, warnings, errors, caveats    |
+| `kiln-design`    | Colour, type, spacing, motion                                  |
+| `measure-memory` | Re-measuring `EDGE_COST` after a library upgrade               |
+| `release-check`  | Finishing a stage                                              |
 
 ## Deploying
 

@@ -80,6 +80,28 @@ neither dirties the tree.
 
 Disable them with `/hooks`, or delete the file — nothing else depends on them.
 
+## Where things are written down
+
+`CLAUDE.md` is the rules. The history lives in `docs/`, and nothing reads it
+unless it needs to — start with the `orient` skill, which routes a question to
+one file instead of four.
+
+| Question                                    | File                                            |
+| ------------------------------------------- | ----------------------------------------------- |
+| **Why** is it this way? What was rejected?  | `docs/DECISIONS.md`                             |
+| How did we get here, and what did it teach? | `docs/STAGES.md`                                |
+| What is outstanding, and whose is it?       | `docs/OPEN.md`                                  |
+| What has gone wrong before?                 | `.claude/skills/probe/references/known-bugs.md` |
+
+**Check `docs/DECISIONS.md` before proposing anything structural.** It records
+what was rejected and why, which is what a fresh session cannot know and will
+otherwise re-propose in good faith.
+
+**At the end of a stage, this is part of done, not a nice-to-have:** append to
+`STAGES.md`, add any genuine decision to `DECISIONS.md`, and reconcile `OPEN.md`
+— a closed item moves to `DECISIONS.md` rather than being deleted. The
+`release-check` skill has the full sequence.
+
 ## Committing
 
 **Never `git add -A` or `git add .` while a subagent is running.** Stage files by
@@ -154,6 +176,7 @@ bypassed — silent mojibake is the bug it was written for.
   normal leading from one wrapped paragraph. Both also assume ordinary body text
   is the commonest size in the document — a page that is mostly headings reads
   its own body size wrong. The caveats say so; do not claim more.
-- The x2t question is unresolved. `docs/x2t-spike.md` records how far it got; it
-  needs Docker on a real machine to finish.
+- The x2t question is unresolved. `docs/x2t-spike.md` **on branch
+  `spike/x2t-wasm`** records how far it got; it needs Docker on a real machine
+  for the size, and a decision on AGPL-3.0. See `docs/OPEN.md`.
 - The default branch still needs flipping to `main`.
