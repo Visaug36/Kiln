@@ -144,39 +144,10 @@ bypassed — silent mojibake is the bug it was written for.
 
 ## Known open issues
 
-- **Right-to-left has no PDF path.** Arabic and Hebrew are reported, not
-  rendered. fontkit can shape Arabic, but nothing in the stack implements the
-  Unicode bidirectional algorithm, so a mixed paragraph would come out in the
-  wrong visual order — and a bidi bug looks correct to anyone who does not read
-  the script. Deliberately not started until someone who reads it can check it.
-- **Korean has no PDF path.** Neither shipped face carries a hangul syllable, so
-  a Korean document is refused. A third font is a decision, not an oversight.
-- **A CJK document with no kana gets the Chinese face.** `日本語` is three kanji
-  and nothing in it says Japanese. Both faces carry the shared Han characters so
-  it renders, but with Chinese glyph shapes.
-- **Latin Extended Additional is only half there.** Vietnamese is complete; the
-  dot-below and macron-below letters Yoruba and Sanskrit transliteration use are
-  not. They are replaced and named, not silently dropped.
-- **Mobile Safari is still untested on a real device.** The memory thresholds in
-  `lib/files/capacity.ts` are provisional guesses, marked as such, waiting on
-  numbers from a phone.
-- **Four pairs need three hops and so do not exist:** `json` to `odt`, `rtf`,
-  `html` and `epub`. Two steps is the rule; convert through `.xlsx` or `.md`.
-  Not a defect — recorded so nobody rediscovers it as one. ODS has no such gap
-  because it shares its text-side edges with XLSX.
-- **The block model carries no inline runs**, so every writer but HTML drops
-  emphasis and links. See above.
-- **`xlsx → pdf` clips past 12 columns.** It warns now, but the layout is
-  unchanged.
-- **`pdf → md` and `rtf → md` infer structure the format does not record, and
-  there is a ceiling.** Heading levels are ranked by size and PDF paragraphs
-  split where the line gap exceeds about twice the type size, which is a real
-  improvement over the fixed ratios they used before. What neither can do: tell
-  a pull quote set large from a heading, or tell two short paragraphs set at
-  normal leading from one wrapped paragraph. Both also assume ordinary body text
-  is the commonest size in the document — a page that is mostly headings reads
-  its own body size wrong. The caveats say so; do not claim more.
-- The x2t question is unresolved. `docs/x2t-spike.md` **on branch
-  `spike/x2t-wasm`** records how far it got; it needs Docker on a real machine
-  for the size, and a decision on AGPL-3.0. See `docs/OPEN.md`.
-- The default branch still needs flipping to `main`.
+**`docs/OPEN.md`.** Everything outstanding lives there, each with why it is open,
+what would have to change, and whose it is — yours (the default branch flip, the
+iOS memory threshold) or deferred with a reason (right-to-left, Korean, x2t,
+merged-cell layout, `xlsx → pdf` clipping, the inline-run gap).
+
+This list used to be repeated here. Two copies of an issue list is one copy that
+goes stale, and the stale one is the one always in context.

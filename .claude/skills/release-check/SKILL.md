@@ -15,7 +15,7 @@ Run it in this order. Later steps depend on earlier ones.
 ## 1. The cheap checks, deliberately
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle
+pnpm lint && pnpm typecheck && pnpm check:links && pnpm test && pnpm build && pnpm check:bundle
 ```
 
 The Stop hook runs most of this, which is exactly why it is easy to assume it
@@ -24,6 +24,12 @@ first — checking a stale build is worse than not checking.
 
 **Entry chunk under 200 KB gzipped.** Engine size is not counted and is not a
 reason to reject a good engine.
+
+**`check:links` is the one the hooks do not run.** It resolves every file path
+`CLAUDE.md`, `docs/` and the skills mention. `CLAUDE.md` pointed at a spike
+write-up that only existed on another branch for four stages, and nobody noticed
+because nobody followed it. It also runs in CI, so a broken pointer fails the
+deploy rather than waiting to be spotted.
 
 ## 2. Every pair in a real browser
 
@@ -64,8 +70,12 @@ Part of the definition of done, not a nice-to-have:
 - **`docs/OPEN.md`** — close what closed, add what opened. **A closed item moves
   to `DECISIONS.md`, it is not deleted.**
 - **`known-bugs.md`** — an entry per bug found, with the test that pins it.
-- **`CLAUDE.md`** — only if a rule or a headline number changed.
+- **`CLAUDE.md`** — only if a rule or a headline number changed. It points at
+  `OPEN.md` rather than repeating it, so the issue list is one file's job.
 - **`README.md`** — only if the support matrix changed.
+
+Then `pnpm check:links` again: reconciling docs is exactly when a pointer gets
+written to a file that has moved or does not exist yet.
 
 ## 4. Commit, push, confirm the deploy
 

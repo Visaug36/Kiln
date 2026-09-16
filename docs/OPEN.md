@@ -137,8 +137,3 @@ and here Kiln wrote it.
 
 This is the copy-survives-composition problem in miniature, and belongs with the
 UI stage's warnings work rather than a patch now. See the `interface-copy` skill.
-
-### `CLAUDE.md` pointed at a file that is not on this branch
-
-`docs/x2t-spike.md` lives on `spike/x2t-wasm`. Now stated wherever it is
-referenced, rather than reading as a missing file.

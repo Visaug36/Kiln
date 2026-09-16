@@ -11,6 +11,27 @@ would be two places to keep true, and the numbers below are the link.
 
 ---
 
+## Stage 7 — The repo's memory · `f323b27` · 17 Sep
+
+**Shipped.** No product code. `docs/DECISIONS.md`, `docs/STAGES.md` and
+`docs/OPEN.md`; an `orient` skill whose whole job is routing a question to one
+file; three more skills — `measure-memory`, `interface-copy`, `release-check`.
+Then `scripts/check-links.mjs`, in CI.
+
+**Broke.** One broken pointer, found by the checker on its first run — the
+`add-converter` worked example names a file you would create, which needed a
+mechanism rather than an exception. And one that had been broken for four
+stages: `CLAUDE.md` referencing a spike write-up that only exists on
+`spike/x2t-wasm`.
+
+**Taught.** Documentation can be wrong about itself the same way a caveat can,
+and with the same failure mode: the only reader who would notice is the one who
+followed the pointer and did not get what they came for. Also that duplication
+in documentation is not a tidiness problem — `CLAUDE.md` repeating `OPEN.md`
+meant the copy that goes stale would be the copy always in context.
+
+---
+
 ## Stage 6 — Routing, then six formats · `c1e7300` · 16 Sep
 
 **Shipped.** The registry stopped being a list of pairs and became a graph:

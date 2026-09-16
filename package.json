@@ -17,6 +17,7 @@
     "fixtures": "node scripts/make-fixtures.mjs",
     "analyze": "ANALYZE=true NEXT_TELEMETRY_DISABLED=1 next build",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:links": "node scripts/check-links.mjs",
     "verify:browser": "node scripts/verify-browser.mjs"
   },
   "dependencies": {

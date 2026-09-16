@@ -174,7 +174,9 @@ A pair Kiln does not currently declare, built completely.
 
 ## 1. The engine
 
-`lib/registry/converters/rtf-to-pdf.ts`
+<!-- check-links: the worked example builds this file; it does not exist yet -->
+
+The file you would create, `lib/registry/converters/rtf-to-pdf.ts`:
 
 ```ts
 import type { ConversionResult } from '../types';

@@ -10,6 +10,66 @@ narrative goes in `STAGES.md`; unresolved questions go in `OPEN.md`.
 
 ---
 
+## 2026-09-17 — The repo's memory
+
+### `docs/` holds the history; `CLAUDE.md` holds the rules and points at it
+
+A fresh session was starting by rediscovering what had already been decided.
+Cheap by default, deep on demand — the same shape as the skills. `CLAUDE.md`
+gains a pointer table; `DECISIONS.md`, `STAGES.md` and `OPEN.md` carry the rest
+and are read only when something needs them.
+
+**Rejected:** putting the history in `CLAUDE.md`. It is read in full at the start
+of every session, so every fact added there is paid for by every session that did
+not need it.
+
+### No hook enforces the end-of-stage docs update
+
+Reconciling `docs/` is part of the definition of done, kept honest by the rule in
+`CLAUDE.md` and the sequence in `release-check`.
+
+**Rejected: a hook.** There is no observable event for "a stage ended" — that is
+a judgement, not something the harness can see. `Stop` fires every turn while a
+stage spans many, so it would nag on almost all of them and get disabled.
+`PreToolUse` on `Bash` fires on every shell command to catch a once-per-stage
+event, putting overhead on the hottest tool. Two better-targeted mechanisms
+already exist, and a third would trade a rule people follow for a check people
+disable.
+
+**What would change it:** a hook event that fires on an explicit "stage
+complete" signal rather than on a turn or a tool call.
+
+### `CLAUDE.md`'s issue list was replaced with a pointer, not kept in both places
+
+It duplicated `OPEN.md` from the day `OPEN.md` existed.
+
+**Rejected:** keeping both, the short list for convenience and the long one for
+detail. Two copies of an issue list is one copy that goes stale — and the stale
+one would be the copy that is always in context.
+
+### A script checks that documentation resolves; the ignore marker is deliberate
+
+`scripts/check-links.mjs`, wired into `release-check` and into CI. `CLAUDE.md`
+pointed at `docs/x2t-spike.md` for four stages while that file only existed on
+another branch. The same shape as the false caveat: documentation asserting
+something untrue about itself, where the only reader who would catch it is one
+who did not get what they came for.
+
+A candidate path is only checked when its first segment exists at the repo root,
+or when it resolves relative to the file mentioning it.
+
+**Rejected:** checking every path-shaped string. Kiln's docs are full of paths
+_inside_ a document archive — `word/document.xml`, `META-INF/`, `OEBPS/` — and a
+checker that flagged those would need a list of exceptions that goes stale faster
+than the thing it is guarding.
+
+**Rejected:** an exception list alone for the one genuine false positive, a file
+the docs tell you to _create_. `<!-- check-links: reason -->` sits on the line
+instead: invisible when rendered, visible in a diff, which is the right way round
+for something that silences a check.
+
+---
+
 ## 2026-09-16 — Routing and the six new formats
 
 ### The registry declares edges and computes pairs

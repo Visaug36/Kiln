@@ -35,6 +35,39 @@ bugs at once, twice.
 
 ---
 
+## `pnpm check:links`
+
+**Proves:** the documentation does not assert something untrue about itself.
+
+The same shape as the false caveat, one level up. `CLAUDE.md` referenced
+`docs/x2t-spike.md` for four stages while that file existed only on
+`spike/x2t-wasm`. The only reader who would have caught it is one who followed
+the pointer — and anybody who followed it needed the information and did not get
+it.
+
+It resolves backticked paths and Markdown link targets in `CLAUDE.md`,
+`AGENTS.md`, `README.md`, `docs/` and `.claude/`. A candidate is checked only
+when its first segment exists at the repo root, or when it resolves relative to
+the file that mentions it. That rule is what keeps it quiet: Kiln's docs are full
+of paths _inside_ a document archive — `word/document.xml`, `META-INF/`,
+`OEBPS/` — and none of those are repo files.
+
+### When it fails
+
+- **A typo or a moved file** — fix the path. This is the case it exists for.
+- **A file the documentation tells you to create**, like the `rtf-to-pdf.ts` in
+  the `add-converter` worked example — put `<!-- check-links: reason -->` on the
+  line, or on its own line above it. Invisible when rendered, visible in a diff.
+- **A file that genuinely lives elsewhere** — say where in the prose, then add it
+  to `ELSEWHERE` in `scripts/check-links.mjs` with a reason. The script also
+  fails if an `ELSEWHERE` entry turns out to be present, so that list cannot
+  quietly go stale either.
+
+Do not reach for the ignore marker first. Two of the three cases above are the
+documentation being wrong.
+
+---
+
 ## `pnpm build && pnpm check:bundle`
 
 **Proves:** the static export builds, and the page has not quietly gained an
@@ -130,6 +163,7 @@ it go green rather than assuming it.
 - Entry chunk under budget.
 - Does `OPEN.md` still describe reality — nothing closed still listed, nothing
   noticed and unrecorded?
+- Does every path the documentation mentions still resolve? `pnpm check:links`.
 - Does any caveat now claim something that is no longer true? Routing spreads a
   false one across every pair routed through that edge.
 - Did the stage change how the work is done? That belongs in a skill, not only
