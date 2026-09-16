@@ -1,3 +1,4 @@
+import { find } from '@/lib/registry/routing';
 import type { Format } from '@/lib/registry/types';
 
 /**
@@ -15,78 +16,134 @@ import type { Format } from '@/lib/registry/types';
  */
 
 /**
- * Peak working memory as a multiple of the document's size, **per pair**.
+ * What one declared converter costs.
  *
- * Keyed on the pair, not the source format. Keyed on the source it had to carry
- * the worst target's figure, so `md → txt` was judged by `md → pdf`'s ×145 and
- * warned about files it handles in a few megabytes — the same cry-wolf problem
- * that multiplying a compressed archive's size caused, arriving by a different
- * door. The registry is pair-keyed and the measurements were per pair; this
- * table now matches both.
+ * `peak` is peak working memory as a multiple of the content it is given.
+ * `growth` is how much bigger the file it writes is than the content it read —
+ * which only matters because most pairs Kiln offers are two converters run back
+ * to back, and the second one is handed the first one's output.
+ *
+ * Keyed on the **edge**, not the pair. There are around a hundred pairs and
+ * thirty-nine edges, so measuring pairs would be a hundred numbers drifting out
+ * of step with each other and with the engines beneath them. A route's cost is
+ * composed from its edges in `footprintFor`, the same way the conversion itself
+ * is composed.
  *
  * Measured by sampling the heap through real conversions of multi-megabyte
- * inputs, worst of two runs, rounded up for headroom. They are
+ * documents, worst of two runs, rounded up for headroom — see
+ * `test/measure-memory.test.ts`, which prints this table. They are
  * order-of-magnitude figures: the real number depends on what is in the
  * document, and the estimate built on them is a prediction, never a
  * measurement.
  *
- * "Size" means the bytes an engine actually works on. For the zip formats that
- * is the unpacked size, which `sniffOoxml` reads out of the archive while
+ * "Content" means the bytes an engine actually works on. For the zip formats
+ * that is the unpacked size, which `sniffOoxml` reads out of the archive while
  * identifying it — see `ZIP_RATIO` for when the headers did not say.
  */
-export const FOOTPRINT: Record<string, number> = {
+export interface EdgeCost {
+  peak: number;
+  growth: number;
+}
+
+export const EDGE_COST: Record<string, EdgeCost> = {
   // Text documents
-  'docx>md': 85, // measured ×70
-  'docx>txt': 80, // ×64
-  'docx>pdf': 220, // ×186 — pdfmake lays out every line before writing
-  'docx>rtf': 95, // ×77
-  'md>docx': 100, // ×82
-  'md>pdf': 175, // ×145
-  'md>txt': 35, // ×26
-  'md>pptx': 95, // ×79
-  'txt>md': 15, // ×9
-  'txt>docx': 25, // ×18
-  'txt>pdf': 50, // ×38
-  'rtf>txt': 20, // ×12
-  'rtf>md': 20, // ×15
-  'pdf>txt': 90, // ×74 — pdfjs holds the page tree and the text layer
-  'pdf>md': 60, // ×46
+  'docx>md': { peak: 100, growth: 0.11 }, // ×80
+  'docx>txt': { peak: 100, growth: 0.09 }, // ×80
+  'docx>pdf': { peak: 100, growth: 0.31 }, // ×80 — pdfmake lays out every line before writing
+  'docx>rtf': { peak: 125, growth: 0.2 }, // ×100
+  'odt>md': { peak: 30, growth: 0.17 }, // ×24
+  'html>md': { peak: 10, growth: 0.01 }, // ×5
+  'epub>md': { peak: 15, growth: 0.3 }, // ×12
+  'rtf>txt': { peak: 20, growth: 0.42 }, // ×16
+  'rtf>md': { peak: 25, growth: 0.42 }, // ×19
+  'pdf>txt': { peak: 40, growth: 0.27 }, // ×30
+  'pdf>md': { peak: 65, growth: 0.28 }, // ×53
+  'md>docx': { peak: 475, growth: 0.06 }, // ×393 — the docx library builds a paragraph object per block
+  'md>odt': { peak: 80, growth: 0.04 }, // ×65
+  'md>pdf': { peak: 190, growth: 2.68 }, // ×155
+  'md>rtf': { peak: 75, growth: 1.8 }, // ×62
+  'md>html': { peak: 65, growth: 1.85 }, // ×51
+  'md>epub': { peak: 95, growth: 1.81 }, // ×78
+  'md>txt': { peak: 25, growth: 0.85 }, // ×21
+  'txt>md': { peak: 5, growth: 1.0 }, // ×1
+  'txt>docx': { peak: 120, growth: 0.02 }, // ×100
+  'txt>pdf': { peak: 165, growth: 1.51 }, // ×136
 
   // Spreadsheets
-  'xlsx>csv': 20, // ×12
-  'xlsx>md': 20, // ×12
-  'xlsx>txt': 20, // ×14
-  'xlsx>pdf': 60, // ×47
-  'xlsx>docx': 220, // ×181 — a Word table object per cell
-  'csv>xlsx': 275, // ×227 — see the note below
-  'csv>md': 30, // ×23
-  'csv>txt': 15, // ×9
+  'xlsx>csv': { peak: 15, growth: 0.18 }, // ×10
+  'xlsx>ods': { peak: 135, growth: 3.26 }, // ×112
+  'xlsx>json': { peak: 15, growth: 0.75 }, // ×12
+  'xlsx>md': { peak: 15, growth: 0.24 }, // ×12
+  'xlsx>txt': { peak: 15, growth: 0.17 }, // ×10
+  'xlsx>pdf': { peak: 80, growth: 0.65 }, // ×65
+  'xlsx>docx': { peak: 220, growth: 0.03 }, // ×183 — a Word table object per cell
+  'ods>xlsx': { peak: 15, growth: 0.39 }, // ×12
+  'ods>csv': { peak: 10, growth: 0.05 }, // ×5
+  'ods>md': { peak: 10, growth: 0.08 }, // ×6
+  'ods>txt': { peak: 10, growth: 0.05 }, // ×5
+  'ods>pdf': { peak: 25, growth: 0.2 }, // ×20
+  'ods>docx': { peak: 70, growth: 0.01 }, // ×55
+  // The heaviest edge Kiln has, and the library's shape rather than a mistake:
+  // SheetJS builds a cell object per value and then materialises the whole
+  // workbook XML as one string before zipping any of it, with no streaming
+  // write in the build Kiln ships. Releasing the parsed rows the moment the
+  // sheet holds them was the one part Kiln controlled, and it already does.
+  'csv>xlsx': { peak: 310, growth: 5.95 }, // ×257
+  'csv>md': { peak: 45, growth: 1.46 }, // ×36
+  'csv>txt': { peak: 5, growth: 1.0 }, // ×1
+  'json>xlsx': { peak: 145, growth: 2.18 }, // ×117
 
   // Slides
-  'pptx>txt': 10, // ×5
-  'pptx>md': 10, // ×5
+  'pptx>txt': { peak: 5, growth: 0.03 }, // ×1 — an unpacked deck is mostly theme and media XML, so the text is a sliver of it
+  'pptx>md': { peak: 5, growth: 0.03 }, // ×1
+  'odp>txt': { peak: 10, growth: 0.12 }, // ×5
+  'odp>md': { peak: 10, growth: 0.13 }, // ×6
+  'md>pptx': { peak: 320, growth: 31.13 }, // ×264 — a slide object per heading, and the deck is written whole
+  'md>odp': { peak: 105, growth: 0.04 }, // ×83
 };
 
-/**
- * The two heaviest pairs, and why they stay that way.
- *
- * `csv → xlsx` at ×227 is SheetJS: `aoa_to_sheet` builds one cell object per
- * value, and `XLSX.write` then materialises the whole workbook XML before it
- * zips anything — 270 MB from a 1.2 MB file, of which about 35 MB is the sheet
- * and the rest is the writer. There is no streaming write in the build Kiln
- * ships. The one part Kiln controlled was holding the parsed rows alive
- * alongside the sheet, which it no longer does; that was worth about 10%.
- *
- * `md → pdf` at ×145 is pdfmake, which builds a document tree, lays out every
- * line, and holds the result until the file is serialised. Kiln's own step —
- * blocks to content nodes — is a few megabytes of the sixty-six.
- *
- * Both are the library's shape rather than a mistake in Kiln, so the numbers
- * are facts to predict with, not bugs to fix.
- */
+/** A cautious default for an edge nobody has measured yet. */
+const UNMEASURED: EdgeCost = { peak: 100, growth: 1 };
 
-/** Formats whose FOOTPRINT is against unpacked, not compressed, bytes. */
-const PACKED: ReadonlySet<Format> = new Set<Format>(['docx', 'xlsx', 'pptx']);
+/**
+ * The multiplier for one pair, however Kiln reaches it.
+ *
+ * Two converters run one after the other, so the peak is the larger of their
+ * two peaks — not their sum. The second one's peak is scaled by how much the
+ * first one grew the file, because that is what it is handed: `csv → ods` goes
+ * through Excel, and costs what `xlsx → ods` costs *on the workbook that was
+ * just written* — six times the CSV — not on the CSV.
+ *
+ * An unmeasured edge falls back to a cautious default rather than to nothing;
+ * `capacity.test.ts` fails if any declared edge is actually missing, so the
+ * fallback is for a table that has drifted, not for one that is incomplete.
+ */
+export function footprintFor(from: Format, to: Format): number {
+  const route = find(from, to);
+  if (!route) return UNMEASURED.peak;
+
+  let worst = 0;
+  let scale = 1;
+
+  for (const step of route.steps) {
+    const cost = EDGE_COST[`${step.from}>${step.to}`] ?? UNMEASURED;
+    worst = Math.max(worst, scale * cost.peak);
+    scale *= cost.growth;
+  }
+
+  return Math.round(worst);
+}
+
+/** Formats whose cost is measured against unpacked, not compressed, bytes. */
+const PACKED: ReadonlySet<Format> = new Set<Format>([
+  'docx',
+  'xlsx',
+  'pptx',
+  'odt',
+  'ods',
+  'odp',
+  'epub',
+]);
 
 /**
  * What to assume an archive unpacks to when its headers did not say.
@@ -95,11 +152,6 @@ const PACKED: ReadonlySet<Format> = new Set<Format>(['docx', 'xlsx', 'pptx']);
  * images, which barely expand at all.
  */
 const ZIP_RATIO = 8;
-
-/** The multiplier for one pair, or a cautious default for a pair not measured. */
-export function footprintFor(from: Format, to: Format): number {
-  return FOOTPRINT[`${from}>${to}`] ?? 100;
-}
 
 export interface Capacity {
   /** Bytes of working memory Kiln is willing to assume it can use. */

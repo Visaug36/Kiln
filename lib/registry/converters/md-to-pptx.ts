@@ -1,63 +1,8 @@
 import type { ConversionResult } from '../types';
 import { MIME, fail, outputFile, readText } from '../shared';
-import { MAX_LIST_DEPTH, parseMarkdown, type Block } from './_md';
-
-interface Line {
-  text: string;
-  /** Nesting level, so a sub-point sits under its parent rather than beside it. */
-  depth: number;
-}
-
-interface Deck {
-  title: string;
-  bullets: Line[];
-}
-
-/** Splits the block list into slides, one per top-level heading. */
-function toSlides(blocks: Block[]): Deck[] {
-  const slides: Deck[] = [];
-  let current: Deck | null = null;
-
-  const open = (title: string) => {
-    current = { title, bullets: [] };
-    slides.push(current);
-  };
-
-  for (const block of blocks) {
-    if (block.kind === 'heading' && block.level <= 1) {
-      open(block.text);
-      continue;
-    }
-    if (!current) open('');
-
-    switch (block.kind) {
-      case 'heading':
-        current!.bullets.push({ text: block.text, depth: 0 });
-        break;
-      case 'bullet':
-        current!.bullets.push({ text: block.text, depth: block.depth });
-        break;
-      case 'paragraph':
-      case 'quote':
-        current!.bullets.push({ text: block.text, depth: 0 });
-        break;
-      case 'code':
-        for (const line of block.text.split('\n').filter(Boolean)) {
-          current!.bullets.push({ text: line, depth: 0 });
-        }
-        break;
-      case 'table':
-        for (const row of block.rows) {
-          current!.bullets.push({ text: row.join(' — '), depth: 0 });
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  return slides.filter((slide) => slide.title || slide.bullets.length > 0);
-}
+import { MAX_LIST_DEPTH } from './_md';
+import { parseMarkdown } from './_md';
+import { deckWarnings, toSlides } from './_slides';
 
 export async function convert(input: File): Promise<ConversionResult> {
   const source = await readText(input);
@@ -114,16 +59,7 @@ export async function convert(input: File): Promise<ConversionResult> {
   const raw = (await deck.write({ outputType: 'blob' })) as Blob;
   const blob = new Blob([raw], { type: MIME.pptx });
 
-  const warnings: string[] = [];
-  if (/!\[[^\]]*\]\([^)]*\)/.test(source)) {
-    warnings.push('Images in the Markdown were not carried onto the slides.');
-  }
-  const long = slides.filter((s) => s.bullets.length > 12).length;
-  if (long > 0) {
-    warnings.push(
-      `${long} slide${long === 1 ? '' : 's'} had more than 12 bullets and will overflow — split those headings up.`,
-    );
-  }
+  const warnings = deckWarnings(source, slides);
 
   return {
     files: [{ blob, filename: outputFile(input.name, 'pptx', '').filename }],

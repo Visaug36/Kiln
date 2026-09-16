@@ -1,8 +1,9 @@
 # Kiln
 
 A document converter that runs entirely in your browser. Drop a file, pick a
-target format, download the result. Kiln handles PDF, DOCX, Markdown, plain text
-and RTF.
+target format, download the result. Kiln handles fourteen formats — PDF, Word,
+OpenDocument, RTF, HTML, EPUB, Markdown, plain text, PowerPoint, Excel, CSV and
+JSON — in 114 combinations.
 
 ## The constraint
 
@@ -141,10 +142,11 @@ Every conversion is a self-contained plugin. The interface never names a format
 or a pair; it reads the registry and renders whatever is there. Adding a format
 means adding one file and one entry, and touching no component.
 
-Two modules, deliberately separate.
+Four modules behind one façade, `lib/registry/index.ts`, which is all the page
+imports.
 
-**`lib/registry/index.ts` — the table.** What Kiln can convert and how well.
-This is what the page imports.
+**`table.ts` — the edges.** One-step conversions, written by hand. It is a list
+of edges, not of pairs: most pairs Kiln offers are two of these composed.
 
 ```ts
 export interface Converter {
@@ -157,7 +159,32 @@ export interface Converter {
 }
 ```
 
-**`lib/registry/engines.ts` — the engines.** Only the worker imports this.
+**`routing.ts` — the pairs.** Turns a requested pair into a **route** of one or
+two edges, with the fidelity and caveats that follow from it.
+
+```ts
+export interface Route {
+  from: Format;
+  to: Format;
+  /** One or two converters, in the order they run. */
+  steps: Converter[];
+  /** The worst link in the path. */
+  fidelity: Fidelity;
+  /** Every step's caveat, in order, deduplicated. */
+  caveats: string[];
+  /** The format the file passes through, when there is one. */
+  via?: Format;
+}
+```
+
+A one-step route and a two-step route are the same shape on purpose: nothing
+downstream — not the picker, not the row, not the worker — has to ask which kind
+it got.
+
+**`unsupported.ts` — the refusals.** Rules that expand into pairs, checked by the
+router before it goes looking for a path.
+
+**`engines.ts` — the engines.** Only the worker imports this.
 
 ```ts
 export const engines: Record<string, () => Promise<ConvertFn>> = {
@@ -192,12 +219,16 @@ there is more than one, the row offers a single download that zips them.
 
 The registry exposes:
 
-| Export                | Where from   | Purpose                                            |
-| --------------------- | ------------ | -------------------------------------------------- |
-| `converters`          | `index.ts`   | The table itself.                                  |
-| `targetsFor(from)`    | `index.ts`   | Every format `from` can become. Drives the picker. |
-| `find(from, to)`      | `index.ts`   | Fidelity and caveat for one pair, or `undefined`.  |
-| `engineFor(from, to)` | `engines.ts` | The loader for one pair. Worker only.              |
+| Export                  | Where from       | Purpose                                                             |
+| ----------------------- | ---------------- | ------------------------------------------------------------------- |
+| `converters`            | `table.ts`       | The declared edges.                                                 |
+| `targetsFor(from)`      | `routing.ts`     | Every format `from` can reach, direct or routed. Drives the picker. |
+| `find(from, to)`        | `routing.ts`     | The `Route` for one pair, or `undefined`.                           |
+| `edge(from, to)`        | `routing.ts`     | The one-step converter for a pair, if there is one.                 |
+| `allRoutes()`           | `routing.ts`     | Every pair Kiln offers. Used by the matrix snapshot.                |
+| `isUnsupported(a, b)`   | `unsupported.ts` | Whether a pair is refused, whatever route could reach it.           |
+| `engineFor(from, to)`   | `engines.ts`     | The loader for one **edge**. Worker only.                           |
+| `runRoute(route, file)` | `run-route.ts`   | Runs a route's steps in order. Worker only.                         |
 
 Three properties follow, and are worth stating plainly:
 
@@ -207,6 +238,10 @@ Three properties follow, and are worth stating plainly:
   then `docx → pdf` downloads mammoth once, not twice.
 - **A pair that is absent is simply not offered.** No disabled options, no
   "coming soon" — if `targetsFor` does not return it, the user never sees it.
+- **A routed pair loads two engines, one after the other**, and the hand-off
+  between them is a real file. The second engine sees exactly what a person
+  would have got had they run the two conversions themselves, which is what
+  makes the merged caveats true rather than optimistic.
 
 ### Worked example: adding DOCX → RTF
 
@@ -274,10 +309,68 @@ import()` inside the engine.
 
 ## Support matrix
 
-Twenty-five pairs, all implemented and all verified in a real browser
+**Fourteen formats, 114 pairs**, all verified in a real browser
 (`pnpm verify:browser`).
 
-### Text documents
+Those pairs are not 114 converters. Kiln declares **44 edges** — one-step
+conversions written by hand — and computes the rest as two of them run back to
+back. Fourteen formats would otherwise be 182 hand-written converters, each with
+its own bugs and its own caveat to keep true.
+
+Each family has a **hub** that everything else connects through: Markdown for
+text documents, Excel for spreadsheets. A new format needs a reader to its hub
+and a writer from it, and it is reachable from the whole family.
+
+### How a pair is reached
+
+`✓` is a direct converter. A format name is the one the file passes through on
+the way. `—` is a pair Kiln does not offer, and the interface says why.
+
+| from \ to  | `pdf` | `docx` | `odt` | `rtf` | `html` | `epub` | `md` | `txt` | `pptx` | `odp` | `xlsx` | `ods` | `csv` | `json` |
+| ---------- | ----- | ------ | ----- | ----- | ------ | ------ | ---- | ----- | ------ | ----- | ------ | ----- | ----- | ------ |
+| **`pdf`**  | ·     | md     | md    | md    | md     | md     | ✓    | ✓     | —      | —     | —      | —     | —     | —      |
+| **`docx`** | ✓     | ·      | md    | ✓     | md     | md     | ✓    | ✓     | —      | —     | —      | —     | —     | —      |
+| **`odt`**  | md    | md     | ·     | md    | md     | md     | ✓    | md    | —      | —     | —      | —     | —     | —      |
+| **`rtf`**  | md    | md     | md    | ·     | md     | md     | ✓    | ✓     | —      | —     | —      | —     | —     | —      |
+| **`html`** | md    | md     | md    | md    | ·      | md     | ✓    | md    | —      | —     | —      | —     | —     | —      |
+| **`epub`** | md    | md     | md    | md    | md     | ·      | ✓    | md    | —      | —     | —      | —     | —     | —      |
+| **`md`**   | ✓     | ✓      | ✓     | ✓     | ✓      | ✓      | ·    | ✓     | ✓      | ✓     | —      | —     | —     | —      |
+| **`txt`**  | ✓     | ✓      | md    | md    | md     | md     | ✓    | ·     | md     | md    | —      | —     | —     | —      |
+| **`pptx`** | —     | md     | md    | md    | md     | md     | ✓    | ✓     | ·      | —     | —      | —     | —     | —      |
+| **`odp`**  | —     | md     | md    | md    | md     | md     | ✓    | ✓     | —      | ·     | —      | —     | —     | —      |
+| **`xlsx`** | ✓     | ✓      | md    | md    | md     | md     | ✓    | ✓     | —      | —     | ·      | ✓     | ✓     | ✓      |
+| **`ods`**  | ✓     | ✓      | md    | md    | md     | md     | ✓    | ✓     | —      | —     | ✓      | ·     | ✓     | xlsx   |
+| **`csv`**  | md    | md     | md    | md    | md     | md     | ✓    | ✓     | —      | —     | ✓      | xlsx  | ·     | xlsx   |
+| **`json`** | xlsx  | xlsx   | —     | —     | —      | —      | xlsx | xlsx  | —      | —     | ✓      | xlsx  | xlsx  | ·      |
+
+The matrix is snapshotted in `lib/registry/routing.test.ts`, so a change to one
+edge that quietly adds or removes a dozen pairs shows up in a diff rather than in
+a bug report.
+
+### The rules that keep routing honest
+
+- **Two steps at most.** Three compounds the loss past the point of usefulness,
+  and each step is a whole file written and parsed again. A pair that would need
+  three hops does not exist — which is why `json → epub` is blank above while
+  `ods → epub` is not.
+- **A direct converter always wins**, even where a path also works. It was
+  written for that pair; a path was not.
+- **Fidelity is the worst link.** An `exact` step followed by a `lossy` one is
+  `lossy`.
+- **Caveats merge**, deduplicated, and a routed pair adds one more line naming
+  the format it passes through. Both reasons are shown before you commit, not
+  the first one.
+- **Warnings accumulate across the path**, each tagged with the step that
+  produced it: `.odt → .md: An image was not carried over`. Which half lost
+  something matters.
+- **A family boundary is crossed at most once.** Text documents, spreadsheets
+  and slides are separate families. A spreadsheet read out as prose is an honest
+  reduction; re-inflating that prose back into a grid is not, so `pdf → xlsx`
+  does not exist however it is asked for.
+
+### The 44 edges
+
+#### Text documents — hub: `md`
 
 | From | To   | Fidelity | What is lost                                                                   |
 | ---- | ---- | -------- | ------------------------------------------------------------------------------ |
@@ -285,46 +378,96 @@ Twenty-five pairs, all implemented and all verified in a real browser
 | docx | txt  | good     | All formatting.                                                                |
 | docx | pdf  | lossy    | Styles are approximated; pagination, headers and footers will not match Word.  |
 | docx | rtf  | lossy    | Tables, images and precise spacing.                                            |
-| md   | docx | good     | Raw HTML blocks.                                                               |
-| md   | pdf  | good     | Your previewer's typography.                                                   |
-| md   | txt  | exact    | Nothing — only the markers that exist to be rendered.                          |
-| txt  | md   | exact    | Nothing; the bytes pass through.                                               |
-| txt  | docx | good     | Nothing beyond paragraph structure.                                            |
-| txt  | pdf  | good     | Line breaks rewrap to the page.                                                |
+| odt  | md   | good     | Fonts, colours, page layout, footnotes. Emphasis, links and tables survive.    |
+| html | md   | lossy    | Styling, scripts, images and anything whose value is its layout.               |
+| epub | md   | lossy    | Cover, table of contents, metadata and styling. Chapters join into one file.   |
 | rtf  | txt  | good     | All formatting.                                                                |
 | rtf  | md   | lossy    | Heading levels ranked by font size; a large pull quote reads as a heading.     |
 | pdf  | txt  | lossy    | Layout, images, tables. A scan has no text at all.                             |
 | pdf  | md   | lossy    | Headings ranked by type size, paragraphs split on line spacing. Both inferred. |
+| md   | docx | good     | Inline emphasis, links, raw HTML.                                              |
+| md   | odt  | good     | Inline emphasis and links.                                                     |
+| md   | pdf  | good     | Inline emphasis, links, your previewer's typography.                           |
+| md   | rtf  | lossy    | Tables become tab-separated lines. Inline emphasis and links.                  |
+| md   | html | good     | Nothing structural — **the one target that keeps emphasis and links**.         |
+| md   | epub | good     | Images, inline emphasis, links. Each `#` starts a chapter.                     |
+| md   | txt  | exact    | Nothing — only the markers that exist to be rendered.                          |
+| txt  | md   | exact    | Nothing; the bytes pass through.                                               |
+| txt  | docx | good     | Nothing beyond paragraph structure.                                            |
+| txt  | pdf  | good     | Line breaks rewrap to the page.                                                |
 
-### Spreadsheets
+**Inline emphasis stops at the hub.** Every reader carries bold, italics and
+links into Markdown, and every writer except HTML drops them: the block model
+the writers share does not carry inline runs, and four formats' worth of run
+handling is a much larger job than it looks. HTML is the exception because it is
+rendered directly from the Markdown rather than through that model. The caveats
+say so on each pair rather than promising otherwise.
+
+#### Spreadsheets — hub: `xlsx`
 
 | From | To   | Fidelity | What is lost                                                        |
 | ---- | ---- | -------- | ------------------------------------------------------------------- |
 | xlsx | csv  | exact    | One CSV per sheet; several sheets means several files.              |
+| xlsx | ods  | good     | Formulas, charts, images and cell formatting.                       |
+| xlsx | json | good     | Formulas and formatting. Every value arrives as a string.           |
 | xlsx | md   | good     | Formatting, formulas and merged cells.                              |
 | xlsx | txt  | good     | Everything but the values.                                          |
 | xlsx | pdf  | lossy    | Sheets wider than 12 columns are cut off; charts and formatting go. |
 | xlsx | docx | lossy    | Formulas, charts, images and cell formatting.                       |
+| ods  | xlsx | good     | Formulas, charts, images and cell formatting.                       |
+| ods  | csv  | exact    | One CSV per sheet.                                                  |
+| ods  | md   | good     | Formatting, formulas and merged cells.                              |
+| ods  | txt  | good     | Everything but the values.                                          |
+| ods  | pdf  | lossy    | Sheets wider than 12 columns are cut off.                           |
+| ods  | docx | lossy    | Formulas, charts, images and cell formatting.                       |
 | csv  | xlsx | exact    | Nothing.                                                            |
 | csv  | md   | good     | Becomes a pipe table, first row as header.                          |
 | csv  | txt  | exact    | Nothing; the bytes pass through.                                    |
+| json | xlsx | good     | Nesting is flattened to dotted keys.                                |
 
-### Slides
+ODS shares five of those engines with XLSX rather than copying them: SheetJS
+reads both, and the engines work on rows. Declaring the edges records a
+capability that already existed — leaving them out would have offered
+`xlsx → odt` while refusing `ods → odt`.
 
-| From | To   | Fidelity | What is lost                                              |
-| ---- | ---- | -------- | --------------------------------------------------------- |
-| pptx | txt  | lossy    | Everything visual. Slide text only.                       |
-| pptx | md   | lossy    | One `##` per slide, bullets beneath; notes become quotes. |
-| md   | pptx | good     | Images and tables. Each top-level heading starts a slide. |
+**JSON is a spreadsheet, not a document.** The only JSON Kiln reads or writes is
+tabular: an array of records becomes rows with the keys as a header, and a
+workbook of several sheets becomes an object of arrays keyed by sheet name — the
+shape it reads back, so a round trip survives. A nested object flattens to dotted
+keys (`lead.name`), an array inside a value becomes comma-separated text, and
+both are said out loud in the caveat. Arbitrary nested JSON is not a table and
+Kiln does not pretend it is one.
+
+#### Slides
+
+| From | To   | Fidelity | What is lost                                                     |
+| ---- | ---- | -------- | ---------------------------------------------------------------- |
+| pptx | txt  | lossy    | Everything visual. Slide text only.                              |
+| pptx | md   | lossy    | One `##` per slide, bullets beneath; notes become quotes.        |
+| odp  | txt  | lossy    | Everything visual. Slide text only.                              |
+| odp  | md   | lossy    | One `##` per slide, bullets beneath; notes become quotes.        |
+| md   | pptx | good     | Images, tables, emphasis. Each top-level heading starts a slide. |
+| md   | odp  | good     | Images, tables, emphasis. Each top-level heading starts a slide. |
+
+Slides have no hub, and no deck becomes another deck. Kiln reads a deck as text
+only — there is no browser-sized library that can rebuild a layout — so
+`pptx → odp` would hand you the words and lose every design decision in the
+original.
+
+**Only Markdown becomes slides.** A `#` heading is an explicit statement of where
+one slide ends and the next begins; prose carries no such marker, and inventing
+them is writing rather than converting. That is why `docx → pptx` is refused
+while `md → pptx` is not, and why `txt → pptx` is offered — `txt → md` is a
+byte-for-byte copy, so a `.txt` file is Markdown as far as this is concerned.
 
 **Values, not formulas.** Reading a workbook exports what Excel last computed,
 so a cell holding `=SUM(C2:C3)` converts as `4000`. Kiln does not recalculate.
 
 **Warnings, not silence.** When an engine has to drop something — charts, images,
-pivot tables, a page with no text layer, a CSV that turned out to be
-semicolon-separated, a table too wide for the page, a script the PDF font cannot
-draw — it says so under the finished row instead of pretending the conversion was
-clean.
+pivot tables, a footnote, a script tag, a page with no text layer, a CSV that
+turned out to be semicolon-separated, a table too wide for the page, a script the
+PDF font cannot draw — it says so under the finished row instead of pretending
+the conversion was clean.
 
 ### Which scripts survive a PDF
 
@@ -395,24 +538,43 @@ The iOS thresholds are provisional guesses awaiting a real device.
 
 ## What Kiln will not do
 
-Seven pairs are deliberately absent. They are listed in
-`lib/registry/unsupported.ts` and shown in the interface, under a quiet link on
-any row whose format has missing targets.
+**Sixty-four pairs are deliberately absent**, and four more are simply out of
+reach in two steps. They are written as rules in `lib/registry/unsupported.ts` —
+one reason covering every pair it applies to, because fourteen formats make 182
+ordered pairs and a reason repeated eight times is a reason nobody maintains.
+They are shown in the interface, under a quiet link on any row whose format has
+missing targets, grouped the same way.
 
-| From | To   | Why not                                                                           |
-| ---- | ---- | --------------------------------------------------------------------------------- |
-| pptx | pdf  | Rendering slides faithfully needs a full presentation engine.                     |
-| pptx | docx | No honest mapping from positioned slide elements to flowing prose.                |
-| pdf  | docx | A PDF records glyph positions, not paragraphs. Rebuilding structure is guesswork. |
-| pdf  | xlsx | Table detection in a PDF is inference. Wrong numbers are worse than none.         |
-| pdf  | pptx | Two unreliable steps stacked on each other.                                       |
-| xlsx | pptx | Deciding what deserves a slide is editorial, not mechanical.                      |
-| docx | pptx | Splitting prose into slides is a writing task.                                    |
+The list is also what stops routing being too clever: a two-step path can reach
+pairs nobody should be offered, so the router checks here first.
 
-They all reduce to the same constraint: the output's value is its visual layout,
-and reconstructing that means shipping a rendering engine to the browser or
-sending the document to a server. The second is the one thing Kiln will not do,
-and the first is too large to be honest about.
+| From              | To              | Why not                                                                                                                                                                        |
+| ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| any text document | any spreadsheet | Kiln will not guess which parts of a document are a table. A spreadsheet that is subtly wrong is worse than none.                                                              |
+| prose documents   | `pptx`, `odp`   | Splitting prose into slides means deciding what deserves a slide, which is a writing task. Markdown and plain text are the exception: a `#` heading says where a slide starts. |
+| `pptx`, `odp`     | `pdf`           | A deck converted to PDF should look like the deck. Kiln reads slides as text, and rendering the real layout needs a full presentation engine.                                  |
+| `pptx`, `odp`     | any spreadsheet | A deck is not a grid. The text on a slide has no rows or columns to recover.                                                                                                   |
+| any spreadsheet   | `pptx`, `odp`   | Turning a sheet into slides is an editorial judgement, not a conversion.                                                                                                       |
+| `pptx`, `odp`     | each other      | Kiln reads a deck as text only, so there is no layout to carry across.                                                                                                         |
+
+Two of these used to be absolute and are not any more. `pdf → docx` and
+`pptx → docx` are now offered as two-step conversions, because refusing them
+while offering `pdf → md` and `pptx → md` was inconsistent: the loss is in the
+first step either way, and it is disclosed either way. What is still refused is
+`pptx → pdf`, and the difference is the reader's expectation — somebody asking
+for that wants printable slides, and a prose PDF would be a worse answer than no.
+
+The four out-of-reach pairs are `json` to `odt`, `rtf`, `html` and `epub`.
+Nothing is wrong with them; they simply need three hops, and three compounds the
+loss past the point of usefulness. Convert to `.xlsx` or `.md` first. ODS reaches
+all four because it shares its text-side edges with XLSX — JSON, whose reader is
+genuinely its own, has only the one edge into the family.
+
+The refusals all reduce to one of two things: the output's value is its visual
+layout, and reconstructing that means shipping a rendering engine to the browser
+or sending the document to a server — the second being the one thing Kiln will
+not do. Or the conversion is an editorial judgement, and a converter that guesses
+at one produces something you have to redo.
 
 This is not hedging. The constraint that makes Kiln private is the same
 constraint that limits it, and a product that hides the second half while

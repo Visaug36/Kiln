@@ -57,16 +57,31 @@ const server = createServer((req, res) => {
 await new Promise((resolve) => server.listen(4173, resolve));
 const base = 'http://localhost:4173';
 
-/** source fixture → every target declared for it. */
-const PAIRS = [
-  ['sample.docx', ['md', 'txt', 'pdf', 'rtf']],
-  ['sample.md', ['docx', 'pdf', 'txt', 'pptx']],
-  ['sample.txt', ['md', 'docx', 'pdf']],
-  ['sample.rtf', ['txt', 'md']],
-  ['sample.pdf', ['txt', 'md']],
-  ['sample.xlsx', ['csv', 'md', 'txt', 'pdf', 'docx']],
-  ['sample.csv', ['xlsx', 'md', 'txt']],
-  ['sample.pptx', ['txt', 'md']],
+/**
+ * One fixture per source format. The **targets are not listed here** — they are
+ * read off the format picker once the file is dropped.
+ *
+ * Most pairs Kiln offers are now two converters composed by the router rather
+ * than anything written by hand, and a list in this file would be a third copy
+ * of the matrix to keep in step with the registry and the snapshot. Reading the
+ * interface instead means this script checks exactly what a person is actually
+ * offered — which is the only list that matters here.
+ */
+const SOURCES = [
+  'sample.docx',
+  'sample.odt',
+  'sample.rtf',
+  'sample.html',
+  'sample.epub',
+  'sample.md',
+  'sample.txt',
+  'sample.pdf',
+  'sample.pptx',
+  'sample.odp',
+  'sample.xlsx',
+  'sample.ods',
+  'sample.csv',
+  'sample.json',
 ];
 
 /**
@@ -80,27 +95,54 @@ const PAIRS = [
 const MARKER = 'Kiln fixture marker 4711';
 const EXPECTED = {
   'sample.docx': [MARKER, 'Quarterly report', 'Emphasis cell'],
+  'sample.odt': [MARKER, 'Field notes', 'Nested item'],
   'sample.md': [MARKER, 'Kiln test document'],
   'sample.txt': [MARKER],
   'sample.rtf': [MARKER, 'Plain paragraph text.'],
+  'sample.html': [MARKER, 'Quarterly report', 'Nested bullet'],
+  // Chapter three is stored first in the archive and last in the spine, so
+  // finding all three proves nothing was dropped and the order test below
+  // proves they came back the right way round.
+  'sample.epub': [MARKER, 'Chapter one', 'Chapter three'],
   'sample.pdf': [MARKER, 'A printed heading'],
   'sample.xlsx': [MARKER, 'North'],
+  'sample.ods': [MARKER, 'North'],
   'sample.csv': [MARKER, 'North'],
+  'sample.json': [MARKER, 'North'],
   'sample.pptx': [MARKER, 'Opening slide'],
+  'sample.odp': [MARKER, 'Opening slide', 'Second slide'],
+};
+
+/**
+ * Text that must appear **in this order** in the output.
+ *
+ * The EPUB fixture's chapters are stored in one order, named in another and
+ * spined in a third. Every individual chapter reads perfectly whichever way
+ * they come out, so only the order catches a reader that ignored the spine.
+ */
+const ORDERED = {
+  'sample.epub': ['Chapter one', 'Chapter two', 'Chapter three'],
+  'sample.odp': ['Opening slide', 'Second slide'],
+  'sample.pptx': ['Opening slide', 'Second slide'],
 };
 
 /** Formats whose bytes are readable as text without a parser. */
-const READABLE = new Set(['md', 'txt', 'csv', 'rtf']);
+const READABLE = new Set(['md', 'txt', 'csv', 'rtf', 'html', 'json']);
 
 /** Markdown punctuation that must never reach a format that cannot render it. */
 const LEAKED_MARKERS = /\*\*|`[^`]|\]\(http/;
 
+const PK = [0x50, 0x4b, 0x03, 0x04];
 const SIGNATURE = {
   pdf: [0x25, 0x50, 0x44, 0x46],
-  docx: [0x50, 0x4b, 0x03, 0x04],
-  xlsx: [0x50, 0x4b, 0x03, 0x04],
-  pptx: [0x50, 0x4b, 0x03, 0x04],
-  zip: [0x50, 0x4b, 0x03, 0x04],
+  docx: PK,
+  xlsx: PK,
+  pptx: PK,
+  odt: PK,
+  ods: PK,
+  odp: PK,
+  epub: PK,
+  zip: PK,
 };
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -132,7 +174,22 @@ await page.goto(base, { waitUntil: 'networkidle' });
 const results = [];
 let failures = 0;
 
-for (const [fixtureName, targets] of PAIRS) {
+for (const fixtureName of SOURCES) {
+  // Ask the interface what it offers for this file, rather than telling it.
+  await page.goto(base, { waitUntil: 'networkidle' });
+  await page.setInputFiles('input[type=file]', join(fixtures, fixtureName));
+  await page.getByRole('radiogroup').first().waitFor({ timeout: 15000 });
+
+  const targets = (
+    await page.getByRole('radiogroup').first().getByRole('radio').allTextContents()
+  ).map((label) => label.trim().replace(/^\./, ''));
+
+  if (targets.length === 0) {
+    console.log(`FAIL ${fixtureName}: the picker offered nothing`);
+    failures += 1;
+    continue;
+  }
+
   for (const target of targets) {
     await page.goto(base, { waitUntil: 'networkidle' });
     await page.setInputFiles('input[type=file]', join(fixtures, fixtureName));
@@ -181,8 +238,18 @@ for (const [fixtureName, targets] of PAIRS) {
       if (READABLE.has(suffix)) {
         const text = new TextDecoder().decode(bytes);
         const missing = (EXPECTED[fixtureName] ?? []).filter((w) => !text.includes(w));
+
+        // Reading order, where the source records one that its file order does
+        // not match.
+        const sequence = ORDERED[fixtureName] ?? [];
+        const positions = sequence.map((word) => text.indexOf(word));
+        const outOfOrder =
+          positions.every((at) => at >= 0) &&
+          positions.some((at, i) => i > 0 && at < positions[i - 1]);
+
         if (missing.length > 0) contentNote = `missing ${missing.join(', ')}`;
-        else if (target !== 'md' && LEAKED_MARKERS.test(text)) {
+        else if (outOfOrder) contentNote = `out of order: ${sequence.join(' then ')}`;
+        else if (suffix !== 'md' && suffix !== 'json' && LEAKED_MARKERS.test(text)) {
           contentNote = 'Markdown punctuation leaked into a non-Markdown output';
         }
       }
@@ -215,7 +282,7 @@ for (const [fixtureName, targets] of PAIRS) {
     if (!outcome.ok) failures += 1;
     results.push(outcome);
     console.log(
-      `${outcome.ok ? 'ok  ' : 'FAIL'} ${outcome.pair.padEnd(16)} ${String(outcome.bytes).padStart(8)} B  ${String(outcome.ms).padStart(6)} ms  ${outcome.file} ${outcome.note}`,
+      `${outcome.ok ? 'ok  ' : 'FAIL'} ${outcome.pair.padEnd(18)} ${String(outcome.bytes).padStart(8)} B  ${String(outcome.ms).padStart(6)} ms  ${outcome.file} ${outcome.note}`,
     );
   }
 }

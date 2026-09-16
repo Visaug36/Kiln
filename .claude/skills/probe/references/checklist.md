@@ -6,10 +6,15 @@ not a test yet.
 
 Pair shorthand used below:
 
-- **text in** — `docx`, `md`, `txt`, `rtf`, `pdf` as a source
+- **text in** — `docx`, `odt`, `rtf`, `html`, `epub`, `md`, `txt`, `pdf` as a source
 - **text out** — `md`, `txt` as a target (the formats that carry plain runs)
-- **rich out** — `docx`, `pdf`, `rtf`, `pptx` as a target
-- **all 25** — every declared pair in `lib/registry/index.ts`
+- **rich out** — `docx`, `odt`, `pdf`, `rtf`, `html`, `epub`, `pptx`, `odp` as a target
+- **every edge** — the 44 declared converters in `lib/registry/table.ts`
+- **every pair** — all 114, direct and routed, in the `routing.test.ts` snapshot
+
+**Probe edges, assert on pairs.** A routed pair is two edges and a hand-off;
+there is no third thing to test in the middle. Fix an edge and every pair through
+it is fixed — which is also how one bad edge breaks a dozen pairs at once.
 
 Load a fixture with `fixture('sample.docx')` from `test/fixtures.ts`; reach an
 engine with `engineFor(from, to)` from `lib/registry/engines.ts`.
@@ -37,14 +42,19 @@ first:
 
 The siblings in this repo, and the question to ask of each:
 
-| You changed                                                                           | Also check                              | Because                                                                |
-| ------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| `_md.ts` (Markdown reader)                                                            | `_docx.ts` `htmlToBlocks` (HTML reader) | Both produce `Block[]` and must agree about the same document          |
-| `_docx.ts` `htmlToBlocks`                                                             | `_md.ts` `parseMarkdown`                | The same, in reverse                                                   |
-| Either reader                                                                         | `_pdfread.ts`, `_rtf.ts` `parseRtf`     | Two more producers of `Block[]`, easy to forget                        |
-| One writer (`_blocks-to-md`, `_blocks-to-pdf`, `writeDocx`, `writeRtf`, `md-to-pptx`) | The other four                          | A block field that one writer honours and four ignore is a silent loss |
-| `inlineToMarkdown`                                                                    | `htmlToPlainText`                       | The two inline renderers, chosen by the caller                         |
-| Anything that drops content                                                           | Everything else in that function        | If it can lose one thing silently, ask what else it loses              |
+| You changed                                                                                                                                  | Also check                                    | Because                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| `_md.ts` (Markdown reader)                                                                                                                   | `_docx.ts` `htmlToBlocks` (HTML reader)       | Both produce `Block[]` and must agree about the same document             |
+| `_docx.ts` `htmlToBlocks`                                                                                                                    | `_md.ts` `parseMarkdown`                      | The same, in reverse                                                      |
+| Either reader                                                                                                                                | `_pdfread.ts`, `_rtf.ts`, `_odf.ts`           | Four producers of `Block[]` now, and the newest is the easiest to forget  |
+| One writer (`_blocks-to-md`, `_blocks-to-pdf`, `writeDocx`, `writeRtf`, `blocksToOdfText`, `_epub` `chapterBody`, `md-to-pptx`, `md-to-odp`) | The other seven                               | A block field one writer honours and seven ignore is a silent loss        |
+| `inlineToMarkdown`                                                                                                                           | `htmlToPlainText`                             | The two inline renderers, chosen by the caller                            |
+| **`_docx.ts` (DOCX)**                                                                                                                        | **`_odf.ts` `odfTextToHtml` (ODT)**           | Siblings by design: ODT is translated into the HTML shape DOCX produces   |
+| **`_sheet.ts` / an `xlsx>*` engine**                                                                                                         | **the ODS keys in `engines.ts`**              | ODS goes through the _same modules_; a reader assumption breaks both      |
+| **`_pptx.ts` (PPTX)**                                                                                                                        | **`_odf.ts` `odfPresentationToSlides` (ODP)** | Two deck readers, one `_slides.ts` behind them                            |
+| **`_html.ts` `reduceHtml`**                                                                                                                  | **`epub-to-md.ts`**                           | An EPUB chapter is XHTML and goes through the same reduction              |
+| Anything that drops content                                                                                                                  | Everything else in that function              | If it can lose one thing silently, ask what else it loses                 |
+| A pair's `caveat`                                                                                                                            | Round-trip it and check the claim             | Routing repeats a caveat on every pair through that edge (known-bugs #15) |
 
 **The test records both.** A regression test that pins only the path you fixed
 leaves the other free to drift again — which is exactly how #5 survived. Assert
@@ -85,7 +95,7 @@ counted, and named as "Chinese, Japanese or Korean" in `warnings`. A document
 that is _only_ CJK must be **refused** by `* → pdf`, not converted to a page of
 replacement characters.
 
-**Applies to** all 25.
+**Applies to** every pair.
 
 ### 1.3 Greek and Cyrillic
 
@@ -95,7 +105,7 @@ replacement characters.
 coverage, and `warnings` must be empty. This is the regression that matters: the
 base-14 Helvetica turned `Καλημέρα` into `9£±;³·;Ã-<` and reported success.
 
-**Applies to** all 25. See known-bugs #6.
+**Applies to** every pair. See known-bugs #6.
 
 ### 1.4 Right-to-left (Arabic, Hebrew)
 
@@ -106,7 +116,7 @@ base-14 Helvetica turned `Καλημέρα` into `9£±;³·;Ã-<` and reported 
 replace and warn — Kiln has no bidirectional ordering, so anything that _looked_
 rendered would be in the wrong visual order, which is worse than a warning.
 
-**Applies to** all 25.
+**Applies to** every pair.
 
 ### 1.5 Accented Latin and Latin Extended
 
@@ -116,7 +126,7 @@ rendered would be in the wrong visual order, which is worse than a warning.
 Latin-1 and is what distinguishes a real encoding fix from one that only handles
 the easy range.
 
-**Applies to** all 25.
+**Applies to** every pair.
 
 ### 1.6 Ligatures
 
@@ -233,7 +243,7 @@ that writes a PDF. A 12-column table produces no warning at all.
 **Correct** Refused with a sentence naming emptiness. Never a crash, never an
 empty output file.
 
-**Applies to** all 25.
+**Applies to** every pair.
 
 ### 3.2 A `.docx` that is really a legacy `.doc`
 
@@ -253,7 +263,7 @@ message, an unhelpful complaint about a zip.
 "This file is named .docx but its contents are XLSX." Detection reads magic bytes
 and, for a ZIP, asks the worker which OOXML type it holds.
 
-**Applies to** all 25, through `lib/files/detect.ts`.
+**Applies to** every pair, through `lib/files/detect.ts`.
 
 ### 3.4 Corrupt or truncated archive
 
@@ -291,7 +301,7 @@ OCR. Not an empty `.txt` reported as done.
 a file merely _large_ gets a pre-flight caution on the queued row — a warning,
 never a block. See `lib/files/capacity.ts`.
 
-**Applies to** all 25.
+**Applies to** every pair.
 
 ---
 
@@ -377,3 +387,53 @@ is not slide order; `slide10.xml` sorts before `slide2.xml` as a string.
   worker must not stop the jobs behind it.
 - **Budget.** `pnpm check:bundle` — entry JS under 200 KB gzipped, and no engine
   marker in the entry chunk.
+
+---
+
+## 7. Routing
+
+### 7.1 A routed pair against the two steps by hand
+
+**Input** Any pair whose `find()` returns a `via`. Run the two edges yourself and
+compare the bytes.
+
+**Correct** Identical. The hand-off is a real file on purpose; if a routed pair
+differs from doing it by hand, something is being smuggled across the join and
+the merged caveats are no longer true.
+
+**Applies to** All 70 routed pairs. `run-route.test.ts` pins one.
+
+### 7.2 Warnings say which step lost what
+
+**Input** `odt → html`, whose first step drops an image and whose second does
+not exist as a single converter.
+
+**Correct** Every warning prefixed `.odt → .md: `. On a one-step pair there is no
+prefix at all — the tag is noise when there is only one place it could have come
+from.
+
+### 7.3 A step that produces several files
+
+**Input** `ods → csv` on a two-sheet workbook, then anything further.
+
+**Correct** The next step runs over **each** file, and the output count follows
+the document. One sheet becoming one file and two becoming two is the honest
+shape; silently taking the first is not.
+
+### 7.4 The matrix snapshot
+
+**Input** `pnpm test`.
+
+**Correct** No snapshot diff, unless you meant to change which pairs exist. One
+new edge can add a dozen pairs. Read the diff; do not update it reflexively.
+
+### 7.5 XML element names that share a prefix
+
+**Input** Markup using `text:list` beside `text:list-item`, or `table:table`
+beside `table:table-row`.
+
+**Correct** Each matched by its own rule. `\b` is a word boundary and a hyphen
+is not a word character, so `/<text:list\b/` matches both — see known-bugs #13,
+which flattened every list in a document while the output stayed plausible.
+
+**Applies to** `_odf.ts`, and anything else parsing namespaced XML by hand.

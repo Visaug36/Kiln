@@ -1,13 +1,7 @@
 import { describeFailure, fail, readArrayBuffer } from '../shared';
+import type { Slide } from './_slides';
 
-export interface Slide {
-  index: number;
-  /** First text run on the slide, treated as its title. */
-  title: string;
-  /** Everything after the title, in reading order. */
-  body: string[];
-  notes: string[];
-}
+export type { Slide } from './_slides';
 
 export interface PptxRead {
   slides: Slide[];

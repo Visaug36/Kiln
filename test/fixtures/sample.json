@@ -1,0 +1,37 @@
+[
+  {
+    "region": "North",
+    "units": 120,
+    "revenue": 2400,
+    "lead": {
+      "name": "Ada",
+      "office": "Leeds"
+    },
+    "tags": [
+      "priority",
+      "q1"
+    ]
+  },
+  {
+    "region": "South",
+    "units": 80,
+    "revenue": 1600,
+    "lead": {
+      "name": "Grace",
+      "office": "Bath"
+    },
+    "tags": [
+      "q1"
+    ]
+  },
+  {
+    "region": "Note",
+    "units": 0,
+    "revenue": 0,
+    "lead": {
+      "name": "Kiln fixture marker 4711",
+      "office": ""
+    },
+    "tags": []
+  }
+]

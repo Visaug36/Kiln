@@ -7,6 +7,8 @@ import { pdfLinesToBlocks } from './_pdfread';
 import { parseDelimited, sniffDelimiter, toCsv, toPipeTable } from './_sheet';
 import { parseMarkdown, stripInline } from './_md';
 import type { Block } from './_md';
+import { odfTextToHtml } from './_odf';
+import { readHtmlDocument } from './_html';
 import { KilnError, describeFailure } from '../shared';
 
 /**
@@ -572,5 +574,161 @@ describe('inferring structure where the format does not record it', () => {
       { text: 'Start of page two', size: 11, page: 2, y: 700 },
     ]);
     expect(blocks).toHaveLength(2);
+  });
+});
+
+describe('the OpenDocument reader', () => {
+  /** A minimal ODF text body, in the shape LibreOffice writes. */
+  const doc = (body: string, styles = '') =>
+    `<office:document-content><office:automatic-styles>${styles}</office:automatic-styles>` +
+    `<office:body><office:text>${body}</office:text></office:body></office:document-content>`;
+
+  it('tells a list from a list item, and a table from its rows', () => {
+    // `\b` matches inside a hyphenated XML name, so a pattern for `text:list`
+    // also matched `text:list-item` and one for `table:table` matched
+    // `table:table-row`. Every list in a document flattened into loose
+    // paragraphs and every table nested three deep. Nothing threw.
+    const { html } = odfTextToHtml(
+      doc(
+        '<text:list text:style-name="L1">' +
+          '<text:list-item><text:p>One</text:p></text:list-item>' +
+          '<text:list-item><text:p>Two</text:p></text:list-item>' +
+          '</text:list>' +
+          '<table:table table:name="T"><table:table-row>' +
+          '<table:table-cell><text:p>Cell</text:p></table:table-cell>' +
+          '</table:table-row></table:table>',
+      ),
+    );
+
+    expect(html).toContain('<ul>');
+    expect(html).toContain('<li><p>One</p></li>');
+    expect(html).not.toContain('<ul><p>One');
+    expect(html).toContain('<tr><td><p>Cell</p></td></tr>');
+    expect(html).not.toContain('<table><p>Cell');
+  });
+
+  it('numbers an ordered list and nests a list inside a list item', () => {
+    const { html } = odfTextToHtml(
+      doc(
+        '<text:list text:style-name="N1"><text:list-item><text:p>Step</text:p>' +
+          '<text:list text:style-name="N1"><text:list-item><text:p>Sub</text:p></text:list-item></text:list>' +
+          '</text:list-item></text:list>',
+        '<text:list-style style:name="N1"><text:list-level-style-number text:level="1"/></text:list-style>',
+      ),
+    );
+
+    expect(html).toContain('<ol>');
+    expect(html).toContain('<ol><li><p>Sub</p></li></ol>');
+    // The outer list closes after the inner one, not before it.
+    expect(html.indexOf('</ol></li></ol>')).toBeGreaterThan(html.indexOf('<p>Sub</p>'));
+  });
+
+  it('closes emphasis where the span it opened ends', () => {
+    // A closing tag carries no style name, so rewriting the opening tags in one
+    // pass and the closing tags in another left every `<strong>` open to the
+    // end of the document.
+    const { html } = odfTextToHtml(
+      doc(
+        '<text:p><text:span text:style-name="T1">bold</text:span> plain ' +
+          '<text:span text:style-name="T2">italic</text:span></text:p>',
+        '<style:style style:name="T1" style:family="text"><style:text-properties fo:font-weight="bold"/></style:style>' +
+          '<style:style style:name="T2" style:family="text"><style:text-properties fo:font-style="italic"/></style:style>',
+      ),
+    );
+
+    expect(html).toContain('<strong><span>bold</span></strong>');
+    expect(html).toContain('<em><span>italic</span></em>');
+    expect((html.match(/<strong>/g) ?? []).length).toBe(1);
+    expect((html.match(/<\/strong>/g) ?? []).length).toBe(1);
+  });
+
+  it('counts one footnote once', () => {
+    // `<text:note>` contains `<text:note-citation>` and `<text:note-body>`, and
+    // a word-boundary pattern counted all three.
+    const { warnings } = odfTextToHtml(
+      doc(
+        '<text:p>Body<text:note text:note-class="footnote">' +
+          '<text:note-citation>1</text:note-citation>' +
+          '<text:note-body><text:p>Aside</text:p></text:note-body>' +
+          '</text:note></text:p>',
+      ),
+    );
+
+    expect(warnings.join(' ')).toContain('One footnote or endnote was');
+  });
+
+  it('carries a merged cell’s span so the same warning fires as for Word', () => {
+    const { html } = odfTextToHtml(
+      doc(
+        '<table:table table:name="T"><table:table-row>' +
+          '<table:table-cell table:number-columns-spanned="2"><text:p>Wide</text:p></table:table-cell>' +
+          '<table:covered-table-cell/>' +
+          '</table:table-row></table:table>',
+      ),
+    );
+
+    expect(html).toContain('<td colspan="2">');
+    expect(htmlToBlocks(html).warnings.join(' ')).toContain('spanned more than one');
+  });
+
+  it('agrees with the Markdown reader about the same nested list', async () => {
+    // The standing rule: two producers of Block[] must not drift apart.
+    const shape = (blocks: Block[]) =>
+      blocks.map((b) =>
+        b.kind === 'bullet' ? `${b.depth}:${b.ordered}:${b.text}` : b.kind,
+      );
+
+    const odf = odfTextToHtml(
+      doc(
+        '<text:list text:style-name="L1">' +
+          '<text:list-item><text:p>One</text:p>' +
+          '<text:list text:style-name="L1"><text:list-item><text:p>One a</text:p></text:list-item></text:list>' +
+          '</text:list-item>' +
+          '<text:list-item><text:p>Two</text:p></text:list-item>' +
+          '</text:list>',
+      ),
+    );
+
+    expect(shape(htmlToBlocks(odf.html).blocks)).toEqual(
+      shape(await parseMarkdown('- One\n    - One a\n- Two\n')),
+    );
+  });
+});
+
+describe('the HTML reader', () => {
+  it('keeps prose that lives in a bare div', () => {
+    // A great deal of the web puts its paragraphs in `<div>`, and the block
+    // layer reads `<p>`. Reporting those as stranded words was honest and
+    // useless: a page built that way converted to a warning and nothing else.
+    const { html } = readHtmlDocument('<body><div>Loose prose here.</div></body>');
+    expect(html).toContain('<p>Loose prose here.</p>');
+    expect(htmlToBlocks(html).warnings).toEqual([]);
+  });
+
+  it('unwraps a div that holds blocks rather than wrapping it again', () => {
+    const { html } = readHtmlDocument(
+      '<body><div class="wrap"><div><p>Inner</p></div></div></body>',
+    );
+    expect(html).toContain('<p>Inner</p>');
+    expect(html).not.toContain('<p><p>');
+  });
+
+  it('collapses pre > code so a fenced block keeps no stray backtick', () => {
+    const { html } = readHtmlDocument('<body><pre><code>x();</code></pre></body>');
+    expect(html).toContain('<pre>x();</pre>');
+    expect(html).not.toContain('<code>');
+  });
+
+  it('names what it dropped instead of dropping it quietly', () => {
+    const { warnings } = readHtmlDocument(
+      '<html><head><style>p{}</style></head><body><img src="a.png"><script>x()</script>' +
+        '<iframe src="b"></iframe><form></form><p>Text</p></body></html>',
+    );
+    const joined = warnings.join(' ');
+    expect(joined).toContain('Stylesheets were dropped');
+    expect(joined).toContain('One image was');
+    expect(joined).toContain('One script was');
+    expect(joined).toContain('An embedded frame was');
+    expect(joined).toContain('A form was');
   });
 });

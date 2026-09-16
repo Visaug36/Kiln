@@ -65,9 +65,9 @@ describe('the screen', () => {
 
     expect(screen.getByRole('heading', { name: 'Drop a document' })).toBeInTheDocument();
     expect(screen.getByText('Files never leave your browser')).toBeInTheDocument();
-    expect(
-      screen.getByText('PDF · DOCX · PPTX · XLSX · CSV · MD · TXT · RTF'),
-    ).toBeInTheDocument();
+    // Derived from the registry, so it cannot fall behind the format list.
+    expect(screen.getByText(/^PDF · DOCX · ODT · /)).toBeInTheDocument();
+    expect(screen.getByText(/ · CSV · JSON$/)).toBeInTheDocument();
   });
 
   it('has no job list until a file arrives', () => {
@@ -88,7 +88,9 @@ describe('dropping a file', () => {
       .getAllByRole('radio')
       .map((node) => node.textContent);
 
-    expect(options).toEqual(['.pdf', '.md', '.txt', '.rtf']);
+    // Routed targets are offered beside direct ones and look no different:
+    // .odt and .epub are reached through Markdown, .pdf and .rtf directly.
+    expect(options).toEqual(['.pdf', '.odt', '.rtf', '.html', '.epub', '.md', '.txt']);
   });
 
   it('changes the target when another format is chosen', async () => {
@@ -154,24 +156,37 @@ describe('the unsupported list', () => {
     await dropFiles(container, [fixture('sample.pdf')]);
 
     const link = await screen.findByRole('button', {
-      name: /Some formats aren’t available for PDF/,
+      name: /Some formats aren’t available for \.pdf/,
     });
     expect(link).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(link);
 
     expect(link).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/\.pdf → \.docx/)).toBeInTheDocument();
-    expect(screen.getByText(/records where glyphs sit on a page/)).toBeInTheDocument();
+    // One reason, covering every target it applies to, rather than the same
+    // paragraph repeated once per pair.
+    expect(screen.getByText(/\.pdf → \.pptx, \.odp/)).toBeInTheDocument();
+    expect(screen.getByText(/deciding what deserves a slide/)).toBeInTheDocument();
   });
 
-  it('says nothing for a format with no missing targets', async () => {
+  it('lists only what is actually missing for the source', async () => {
     const { container } = render(<Home />);
-    await dropFiles(container, [fixture('sample.txt')]);
+    // Markdown reaches every text and slide format Kiln knows. The only thing
+    // it cannot become is a spreadsheet, and that is the only line shown.
+    await dropFiles(container, [fixture('sample.md')]);
 
-    await waitFor(() => expect(useJobs.getState().jobs).toHaveLength(1));
+    const link = await screen.findByRole('button', {
+      name: /Some formats aren’t available for \.md/,
+    });
+    fireEvent.click(link);
+
+    // The disclosure names its own panel, which is the only way to tell these
+    // apart from the format picker's list of offered targets.
+    const panel = document.getElementById(link.getAttribute('aria-controls')!)!;
     expect(
-      screen.queryByRole('button', { name: /aren’t available/ }),
-    ).not.toBeInTheDocument();
+      within(panel).getByText(/\.md → \.xlsx, \.ods, \.csv, \.json/),
+    ).toBeInTheDocument();
+    // Slides are offered for Markdown, so they are not among the refusals.
+    expect(within(panel).queryByText(/\.pptx/)).not.toBeInTheDocument();
   });
 });

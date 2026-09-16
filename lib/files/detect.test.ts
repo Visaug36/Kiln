@@ -98,12 +98,66 @@ describe('plain-text formats', () => {
     expect((await detectFormat(asFile('notes.md'))).format).toBe('md');
     expect((await detectFormat(asFile('notes.txt'))).format).toBe('txt');
     expect((await detectFormat(asFile('rows.csv'))).format).toBe('csv');
+    expect((await detectFormat(asFile('page.html'))).format).toBe('html');
+    expect((await detectFormat(asFile('data.json'))).format).toBe('json');
   });
 
   it('accepts the common aliases', () => {
     expect(formatFromExtension('readme.markdown')).toBe('md');
     expect(formatFromExtension('log.text')).toBe('txt');
     expect(formatFromExtension('rows.tsv')).toBe('csv');
+    expect(formatFromExtension('page.htm')).toBe('html');
+    expect(formatFromExtension('page.xhtml')).toBe('html');
+    expect(formatFromExtension('letter.ott')).toBe('odt');
+  });
+
+  it('does not sniff a leading brace or angle bracket', async () => {
+    // A Markdown file can perfectly well open with `<div>` or `{`. The
+    // extension is the only honest answer for a format with no signature, and
+    // guessing from the first byte would misread ordinary documents.
+    expect((await detectFormat(new File(['{ "a": 1 }'], 'notes.md'))).format).toBe('md');
+    expect((await detectFormat(new File(['<html>'], 'notes.txt'))).format).toBe('txt');
+  });
+});
+
+describe('the archive formats that name themselves', () => {
+  it('reads the mimetype entry ODF and EPUB put first', async () => {
+    expect((await resolve(fixture('sample.odt'))).format).toBe('odt');
+    expect((await resolve(fixture('sample.ods'))).format).toBe('ods');
+    expect((await resolve(fixture('sample.odp'))).format).toBe('odp');
+    expect((await resolve(fixture('sample.epub'))).format).toBe('epub');
+  });
+
+  it('tells an ODF package from an OOXML one, both being ZIPs', async () => {
+    // The whole reason detection reads bytes: seven of the fourteen formats are
+    // a ZIP, and the extension is the one thing that cannot be trusted.
+    const odt = fixture('sample.odt', 'renamed.docx');
+    const settled = await resolve(odt);
+
+    expect(settled.format).toBe('odt');
+    expect(settled.mismatch).toBe(true);
+  });
+
+  it('falls back to the package layout when there is no mimetype entry', async () => {
+    const { default: JSZip } = await import('jszip');
+    const { sniffOoxml } = await import('./archive');
+
+    const book = new JSZip();
+    book.file('META-INF/container.xml', '<container/>');
+    book.file('OEBPS/one.xhtml', '<html/>');
+    const bytes = (await book.generateAsync({ type: 'arraybuffer' })) as ArrayBuffer;
+    expect((await sniffOoxml(new File([bytes], 'x.zip'))).format).toBe('epub');
+
+    const sheet = new JSZip();
+    sheet.file('META-INF/manifest.xml', '<manifest/>');
+    sheet.file(
+      'content.xml',
+      '<office:document-content><office:body><office:spreadsheet/></office:body></office:document-content>',
+    );
+    const sheetBytes = (await sheet.generateAsync({
+      type: 'arraybuffer',
+    })) as ArrayBuffer;
+    expect((await sniffOoxml(new File([sheetBytes], 'y.zip'))).format).toBe('ods');
   });
 });
 

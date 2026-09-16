@@ -8,13 +8,19 @@ import { MIME } from '../shared';
 /** The fixture that stands in for each source format. */
 const SOURCE: Record<Format, string> = {
   docx: 'sample.docx',
+  odt: 'sample.odt',
   xlsx: 'sample.xlsx',
+  ods: 'sample.ods',
   pptx: 'sample.pptx',
+  odp: 'sample.odp',
   pdf: 'sample.pdf',
   rtf: 'sample.rtf',
+  html: 'sample.html',
+  epub: 'sample.epub',
   md: 'sample.md',
   txt: 'sample.txt',
   csv: 'sample.csv',
+  json: 'sample.json',
 };
 
 /** Leading bytes each binary output must actually start with. */
@@ -23,6 +29,10 @@ const SIGNATURE: Partial<Record<Format, number[]>> = {
   docx: [0x50, 0x4b, 0x03, 0x04], // PK..
   xlsx: [0x50, 0x4b, 0x03, 0x04],
   pptx: [0x50, 0x4b, 0x03, 0x04],
+  odt: [0x50, 0x4b, 0x03, 0x04],
+  ods: [0x50, 0x4b, 0x03, 0x04],
+  odp: [0x50, 0x4b, 0x03, 0x04],
+  epub: [0x50, 0x4b, 0x03, 0x04],
 };
 
 describe('every declared converter', () => {
@@ -624,5 +634,284 @@ describe('choosing a CJK face', () => {
     expect(variantFor(points('简体中文'))).toBe('sc');
     expect(variantFor(points('漢字だけ'))).toBe('jp');
     expect(variantFor(points('中文文本'))).toBe('sc');
+  });
+});
+
+describe('OpenDocument text', () => {
+  it('carries headings, emphasis, links, nested lists and a table', async () => {
+    const convert = await engineFor('odt', 'md')!();
+    const result = await convert(fixture('sample.odt'));
+    const md = await textOf(result.files[0]!.blob);
+
+    expect(md).toContain('# Field notes');
+    expect(md).toContain('## Observations');
+    expect(md).toContain('**bold**');
+    expect(md).toContain('*italic*');
+    expect(md).toContain('[a link](https://example.com)');
+    // Depth survives, and the list continues after the nested one.
+    expect(md).toContain('- Second item\n    - Nested item\n- Third item');
+    expect(md).toContain('1. Step one\n2. Step two');
+    expect(md).toContain('| Region | Units | Revenue |');
+    // A `<br>` is not nothing: the words either side must not fuse.
+    expect(md).toContain('A line\nbroken in two.');
+  });
+
+  it('says what it left behind rather than dropping it quietly', async () => {
+    const convert = await engineFor('odt', 'md')!();
+    const warnings = (await convert(fixture('sample.odt'))).warnings ?? [];
+    const joined = warnings.join(' ');
+
+    expect(joined).toContain('An image was not carried over');
+    expect(joined).toContain('One footnote or endnote was');
+    // The sibling of the DOCX merged-cell warning, on the same layer.
+    expect(joined).toContain('spanned more than one row or column');
+  });
+
+  it('carries a text box’s words instead of losing them with the frame', async () => {
+    const convert = await engineFor('odt', 'md')!();
+    const md = await textOf((await convert(fixture('sample.odt'))).files[0]!.blob);
+    expect(md).toContain('Text inside a floating frame.');
+  });
+
+  it('writes a package whose mimetype is stored first, as ODF requires', async () => {
+    const convert = await engineFor('md', 'odt')!();
+    const out = (await convert(fixture('sample.md'))).files[0]!;
+    const bytes = await bytesOf(out.blob);
+
+    // The local file header names the first entry; ODF pins it to `mimetype`
+    // so a reader can identify the package without unzipping it, which is what
+    // Kiln's own detection relies on.
+    const head = new TextDecoder().decode(bytes.subarray(0, 128));
+    expect(head).toContain('mimetype');
+    expect(head).toContain('application/vnd.oasis.opendocument.text');
+
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(bytes);
+    expect(Object.keys(zip.files)).toContain('META-INF/manifest.xml');
+    expect(Object.keys(zip.files)).toContain('content.xml');
+    expect(await zip.file('content.xml')!.async('string')).toContain('<office:text>');
+  });
+});
+
+describe('EPUB', () => {
+  it('reads chapters in spine order, not the order they are stored', async () => {
+    // The fixture stores chapter two first, names them so that alphabetical
+    // order is a third order again, and only the spine says which is which.
+    // Every chapter reads perfectly whichever way they come out.
+    const convert = await engineFor('epub', 'md')!();
+    const md = await textOf((await convert(fixture('sample.epub'))).files[0]!.blob);
+
+    const at = (title: string) => md.indexOf(title);
+    expect(at('Chapter one')).toBeGreaterThanOrEqual(0);
+    expect(at('Chapter one')).toBeLessThan(at('Chapter two'));
+    expect(at('Chapter two')).toBeLessThan(at('Chapter three'));
+    expect(md).toContain(MARKER);
+  });
+
+  it('leaves the navigation document out of the text', async () => {
+    const convert = await engineFor('epub', 'md')!();
+    const md = await textOf((await convert(fixture('sample.epub'))).files[0]!.blob);
+    // The nav lists the chapters; carried through it would read as a duplicate
+    // heading list before the book started.
+    expect(md).not.toContain('Contents');
+    expect((md.match(/Chapter one/g) ?? []).length).toBe(1);
+  });
+
+  it('writes a book with every part EPUB 3 requires', async () => {
+    const convert = await engineFor('md', 'epub')!();
+    const out = (await convert(fixture('sample.md'))).files[0]!;
+    const bytes = await bytesOf(out.blob);
+
+    expect(new TextDecoder().decode(bytes.subarray(0, 128))).toContain(
+      'application/epub+zip',
+    );
+
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(bytes);
+    const names = Object.keys(zip.files);
+
+    expect(names).toContain('META-INF/container.xml');
+    const root = /full-path="([^"]+)"/.exec(
+      await zip.file('META-INF/container.xml')!.async('string'),
+    )?.[1];
+    expect(root).toBeDefined();
+    expect(names).toContain(root!);
+
+    const opf = await zip.file(root!)!.async('string');
+    expect(opf).toContain('<dc:identifier id="bookid">');
+    expect(opf).toContain('<dc:title>');
+    expect(opf).toContain('<dc:language>');
+    expect(opf).toContain('properties="nav"');
+
+    // Every spine entry resolves to a file that is actually in the archive.
+    const manifest = new Map(
+      [...opf.matchAll(/<item\b([^>]*)\/?>/g)].map((m) => [
+        /\bid="([^"]+)"/.exec(m[1] ?? '')?.[1] ?? '',
+        /\bhref="([^"]+)"/.exec(m[1] ?? '')?.[1] ?? '',
+      ]),
+    );
+    const spine = [...opf.matchAll(/<itemref\b[^>]*idref="([^"]+)"/g)].map((m) => m[1]!);
+
+    expect(spine.length).toBeGreaterThan(0);
+    for (const id of spine) {
+      expect(manifest.get(id), `spine entry ${id} is not in the manifest`).toBeDefined();
+      expect(names).toContain(`OEBPS/${manifest.get(id)}`);
+    }
+  });
+
+  it('gives the same bytes for the same document twice', async () => {
+    // Nothing in a written book is allowed to come from a clock or a random
+    // source: converting the same file twice should give the same file.
+    const convert = await engineFor('md', 'epub')!();
+    const first = await bytesOf((await convert(fixture('sample.md'))).files[0]!.blob);
+    const second = await bytesOf((await convert(fixture('sample.md'))).files[0]!.blob);
+    expect([...first]).toEqual([...second]);
+  });
+
+  it('keeps text that comes before the first heading', async () => {
+    const { parseMarkdown } = await import('./_md');
+    const { toChapters } = await import('./_epub');
+    const chapters = toChapters(
+      await parseMarkdown('An opening line.\n\n# First heading\n\nBody.\n'),
+      'Untitled',
+    );
+
+    expect(chapters).toHaveLength(2);
+    expect(chapters[0]!.blocks[0]).toMatchObject({ text: 'An opening line.' });
+  });
+});
+
+describe('OpenDocument presentations', () => {
+  it('takes the declared title frame, wherever it sits in the file', async () => {
+    // The fixture's second slide writes its body frame before its title frame.
+    // "Whatever came first" would swap the title and the first bullet, which
+    // reads perfectly plausibly and is wrong.
+    const convert = await engineFor('odp', 'md')!();
+    const md = await textOf((await convert(fixture('sample.odp'))).files[0]!.blob);
+
+    expect(md).toContain('## Second slide');
+    expect(md).toContain('- Point one');
+    expect(md.indexOf('## Opening slide')).toBeLessThan(md.indexOf('## Second slide'));
+  });
+
+  it('keeps a speaker note out of the slide body', async () => {
+    const convert = await engineFor('odp', 'txt')!();
+    const text = await textOf((await convert(fixture('sample.odp'))).files[0]!.blob);
+
+    expect(text).toContain('Notes:\nA speaker note.');
+    expect(text.indexOf('A speaker note.')).toBeGreaterThan(text.indexOf('Point two'));
+  });
+
+  it('renders a deck the same way PPTX does', async () => {
+    // The two deck readers differ; everything after them is shared, and this is
+    // what keeps it that way.
+    const { slidesToMarkdown } = await import('./_slides');
+    const slides = [
+      { index: 1, title: 'One', body: ['a', 'b'], notes: ['n'] },
+      { index: 2, title: '', body: [], notes: [] },
+    ];
+    expect(slidesToMarkdown(slides)).toContain('## One');
+    expect(slidesToMarkdown(slides)).toContain('## Slide 2');
+  });
+});
+
+describe('JSON and the sheet model', () => {
+  it('turns records into rows with the keys as a header', async () => {
+    const convert = await engineFor('json', 'xlsx')!();
+    const out = (await convert(fixture('sample.json'))).files[0]!;
+
+    const back = await engineFor('xlsx', 'md')!();
+    const md = await textOf(
+      (await back(new File([await out.blob.arrayBuffer()], 'x.xlsx'))).files[0]!.blob,
+    );
+
+    expect(md).toContain('| region | units | revenue |');
+    expect(md).toContain('| North | 120 | 2400 |');
+  });
+
+  it('flattens a nested object to dotted keys, and says so', async () => {
+    const convert = await engineFor('json', 'xlsx')!();
+    const result = await convert(fixture('sample.json'));
+    const back = await engineFor('xlsx', 'md')!();
+    const md = await textOf(
+      (await back(new File([await result.files[0]!.blob.arrayBuffer()], 'x.xlsx')))
+        .files[0]!.blob,
+    );
+
+    expect(md).toContain('lead.name');
+    expect(md).toContain('lead.office');
+    expect(result.warnings?.join(' ')).toContain('dotted names');
+  });
+
+  it('keeps a column that only appears in a later record', async () => {
+    const { jsonToSheets } = await import('./_json');
+    const sheets = jsonToSheets('[{"a":1},{"a":2,"b":3}]');
+    expect(sheets[0]!.rows[0]).toEqual(['a', 'b']);
+    expect(sheets[0]!.rows[2]).toEqual(['2', '3']);
+  });
+
+  it('writes an array for one sheet and an object for several', async () => {
+    const { sheetsToJson } = await import('./_json');
+
+    expect(JSON.parse(sheetsToJson([{ name: 'S', rows: [['a'], ['1']] }]))).toEqual([
+      { a: '1' },
+    ]);
+    expect(
+      JSON.parse(
+        sheetsToJson([
+          { name: 'One', rows: [['a'], ['1']] },
+          { name: 'Two', rows: [['b'], ['2']] },
+        ]),
+      ),
+    ).toEqual({ One: [{ a: '1' }], Two: [{ b: '2' }] });
+  });
+
+  it('survives a workbook round trip', async () => {
+    const { jsonToSheets, sheetsToJson } = await import('./_json');
+    const sheets = [
+      {
+        name: 'One',
+        rows: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
+      },
+      { name: 'Two', rows: [['c'], ['3']] },
+    ];
+    expect(jsonToSheets(sheetsToJson(sheets))).toEqual(sheets);
+  });
+
+  it('refuses JSON that is not tabular, in a sentence', async () => {
+    const { jsonToSheets } = await import('./_json');
+    expect(() => jsonToSheets('42')).toThrow(/list of records/);
+    expect(() => jsonToSheets('nonsense')).toThrow(/not valid JSON/);
+    expect(() => jsonToSheets('[]')).toThrow(/empty list/);
+  });
+});
+
+describe('HTML', () => {
+  it('carries structure out of a real page and drops the chrome', async () => {
+    const convert = await engineFor('html', 'md')!();
+    const md = await textOf((await convert(fixture('sample.html'))).files[0]!.blob);
+
+    expect(md).toContain('# Quarterly report');
+    expect(md).toContain('**every**');
+    expect(md).toContain('[the note](https://example.com)');
+    expect(md).toContain('- Second bullet\n    - Nested bullet');
+    expect(md).toContain('| Region | Units |');
+    expect(md).toContain('Loose text in a div.');
+    expect(md).not.toContain('console.log');
+    expect(md).not.toContain('font-family');
+  });
+
+  it('is the one target that keeps inline emphasis and links', async () => {
+    const convert = await engineFor('md', 'html')!();
+    const html = await textOf((await convert(fixture('sample.md'))).files[0]!.blob);
+
+    expect(html).toContain('<strong>bold</strong>');
+    expect(html).toContain('<em>italic</em>');
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('<!doctype html>');
+    expect(html).toContain('<title>sample</title>');
   });
 });

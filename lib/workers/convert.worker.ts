@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 
 import { sniffOoxml } from '@/lib/files/archive';
-import { engineFor } from '@/lib/registry/engines';
+import { find } from '@/lib/registry/routing';
+import { runRoute } from '@/lib/registry/run-route';
 import { installPolyfills } from './polyfills';
 import { describeFailure } from '@/lib/registry/shared';
 import type { Format, OutputFile } from '@/lib/registry/types';
@@ -17,7 +18,7 @@ export interface ConvertRequest {
 }
 
 /**
- * Asks which of the OOXML formats an archive really is.
+ * Asks which of the archive formats a ZIP really is.
  *
  * Handled here because answering needs a zip library, and the worker already
  * has one. Doing it on the page would ship a second copy of JSZip to everyone
@@ -62,22 +63,21 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   const { file, from, to } = request;
 
-  const load = engineFor(from, to);
-  if (!load) {
+  const route = find(from, to);
+  if (!route) {
     reply({ jobId, error: `Kiln cannot turn .${from} into .${to}.` });
     return;
   }
 
   try {
-    const convert = await load();
-    const result = await convert(file);
+    const { files, warnings } = await runRoute(route, file);
 
-    if (!result.files || result.files.length === 0) {
+    if (files.length === 0) {
       reply({ jobId, error: 'The conversion produced nothing. The file may be empty.' });
       return;
     }
 
-    reply({ jobId, result: { files: result.files, warnings: result.warnings } });
+    reply({ jobId, result: { files, warnings } });
   } catch (cause) {
     // The interface only ever sees a sentence. The real error goes to the
     // console, where a developer can find it — it never leaves the browser,

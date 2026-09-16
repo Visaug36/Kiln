@@ -1,6 +1,6 @@
 ---
 name: probe
-description: Use when checking whether a Kiln conversion is actually correct rather than merely producing a file — auditing an engine, chasing a reported fidelity bug ("the output looks wrong", "characters are mangled", "the table is broken", "text went missing"), reviewing a new or changed converter before it ships, or running a verification pass over some or all of the 25 format pairs.
+description: Use when checking whether a Kiln conversion is actually correct rather than merely producing a file — auditing an engine, chasing a reported fidelity bug ("the output looks wrong", "characters are mangled", "the table is broken", "text went missing"), reviewing a new or changed converter before it ships, or running a verification pass over some or all of Kiln's 114 format pairs.
 ---
 
 # Probing a converter

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  FOOTPRINT,
+  EDGE_COST,
   capacity,
   footprintFor,
   sizeCaution,
@@ -146,16 +146,55 @@ describe('the caution itself', () => {
     expect(known.estimate).toBeLessThan(guessed.estimate);
   });
 
-  it('has a measured footprint for every pair the registry declares', async () => {
-    // Keyed on the source it inherited the worst target's number, so a light
-    // pair warned about files it handles comfortably.
+  it('has a measured cost for every edge the registry declares', async () => {
     const { converters } = await import('@/lib/registry');
     for (const { from, to } of converters) {
-      expect(
-        FOOTPRINT[`${from}>${to}`],
-        `${from} → ${to} has no footprint`,
-      ).toBeGreaterThan(0);
+      const cost = EDGE_COST[`${from}>${to}`];
+      expect(cost, `${from} → ${to} has no measured cost`).toBeDefined();
+      expect(cost!.peak, `${from} → ${to} peak`).toBeGreaterThan(0);
+      expect(cost!.growth, `${from} → ${to} growth`).toBeGreaterThan(0);
     }
+  });
+
+  it('has no cost for an edge the registry does not declare', async () => {
+    const { converters } = await import('@/lib/registry');
+    const declared = new Set(converters.map((c) => `${c.from}>${c.to}`));
+    expect(Object.keys(EDGE_COST).filter((key) => !declared.has(key))).toEqual([]);
+  });
+
+  it('composes a routed pair’s cost from its edges', async () => {
+    const { allRoutes } = await import('@/lib/registry');
+
+    // Two engines run one after the other, so the peak is the larger of their
+    // two peaks — never their sum. The second one's peak is scaled by how much
+    // the first grew the file, because that is what it is handed.
+    for (const route of allRoutes()) {
+      let worst = 0;
+      let scale = 1;
+      for (const step of route.steps) {
+        const cost = EDGE_COST[`${step.from}>${step.to}`]!;
+        worst = Math.max(worst, scale * cost.peak);
+        scale *= cost.growth;
+      }
+      expect(footprintFor(route.from, route.to), `${route.from} → ${route.to}`).toBe(
+        Math.round(worst),
+      );
+    }
+  });
+
+  it('does not simply add the two steps together', async () => {
+    const { find } = await import('@/lib/registry');
+
+    // Adding them would cry wolf on every routed pair. `epub → odt` goes
+    // through Markdown, which is smaller than the book it came from, so the
+    // composed figure is visibly under the sum rather than merely equal to it.
+    const route = find('epub', 'odt')!;
+    expect(route.via).toBe('md');
+
+    const first = EDGE_COST['epub>md']!;
+    const second = EDGE_COST['md>odt']!;
+    expect(first.growth).toBeLessThan(1);
+    expect(footprintFor('epub', 'odt')).toBeLessThan(first.peak + second.peak);
   });
 
   it('judges a pair by its own cost, not its source format’s worst', () => {

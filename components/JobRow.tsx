@@ -23,9 +23,10 @@ interface JobRowProps {
  */
 export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowProps) {
   const targets = targetsFor(job.from);
-  const converter = find(job.from, job.to);
-  const caveat =
-    converter && converter.fidelity !== 'exact' ? converter.caveat : undefined;
+  // A route is one converter or two, and every step's caveat comes with it —
+  // converting through an intermediate format should show both reasons, not
+  // whichever one happened to be first.
+  const caveats = find(job.from, job.to)?.caveats ?? [];
 
   // Worked out before the conversion starts, not after it fails. On iOS a tab
   // that runs out of memory is killed outright, so there is no "after".
@@ -117,8 +118,14 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
         </div>
       )}
 
-      {job.state === 'queued' && caveat && (
-        <p className="mt-2 max-w-prose text-body text-secondary">{caveat}</p>
+      {job.state === 'queued' && caveats.length > 0 && (
+        <ul className="mt-2 max-w-prose space-y-1">
+          {caveats.map((caveat) => (
+            <li key={caveat} className="text-body text-secondary">
+              {caveat}
+            </li>
+          ))}
+        </ul>
       )}
 
       {caution && (

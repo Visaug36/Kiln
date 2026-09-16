@@ -4,13 +4,28 @@ import type { Format, OutputFile } from './types';
 export const MIME: Record<Format, string> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  csv: 'text/csv',
+  odt: 'application/vnd.oasis.opendocument.text',
+  rtf: 'application/rtf',
+  html: 'text/html',
+  epub: 'application/epub+zip',
   md: 'text/markdown',
   txt: 'text/plain',
-  rtf: 'application/rtf',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  odp: 'application/vnd.oasis.opendocument.presentation',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  csv: 'text/csv',
+  json: 'application/json',
 };
+
+/**
+ * The formats that are a ZIP archive underneath.
+ *
+ * They share a failure mode — a truncated download or a half-written file reads
+ * as a broken archive — and the advice for it is the same: re-save from the app
+ * that made it.
+ */
+const ZIPPED = new Set<Format>(['docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp', 'epub']);
 
 /** Longest file Kiln will take on. Everything is held in memory. */
 export const MAX_BYTES = 100 * 1024 * 1024;
@@ -128,7 +143,7 @@ export function describeFailure(cause: unknown, kind: Format): string {
     text.includes('invalid signature') ||
     text.includes("can't find end of central directory")
   ) {
-    return kind === 'docx' || kind === 'xlsx' || kind === 'pptx'
+    return ZIPPED.has(kind)
       ? `This ${kind.toUpperCase()} file is damaged and cannot be opened. Try re-saving it from the app that made it.`
       : 'This file is damaged and cannot be opened.';
   }

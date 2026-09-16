@@ -1,18 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { unsupportedFor, type Format } from '@/lib/registry';
-
-const LABEL: Record<Format, string> = {
-  pdf: 'PDF',
-  docx: 'DOCX',
-  pptx: 'PPTX',
-  xlsx: 'XLSX',
-  csv: 'CSV',
-  md: 'MD',
-  txt: 'TXT',
-  rtf: 'RTF',
-};
+import { unsupportedGroupsFor, type Format } from '@/lib/registry';
 
 /**
  * Says plainly which targets do not exist for this format, and why.
@@ -25,9 +14,9 @@ const LABEL: Record<Format, string> = {
 export default function UnsupportedNote({ from }: { from: Format }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const pairs = unsupportedFor(from);
+  const groups = unsupportedGroupsFor(from);
 
-  if (pairs.length === 0) return null;
+  if (groups.length === 0) return null;
 
   return (
     <div className="mt-2">
@@ -38,17 +27,17 @@ export default function UnsupportedNote({ from }: { from: Format }) {
         aria-controls={panelId}
         className="kiln-motion text-body text-secondary underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
       >
-        Some formats aren’t available for {LABEL[from]}.
+        Some formats aren’t available for .{from}.
       </button>
 
       <div id={panelId} hidden={!open} className="mt-2 max-w-prose">
         <ul className="space-y-2 border-l border-separator pl-3">
-          {pairs.map((pair) => (
-            <li key={`${pair.from}-${pair.to}`} className="text-body text-secondary">
+          {groups.map((group) => (
+            <li key={group.targets.join()} className="text-body text-secondary">
               <span className="font-mono text-[13px] text-label">
-                .{pair.from} → .{pair.to}
+                .{from} → {group.targets.map((to) => `.${to}`).join(', ')}
               </span>{' '}
-              {pair.reason}
+              {group.reason}
             </li>
           ))}
         </ul>

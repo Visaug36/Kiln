@@ -5,15 +5,20 @@ description: Use when adding, removing, or changing a conversion pair in Kiln's 
 
 # Adding a conversion pair
 
-Three steps, three files, no component changes. The interface reads the registry
-and renders whatever is there, so a pair appears in the picker the moment it is
-declared.
+**First: check whether you need one.** Kiln offers 114 pairs and declares 44
+converters. A pair is a route of one or two declared **edges**, so most of what
+looks like a missing pair is a missing edge somewhere else — often one edge, at
+the other end of the family. `references/contract.md` has the families and their
+hubs; read it before writing a thirty-ninth engine module.
+
+When you do need an edge: three steps, three files, no component changes. The
+interface reads the registry and renders whatever is there.
 
 **1. Write the engine** at `lib/registry/converters/<from>-to-<to>.ts`, exporting
 `convert(input: File): Promise<ConversionResult>`. Every heavy dependency is
 named inside the function, behind `await import()`. Nothing at module scope.
 
-**2. Declare the pair** in `lib/registry/index.ts` — `from`, `to`, `fidelity`,
+**2. Declare the edge** in `lib/registry/table.ts` — `from`, `to`, `fidelity`,
 and a `caveat` unless it is `exact`.
 
 **3. Wire the engine** in `lib/registry/engines.ts`:
@@ -22,11 +27,15 @@ and a `caveat` unless it is `exact`.
 Steps 2 and 3 live in separate files so the **page never reaches an `import()`**
 — one in a module the page imports makes the bundler emit a chunk for every
 engine. They cannot drift silently: `lib/registry/index.test.ts` fails if a
-declared pair has no engine, or an engine has no declared pair.
+declared edge has no engine, or an engine has no declared edge.
 
-If the format is new to Kiln, also add it to the `Format` union in `types.ts`, to
-`FORMATS` (the canonical display order), to `MIME` in `shared.ts`, to `FOOTPRINT`
-in `lib/files/capacity.ts`, and to detection in `lib/files/detect.ts`.
+**Then read the snapshot diff.** `lib/registry/routing.test.ts` pins every pair
+Kiln offers. One new edge routinely adds a dozen, and that is the moment to
+notice whether you wanted all of them. Do not update it without reading it.
+
+If the format is new to Kiln, `references/contract.md` has the full checklist —
+the `Format` union, `FORMATS` and `FAMILY`, `MIME`, detection, `EDGE_COST`, a
+fixture, and the README matrix.
 
 ## Choosing a fidelity
 
@@ -66,7 +75,8 @@ script and nothing earlier.
 
 ## Reference
 
-`references/contract.md` has the full registry contract — every type, every
-export, the conventions engines follow, and a complete worked example with its
-engine, table entry, wiring, test and fixture. Read it before writing an engine
-rather than copying the nearest neighbour.
+`references/contract.md` has the full registry contract — edges versus pairs,
+the families and their hubs, every type and export, the conventions engines
+follow, and a complete worked example with its engine, table entry, wiring, test
+and fixture. Read it before writing an engine rather than copying the nearest
+neighbour.

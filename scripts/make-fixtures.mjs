@@ -259,4 +259,10 @@ write(
 
 write('empty.txt', Buffer.alloc(0));
 
+// ---- OpenDocument, EPUB, HTML and JSON --------------------------------
+{
+  const { writeOdfFixtures } = await import('./fixtures-odf.mjs');
+  await writeOdfFixtures(write, MARKER);
+}
+
 console.log('\nFixtures written to test/fixtures/');

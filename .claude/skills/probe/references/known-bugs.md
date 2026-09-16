@@ -307,6 +307,86 @@ silently drops what it does not. Ask what falls between the matches.
 
 ---
 
+### 13. `\b` matched inside a hyphenated XML name
+
+**Symptom** An ODT converted with every list flattened into loose paragraphs and
+every table nested three deep. Nothing threw; the file opened.
+
+**Detected** By printing the intermediate HTML the ODF reader hands to
+`htmlToBlocks`, rather than reading the Markdown that came out. The Markdown
+looked like a document with no lists in it, which is a plausible document.
+
+**Root cause** OpenDocument element names share prefixes: `text:list` and
+`text:list-item`, `table:table` and `table:table-row`. A hyphen is a word
+boundary, so `/<text:list\b/` matches `<text:list-item>` — and every list item
+was rewritten as a fresh `<ul>`. The same pattern counted one `<text:note>` three
+times, because `<text:note-citation>` and `<text:note-body>` matched it too.
+
+**Fix** `const END = '(?=[\\s/>])'` on every element-name pattern in the file,
+and the replacements reordered so the more specific name is consumed first.
+Either alone fixes the lists; both are kept, because the next name to collide
+will not be one anybody remembered to reorder.
+
+**Pinned by** `helpers.test.ts` → "tells a list from a list item, and a table
+from its rows", plus the sibling assertion against `parseMarkdown`. Reverting
+both fixes fails four tests.
+
+**Shape to remember** `\b` is the wrong boundary for any name that can be
+extended with `-` or `:`. It fails silently and the output stays plausible.
+
+---
+
+### 14. Emphasis opened and never closed
+
+**Symptom** In an ODT, `<strong>` was emitted for a bold run and `</strong>`
+never was, so everything after the first bold word was bold to the end.
+
+**Detected** Same probe, same intermediate output. Reading the Markdown would
+not have shown it — `inlineToMarkdown` tolerates the unbalanced tag.
+
+**Root cause** Opening tags were rewritten in one pass and closing tags in
+another. A closing `</text:span>` carries no style name, so by the second pass
+the only record of what had been opened was gone.
+
+**Fix** One pass with a stack: the closer pushed when the opener is seen.
+
+**Pinned by** `helpers.test.ts` → "closes emphasis where the span it opened
+ends", which counts the tags rather than looking for them.
+
+**Shape to remember** If a decision is made when reading the opening tag, the
+closing tag has to be handled in the same pass. Two passes over paired tags is
+almost always a bug.
+
+---
+
+### 15. A caveat that was not true
+
+**Symptom** None visible. `md → docx` told the user "Headings, lists, **links**,
+quotes and code blocks map to Word styles". Links did not survive, and had not
+for three stages.
+
+**Detected** By round-tripping Markdown out through every writer and back, and
+grepping the result for the URL — a check nobody had run because the pair
+produces a perfectly good Word file.
+
+**Root cause** `parseMarkdown` calls `stripInline`, so inline runs are gone
+before any writer sees them. The block model does not carry them, deliberately.
+The copy was written from what the pair _ought_ to do.
+
+**Fix** The copy, on all seven writers that go through the block model. HTML is
+the exception and now says so.
+
+**Pinned by** Nothing yet, and that is worth being honest about: a false caveat
+is not something a test can catch without a model of what each pair carries.
+`converters.test.ts` → "is the one target that keeps inline emphasis and links"
+pins the exception, which is the half that could regress silently.
+
+**Shape to remember** Routing merges caveats, so a false one is now repeated on
+every pair that passes through it. Check a claim by round-tripping before
+writing it down.
+
+---
+
 ## Two tests that passed for the wrong reason
 
 Worth recording separately, because a test that passes against broken code is

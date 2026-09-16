@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the reachability matrix > is exactly this, and a change to it is a change to the product 1`] = `
+"114 pairs: 44 direct, 70 routed
+44 declared edges, 64 refused pairs
+
+pdf   (text) → docx<-md odt<-md rtf<-md html<-md epub<-md md txt
+docx  (text) → pdf odt<-md rtf html<-md epub<-md md txt
+odt   (text) → pdf<-md docx<-md rtf<-md html<-md epub<-md md txt<-md
+rtf   (text) → pdf<-md docx<-md odt<-md html<-md epub<-md md txt
+html  (text) → pdf<-md docx<-md odt<-md rtf<-md epub<-md md txt<-md
+epub  (text) → pdf<-md docx<-md odt<-md rtf<-md html<-md md txt<-md
+md    (text) → pdf docx odt rtf html epub txt pptx odp
+txt   (text) → pdf docx odt<-md rtf<-md html<-md epub<-md md pptx<-md odp<-md
+pptx  (slides) → docx<-md odt<-md rtf<-md html<-md epub<-md md txt
+odp   (slides) → docx<-md odt<-md rtf<-md html<-md epub<-md md txt
+xlsx  (sheet) → pdf docx odt<-md rtf<-md html<-md epub<-md md txt ods csv json
+ods   (sheet) → pdf docx odt<-md rtf<-md html<-md epub<-md md txt xlsx csv json<-xlsx
+csv   (sheet) → pdf<-md docx<-md odt<-md rtf<-md html<-md epub<-md md txt xlsx ods<-xlsx json<-xlsx
+json  (sheet) → pdf<-xlsx docx<-xlsx md<-xlsx txt<-xlsx xlsx ods<-xlsx csv<-xlsx"
+`;

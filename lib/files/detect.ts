@@ -1,5 +1,8 @@
 import { FORMATS, type Format } from '@/lib/registry';
 
+/** Formats with no magic bytes of their own, identified by extension. */
+const TEXTUAL = new Set<Format>(['md', 'txt', 'csv', 'html', 'json']);
+
 /** Extensions that map onto a format under a different name. */
 const ALIASES: Record<string, Format> = {
   markdown: 'md',
@@ -7,6 +10,12 @@ const ALIASES: Record<string, Format> = {
   mkd: 'md',
   text: 'txt',
   tsv: 'csv',
+  htm: 'html',
+  xhtml: 'html',
+  fodt: 'odt',
+  ott: 'odt',
+  ots: 'ods',
+  otp: 'odp',
 };
 
 /** The part after the final dot, lowercased. Empty when there is no extension. */
@@ -116,8 +125,10 @@ export function detectFromHead(head: Uint8Array, claimed: Format | undefined): D
     );
   }
 
-  // No signature left to check. Text formats are told apart by extension only.
-  if (claimed === 'md' || claimed === 'txt' || claimed === 'csv') {
+  // No signature left to check. Text formats carry none, so the extension is
+  // all there is — and saying so is more honest than sniffing for `<html` or a
+  // leading brace, which would misread a Markdown file that opens with either.
+  if (TEXTUAL.has(claimed as Format)) {
     return settle(claimed);
   }
 

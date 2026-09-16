@@ -16,6 +16,11 @@ export interface Workbook {
  * Charts, images and pivot tables live outside the cell grid, so nothing below
  * can see them and nothing Kiln writes can carry them. They are visible in the
  * archive, though, so the file itself is asked what is being left behind.
+ *
+ * Both archive layouts are checked here rather than in two places. ODS is the
+ * sibling of XLSX and holds the same things under different names — a warning
+ * that only knew `xl/` would have gone quiet the moment ODS was added, and
+ * quiet is the failure mode this whole channel exists to prevent.
  */
 async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
   const warnings: string[] = [];
@@ -24,12 +29,19 @@ async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
     const zip = await JSZip.loadAsync(buffer);
     const names = Object.keys(zip.files);
 
-    const count = (prefix: string) =>
-      names.filter((n) => n.startsWith(prefix) && !n.endsWith('/')).length;
+    const count = (pattern: RegExp) =>
+      names.filter((n) => pattern.test(n) && !n.endsWith('/')).length;
 
-    const charts = count('xl/charts/');
-    const media = count('xl/media/');
-    const pivots = count('xl/pivotTables/');
+    // An OpenDocument chart is an embedded object directory, not a file.
+    const objects = new Set(
+      names
+        .map((n) => /^Object [^/]+\//.exec(n)?.[0])
+        .filter((n): n is string => Boolean(n)),
+    ).size;
+
+    const charts = count(/^xl\/charts\//) + objects;
+    const media = count(/^(xl\/media|Pictures)\//i);
+    const pivots = count(/^xl\/pivotTables\//);
 
     if (charts > 0) {
       warnings.push(

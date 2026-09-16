@@ -2,6 +2,20 @@ import type { Format } from '@/lib/registry/types';
 
 const OOXML_PART = '[Content_Types].xml';
 
+/**
+ * The formats that identify themselves in a `mimetype` entry.
+ *
+ * OpenDocument and EPUB both require it to be the archive's first entry, stored
+ * uncompressed, precisely so that a reader can tell what it has without
+ * unpacking anything. Kiln writes them that way too.
+ */
+const BY_MIMETYPE: Record<string, Format> = {
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'application/vnd.oasis.opendocument.spreadsheet': 'ods',
+  'application/vnd.oasis.opendocument.presentation': 'odp',
+  'application/epub+zip': 'epub',
+};
+
 export interface ArchiveRead {
   format: Format | undefined;
   /**
@@ -39,6 +53,17 @@ export async function sniffOoxml(file: File): Promise<ArchiveRead> {
 
   const expanded = unpackedSize(zip);
 
+  // Asked first, because it is an exact answer rather than a search: an ODF or
+  // EPUB package says what it is in one line.
+  const mimetype = zip.file('mimetype');
+  if (mimetype) {
+    const declared = (await mimetype.async('string')).trim();
+    for (const [mime, format] of Object.entries(BY_MIMETYPE)) {
+      // Templates carry the same body under `…-template`.
+      if (declared.startsWith(mime)) return { format, expanded };
+    }
+  }
+
   const types = zip.file(OOXML_PART);
   if (types) {
     const xml = await types.async('string');
@@ -55,6 +80,19 @@ export async function sniffOoxml(file: File): Promise<ArchiveRead> {
   if (names.some((n) => n.startsWith('word/'))) return { format: 'docx', expanded };
   if (names.some((n) => n.startsWith('xl/'))) return { format: 'xlsx', expanded };
   if (names.some((n) => n.startsWith('ppt/'))) return { format: 'pptx', expanded };
+
+  // An EPUB with no `mimetype` entry is malformed but readable, and the
+  // container is the part that actually matters for reading it.
+  if (names.includes('META-INF/container.xml')) return { format: 'epub', expanded };
+
+  // Likewise an ODF package: `content.xml` beside a manifest is the shape, and
+  // the root element inside says which of the three it is.
+  if (names.includes('content.xml') && names.includes('META-INF/manifest.xml')) {
+    const head = (await zip.file('content.xml')!.async('string')).slice(0, 4096);
+    if (head.includes('<office:spreadsheet')) return { format: 'ods', expanded };
+    if (head.includes('<office:presentation')) return { format: 'odp', expanded };
+    if (head.includes('<office:text')) return { format: 'odt', expanded };
+  }
 
   return { format: undefined, expanded };
 }

@@ -28,7 +28,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 export const metadata: Metadata = {
   title: 'Kiln — convert documents in your browser',
   description:
-    'Convert between PDF, DOCX, Markdown, plain text and RTF. Every conversion runs in your browser; files never leave your machine.',
+    'Convert between PDF, Word, OpenDocument, RTF, HTML, EPUB, Markdown, plain text, PowerPoint, Excel, CSV and JSON. Every conversion runs in your browser; files never leave your machine.',
   icons: { icon: `${basePath}/icon.svg` },
 };
 

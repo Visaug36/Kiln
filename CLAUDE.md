@@ -16,8 +16,18 @@ this reason — not for speed.
 
 ## Architecture
 
-- **`lib/registry/index.ts` is the source of truth.** The UI derives its targets
-  from it. No component hardcodes a format or a pair.
+- **`lib/registry` is the source of truth.** The UI derives its targets from it.
+  No component hardcodes a format or a pair.
+- **The registry declares edges and computes pairs.** `table.ts` holds the
+  one-step converters; `routing.ts` composes at most two of them into a `Route`.
+  Fourteen formats would be 182 hand-written converters otherwise. Each family
+  has a hub — Markdown for text, Excel for spreadsheets — and a new format needs
+  a reader to its hub and a writer from it, not a row of the matrix.
+- **The reachability matrix is snapshotted** in `lib/registry/routing.test.ts`.
+  A change to one edge can add or remove a dozen pairs; the snapshot is how that
+  shows up in a diff rather than in a bug report. Update it deliberately.
+- **`unsupported.ts` outranks routing.** A two-step path can reach pairs nobody
+  should be offered, so the router checks the refusals first.
 - **Engines live behind dynamic imports in `lib/registry/engines.ts`, and only
   the worker imports it.** The page never imports an engine: a dynamic `import()`
   in a module the page reaches makes the bundler emit a chunk for every engine.
@@ -32,6 +42,10 @@ this reason — not for speed.
 ## Product rules
 
 - When an engine discards something, it goes in `warnings`. Silent loss is a bug.
+  On a routed pair each warning is tagged with the step that produced it.
+- **A caveat is a promise.** `md → docx` claimed links map to Word styles for
+  three stages while the block model was quietly dropping them. Check a claim by
+  round-tripping before you write it down.
 - No raw exception text or stack traces in the interface. Errors say what
   happened and what to do about it.
 - Never add analytics, telemetry, or any third-party script.
@@ -78,11 +92,24 @@ subagent was doing exactly what it should; the staging was the mistake.
 
 ## Where things stand
 
-25 pairs, 258 tests, entry chunk ~177 KB gzipped. Static export, deployed to
-GitHub Pages. Seven pairs are deliberately unsupported and listed with reasons in
-`lib/registry/unsupported.ts`: the value of their output is its visual layout, and
-rebuilding that means either a rendering engine too large to ship or a server,
-which Kiln will not have.
+14 formats, **114 pairs from 44 declared edges** — 44 direct and 70 routed
+through a hub. 376 tests, entry chunk ~178 KB gzipped against a 200 KB budget. Static export, deployed to GitHub Pages. 64 pairs are deliberately
+refused and written as rules in `lib/registry/unsupported.ts`: either the value
+of the output is its visual layout, and rebuilding that means a rendering engine
+too large to ship or a server Kiln will not have, or the conversion is an
+editorial judgement rather than a conversion.
+
+**Inline emphasis stops at the hub.** Every reader carries bold, italics and
+links into Markdown; every writer except HTML drops them, because the shared
+block model does not carry inline runs. That is a known limit, stated in each
+pair's caveat, not a bug to fix casually — carrying runs through six writers is
+a much larger job than it looks.
+
+Memory multipliers live in `EDGE_COST` in `lib/files/capacity.ts`, keyed on the
+**edge**; a route's cost is composed from its steps in `footprintFor`. Re-measure
+with `NODE_OPTIONS=--expose-gc MEASURE=1 pnpm vitest run test/measure-memory.test.ts`
+after a library upgrade — the forced collection is not optional, without it the
+numbers are noise.
 
 PDF output embeds pdfmake's Roboto: Latin, Latin Extended-A, **the whole
 Vietnamese block**, Greek and Cyrillic — 927 code points, listed exactly in
@@ -111,6 +138,12 @@ bypassed — silent mojibake is the bug it was written for.
 - **Mobile Safari is still untested on a real device.** The memory thresholds in
   `lib/files/capacity.ts` are provisional guesses, marked as such, waiting on
   numbers from a phone.
+- **Four pairs need three hops and so do not exist:** `json` to `odt`, `rtf`,
+  `html` and `epub`. Two steps is the rule; convert through `.xlsx` or `.md`.
+  Not a defect — recorded so nobody rediscovers it as one. ODS has no such gap
+  because it shares its text-side edges with XLSX.
+- **The block model carries no inline runs**, so every writer but HTML drops
+  emphasis and links. See above.
 - **`xlsx → pdf` clips past 12 columns.** It warns now, but the layout is
   unchanged.
 - **`pdf → md` and `rtf → md` infer structure the format does not record, and

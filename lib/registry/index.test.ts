@@ -73,15 +73,35 @@ describe('the registry table', () => {
 });
 
 describe('targetsFor', () => {
-  it('lists the targets declared for a source format', () => {
-    expect(targetsFor('docx')).toEqual(['pdf', 'md', 'txt', 'rtf']);
-    expect(targetsFor('md')).toEqual(['pdf', 'docx', 'pptx', 'txt']);
-    expect(targetsFor('txt')).toEqual(['pdf', 'docx', 'md']);
-    expect(targetsFor('rtf')).toEqual(['md', 'txt']);
-    expect(targetsFor('pdf')).toEqual(['md', 'txt']);
-    expect(targetsFor('xlsx')).toEqual(['pdf', 'docx', 'csv', 'md', 'txt']);
-    expect(targetsFor('csv')).toEqual(['xlsx', 'md', 'txt']);
-    expect(targetsFor('pptx')).toEqual(['md', 'txt']);
+  // The full matrix, direct and routed alike, is snapshotted in
+  // `routing.test.ts`. These are the shapes worth naming out loud.
+  it('offers everything reachable, not only the direct neighbours', () => {
+    // Every text format reaches every other one, through Markdown.
+    expect(targetsFor('md')).toEqual([
+      'pdf',
+      'docx',
+      'odt',
+      'rtf',
+      'html',
+      'epub',
+      'txt',
+      'pptx',
+      'odp',
+    ]);
+    expect(targetsFor('epub')).toEqual([
+      'pdf',
+      'docx',
+      'odt',
+      'rtf',
+      'html',
+      'md',
+      'txt',
+    ]);
+    // A deck is read out as text, and never becomes another deck.
+    expect(targetsFor('pptx')).not.toContain('odp');
+    // A spreadsheet never becomes a deck, and a document never becomes a grid.
+    expect(targetsFor('xlsx')).not.toContain('pptx');
+    expect(targetsFor('docx')).not.toContain('csv');
   });
 
   it('returns targets in canonical order, not table order', () => {
@@ -113,16 +133,29 @@ describe('targetsFor', () => {
 });
 
 describe('find', () => {
-  it('returns the converter for a declared pair', () => {
-    const converter = find('pdf', 'txt');
-    expect(converter).toMatchObject({ from: 'pdf', to: 'txt', fidelity: 'lossy' });
+  it('returns a one-step route for a declared pair', () => {
+    expect(find('pdf', 'txt')).toMatchObject({
+      from: 'pdf',
+      to: 'txt',
+      fidelity: 'lossy',
+      via: undefined,
+    });
+    expect(find('pdf', 'txt')!.steps).toHaveLength(1);
   });
 
-  it('returns undefined for a pair that is not declared', () => {
-    expect(find('pdf', 'docx')).toBeUndefined();
-    expect(find('md', 'rtf')).toBeUndefined();
+  it('returns a two-step route for a pair only a path can reach', () => {
+    expect(find('epub', 'docx')).toMatchObject({ via: 'md' });
+    expect(find('ods', 'json')).toMatchObject({ via: 'xlsx' });
+  });
+
+  it('returns undefined for a pair Kiln will not do', () => {
     expect(find('txt', 'txt')).toBeUndefined();
     expect(find('pptx', 'pdf')).toBeUndefined();
     expect(find('xlsx', 'pptx')).toBeUndefined();
+    expect(find('pdf', 'xlsx')).toBeUndefined();
+    expect(find('docx', 'pptx')).toBeUndefined();
+    // Three hops is not a pair. JSON reaches its own family and the four text
+    // targets Excel reaches directly; an ebook is one conversion further off.
+    expect(find('json', 'epub')).toBeUndefined();
   });
 });

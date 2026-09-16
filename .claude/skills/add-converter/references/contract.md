@@ -2,13 +2,51 @@
 
 Everything an engine has to satisfy, and one pair built end to end.
 
-## The two modules
+## Edges, not pairs
 
-**`lib/registry/index.ts` — the table.** What Kiln can convert and how well. The
-page imports this, so it contains **no `import()` calls at all**.
+**The most important thing to understand before adding anything.** Kiln offers
+114 pairs and declares 44 converters. A pair is a **route** of one or two
+declared edges, computed by `routing.ts`.
+
+So a new format does **not** need a row of the matrix. It needs a reader to its
+family's hub and a writer from it, and routing reaches the rest:
+
+| Family      | Hub    | Formats                                           |
+| ----------- | ------ | ------------------------------------------------- |
+| text        | `md`   | `pdf` `docx` `odt` `rtf` `html` `epub` `md` `txt` |
+| spreadsheet | `xlsx` | `xlsx` `ods` `csv` `json`                         |
+| slides      | none   | `pptx` `odp`                                      |
+
+Slides have no hub on purpose: Kiln reads a deck as text and writes one from
+Markdown, so no deck becomes another deck.
+
+Adding two edges gives a text format seven pairs. Adding an edge that crosses a
+family boundary — `xlsx → md`, say — gives every other format in the source's
+family that target too. That leverage cuts both ways: **one bad edge breaks a
+dozen pairs**, and a caveat written on one edge is repeated on every pair
+routed through it.
+
+## The modules
+
+**`lib/registry/table.ts` — the edges.** What Kiln converts in one step, and how
+well. Reached from the page, so it contains **no `import()` calls at all**.
 
 ```ts
-export type Format = 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'csv' | 'md' | 'txt' | 'rtf';
+export type Format =
+  | 'pdf'
+  | 'docx'
+  | 'odt'
+  | 'rtf'
+  | 'html'
+  | 'epub'
+  | 'md'
+  | 'txt'
+  | 'pptx'
+  | 'odp'
+  | 'xlsx'
+  | 'ods'
+  | 'csv'
+  | 'json';
 
 export type Fidelity = 'exact' | 'good' | 'lossy';
 
@@ -22,6 +60,17 @@ export interface Converter {
 }
 ```
 
+**`lib/registry/routing.ts` — the pairs.** `find(from, to)` returns a `Route`:
+one or two steps, the worst fidelity in the path, the merged caveats, and the
+intermediate format if there is one. `targetsFor(from)` is everything reachable.
+
+**`lib/registry/unsupported.ts` — the refusals.** Rules that expand into pairs.
+Checked _before_ the router looks for a path, so it is where you stop routing
+reaching something it should not.
+
+**`lib/registry/formats.ts`** — `FORMATS` (display order), `FAMILY`, `HUB`,
+`FORMAT_LABEL`.
+
 `Converter` deliberately has **no reference to its engine**. A dynamic `import()`
 reachable from the page makes the page's bundler emit a chunk for every engine —
 roughly 4 MB that gets built and deployed and then never fetched, because
@@ -32,7 +81,7 @@ conversions happen in the worker.
 ```ts
 export const engines: Record<string, () => Promise<ConvertFn>> = {
   'docx>md': () => import('./converters/docx-to-md').then((m) => m.convert),
-  // … 25 entries
+  // … 44 entries, one per declared edge
 };
 
 export function engineFor(
@@ -236,3 +285,35 @@ encoding cases, the long-line case and the corrupt-file case.
 No component. `.pdf` now appears in the picker for any dropped `.rtf`, the caveat
 shows before the conversion starts, and the unsupported-pairs note updates on its
 own.
+
+## Before you write a new engine, check whether you need one
+
+Two of the fourteen formats needed almost no new code:
+
+- **ODS** goes through the _same modules_ as XLSX for five of its six edges.
+  SheetJS reads both and the engines work on rows, so `engines.ts` maps
+  `'ods>md'` at `xlsx-to-md` directly. Declaring the edges recorded a capability
+  that already existed.
+- **EPUB** chapters are XHTML, so `epub-to-md` runs them through `reduceHtml`
+  from `_html.ts` rather than growing its own copy of that logic. The first
+  version did not, and a `<pre><code>` block came back with a stray backtick in
+  it.
+
+Ask which existing engine already does the work before adding a thirty-ninth
+module. Then add the sibling to the checklist's section 0, because from that
+point on a fix to one is a fix owed to the other.
+
+## Adding a whole format
+
+1. `Format` union in `types.ts`, `FORMATS` and `FAMILY` in `formats.ts`.
+2. `MIME` in `shared.ts`; add it to `ZIPPED` there if it is an archive.
+3. Detection in `lib/files/detect.ts` — `TEXTUAL` and `ALIASES` for a text
+   format, `lib/files/archive.ts` for a ZIP-based one.
+4. The edges in `table.ts` and the engines in `engines.ts`.
+5. `EDGE_COST` in `lib/files/capacity.ts`, measured — see
+   `test/measure-memory.test.ts`, and run it with `NODE_OPTIONS=--expose-gc`.
+6. A real fixture in `scripts/make-fixtures.mjs`, and the source and signature
+   maps in `converters.test.ts`.
+7. `pnpm test` — read the routing snapshot diff rather than updating it blind.
+8. The README support matrix, and `unsupported.ts` if the new format should
+   refuse something.
