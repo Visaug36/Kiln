@@ -1,5 +1,5 @@
 /**
- * Checks that every file path Kiln's documentation mentions actually resolves.
+ * Checks that every file path Recast's documentation mentions actually resolves.
  *
  * `CLAUDE.md` pointed at `docs/x2t-spike.md` for four stages while that file
  * only ever existed on another branch. Nobody followed the pointer, so nobody
@@ -13,7 +13,7 @@
  * only checked when its **first segment is something that exists at the repo
  * root**, or when it resolves relative to the file that mentions it.
  *
- * That rule is what keeps the check quiet. Kiln's docs are full of paths
+ * That rule is what keeps the check quiet. Recast's docs are full of paths
  * *inside* a document archive — `word/document.xml`, `xl/charts/`,
  * `META-INF/manifest.xml`, `OEBPS/nav.xhtml` — and none of those are repo
  * files. Their first segment is not a repo entry, so they are skipped without
@@ -44,7 +44,7 @@ const ELSEWHERE = {
 };
 
 /** Build outputs. Gitignored, and absent in CI until the build has run. */
-const BUILT = ['out/', 'public/kiln-worker/', 'edge-cost.txt', 'tsconfig.tsbuildinfo'];
+const BUILT = ['out/', 'public/recast-worker/', 'edge-cost.txt', 'tsconfig.tsbuildinfo'];
 
 /**
  * A line carrying this comment is skipped.

@@ -1,6 +1,6 @@
 /**
  * pdfmake ships no types for its prebuilt browser bundles. Only the handful of
- * calls Kiln makes are declared, so a typo in one of them is still a type error
+ * calls Recast makes are declared, so a typo in one of them is still a type error
  * rather than silently `any`.
  */
 declare module 'pdfmake/build/pdfmake' {

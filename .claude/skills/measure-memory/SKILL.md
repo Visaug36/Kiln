@@ -1,6 +1,6 @@
 ---
 name: measure-memory
-description: Use when measuring or re-measuring what a Kiln conversion costs in memory — after upgrading mammoth, SheetJS, pdfmake, pdfjs, docx or pptxgenjs, after adding or changing a converter edge, when EDGE_COST in lib/files/capacity.ts needs new numbers, when the size warning is firing on files it should not or staying silent on files it should not, or when a multiplier looks implausible next to its siblings.
+description: Use when measuring or re-measuring what a Recast conversion costs in memory — after upgrading mammoth, SheetJS, pdfmake, pdfjs, docx or pptxgenjs, after adding or changing a converter edge, when EDGE_COST in lib/files/capacity.ts needs new numbers, when the size warning is firing on files it should not or staying silent on files it should not, or when a multiplier looks implausible next to its siblings.
 ---
 
 # Measuring what a conversion costs
@@ -32,7 +32,7 @@ seven minutes for 44 edges.
    production. Measuring the compressed file inflates the multiplier several
    times over and then applies it to the uncompressed one.
 3. **Key on the pair, not the source format.** A source's worst target used to
-   speak for all of them, so `md → txt` was judged by `md → pdf`. Kiln now keys
+   speak for all of them, so `md → txt` was judged by `md → pdf`. Recast now keys
    on the **edge** and composes routes from their steps.
 4. **Take the worst of two runs** — three is better. The first pays for loading
    the library.

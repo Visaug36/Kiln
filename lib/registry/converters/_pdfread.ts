@@ -24,16 +24,16 @@ export interface PdfRead {
 /**
  * Extracts the text layer from a PDF.
  *
- * pdfjs wants its own worker. Kiln is already inside one, so this spawns a
+ * pdfjs wants its own worker. Recast is already inside one, so this spawns a
  * nested worker — which keeps a malformed PDF from wedging the conversion
- * worker itself. The file is served from Kiln's own origin; fetching it from a
+ * worker itself. The file is served from Recast's own origin; fetching it from a
  * CDN, as pdfjs defaults to, would break offline use and would tell a third
  * party which documents someone is opening.
  */
 async function loadPdfjs() {
   const pdfjs = await import('pdfjs-dist');
 
-  // Where nested workers exist — every browser Kiln runs in — pdfjs gets its
+  // Where nested workers exist — every browser Recast runs in — pdfjs gets its
   // own, so a malformed PDF cannot wedge the conversion worker itself. Where
   // they do not (the test runner), pdfjs falls back to parsing inline, which
   // is correct, just not isolated.
@@ -60,7 +60,7 @@ export async function readPdf(input: File): Promise<PdfRead> {
   // task, not the document, and it is what shuts down the nested worker.
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
-    // Kiln has no business fetching anything while reading a local file.
+    // Recast has no business fetching anything while reading a local file.
     disableFontFace: true,
     useWorkerFetch: false,
     isEvalSupported: false,
@@ -119,7 +119,9 @@ export async function readPdf(input: File): Promise<PdfRead> {
   await loadingTask.destroy();
 
   if (lines.length === 0) {
-    fail("This PDF has no text in it. It's probably a scan, and Kiln can't read those.");
+    fail(
+      "This PDF has no text in it. It's probably a scan, and Recast can't read those.",
+    );
   }
 
   // A page or two with no text among many usually means mixed scanned inserts.
@@ -146,7 +148,7 @@ export function pdfLinesToBlocks(lines: PdfLine[]): Block[] {
 
   // Sizes are ranked rather than measured against fixed ratios, for the same
   // reason the RTF reader ranks them: a ratio has to pick a number, and ×1.5
-  // put a 17pt heading over 11pt body — Kiln's own `##` — into h1. The largest
+  // put a 17pt heading over 11pt body — Recast's own `##` — into h1. The largest
   // size in the document is h1, whatever it is.
   const levels = [
     ...new Set(lines.map((l) => round(l.size)).filter((size) => size > round(body))),

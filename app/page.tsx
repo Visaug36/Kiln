@@ -31,7 +31,7 @@ export default function Home() {
         }
         if (file.size > MAX_BYTES) {
           problems.push(
-            `${file.name} is ${Math.round(file.size / 1024 / 1024)} MB. Kiln works in memory and stops at 100 MB.`,
+            `${file.name} is ${Math.round(file.size / 1024 / 1024)} MB. Recast works in memory and stops at 100 MB.`,
           );
           continue;
         }
@@ -50,7 +50,7 @@ export default function Home() {
 
         if (!detection.format) {
           problems.push(
-            detection.reason ?? `Kiln cannot read ${file.name}. ${FORMAT_SENTENCE}`,
+            detection.reason ?? `Recast cannot read ${file.name}. ${FORMAT_SENTENCE}`,
           );
           continue;
         }
@@ -58,7 +58,7 @@ export default function Home() {
         const first = targetsFor(detection.format)[0];
         if (!first) {
           problems.push(
-            `Kiln can read ${file.name} but has nothing to turn it into yet.`,
+            `Recast can read ${file.name} but has nothing to turn it into yet.`,
           );
           continue;
         }
@@ -94,14 +94,14 @@ export default function Home() {
       downloadBlob(files[0]!.blob, files[0]!.filename);
       return;
     }
-    void zipFiles(files).then((blob) => downloadBlob(blob, 'kiln.zip'));
+    void zipFiles(files).then((blob) => downloadBlob(blob, 'recast.zip'));
   }, [jobs]);
 
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 border-b border-separator bg-canvas-blur backdrop-blur-[20px]">
         <div className="mx-auto flex max-w-3xl items-baseline justify-between gap-4 px-5 py-4">
-          <span className="text-heading tracking-[-0.01em] text-label">Kiln</span>
+          <span className="text-heading tracking-[-0.01em] text-label">Recast</span>
           <p className="text-body text-secondary">Files never leave your browser</p>
         </div>
       </header>

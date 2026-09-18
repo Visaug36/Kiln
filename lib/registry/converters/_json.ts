@@ -5,9 +5,9 @@ import type { Row, Sheet } from './_sheet';
  * JSON in and out of the spreadsheet model.
  *
  * JSON is in the spreadsheet family rather than the text one because the only
- * JSON Kiln reads or writes is tabular: an array of objects is a grid with
+ * JSON Recast reads or writes is tabular: an array of objects is a grid with
  * named columns, which is exactly what a sheet is. Arbitrary nested JSON is not
- * a document and Kiln does not pretend it is one — it flattens, by a rule
+ * a document and Recast does not pretend it is one — it flattens, by a rule
  * written down here and repeated in the pair's caveat, so that what comes out
  * is predictable rather than clever.
  */
@@ -81,7 +81,7 @@ function rowsFrom(items: Json[]): Row[] {
  *
  * Three shapes are accepted, because all three are things people actually have:
  * an array of objects (one sheet), an array of arrays (rows as they stand), and
- * an object whose values are arrays (one sheet per key — which is what Kiln
+ * an object whose values are arrays (one sheet per key — which is what Recast
  * itself writes for a multi-sheet workbook, so a round trip comes back whole).
  */
 export function jsonToSheets(text: string): Sheet[] {
@@ -121,7 +121,7 @@ export function jsonToSheets(text: string): Sheet[] {
   }
 
   fail(
-    'Kiln reads JSON that is a list of records, or an object whose values are lists. This file is a single value.',
+    'Recast reads JSON that is a list of records, or an object whose values are lists. This file is a single value.',
   );
 }
 

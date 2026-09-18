@@ -14,7 +14,7 @@ import {
  * file size, and the point of the tests is that the prediction is made at all,
  * that it is tighter on iOS, and that it says out loud that it is a guess. A
  * browser killed for running out of memory throws nothing, so there is no later
- * moment at which Kiln could say any of this.
+ * moment at which Recast could say any of this.
  */
 
 const MB = 1024 * 1024;
@@ -113,7 +113,7 @@ describe('the caution itself', () => {
     const message = sizeCaution(file(4), 'docx', 'pdf', { limits: ios })!.message;
 
     expect(message).toMatch(/without an error|closes/i);
-    expect(message).not.toMatch(/!/); // Kiln's copy has no exclamation marks.
+    expect(message).not.toMatch(/!/); // Recast's copy has no exclamation marks.
   });
 
   it('measures an archive by what it unpacks to, not by its file size', () => {

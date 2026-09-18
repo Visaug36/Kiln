@@ -68,7 +68,7 @@ describe('formats with a signature', () => {
   });
 });
 
-describe('inputs Kiln will not take', () => {
+describe('inputs Recast will not take', () => {
   it('names the old binary Office container specifically', async () => {
     const detection = await detectFormat(fixture('actually-a-doc.docx'));
 

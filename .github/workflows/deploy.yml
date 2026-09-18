@@ -18,6 +18,8 @@ on:
       - main
       # The stage-1 scaffold branch, kept so work in flight on it still deploys.
       - claude/compassionate-lovelace-s20gwv
+      # The Recast branch, so it is built and tested while it is in flight.
+      - claude/friendly-goodall-ahpb2g
   workflow_dispatch:
 
 permissions:
@@ -57,13 +59,30 @@ jobs:
 
       - run: pnpm test
 
+      # A project site is served from /<repo>, so basePath has to track the
+      # repository's name. Read from GITHUB_REPOSITORY, which every trigger
+      # sets, rather than from the event payload, which not all of them carry —
+      # and echoed, so a rename shows up in the log as a changed path rather
+      # than as a site where every asset 404s.
       - name: Build static export
-        run: pnpm build
-        env:
-          # A project site is served from /<repo>. Taken from GITHUB_REPOSITORY
-          # rather than the event payload so it is correct on every trigger,
-          # and so a rename cannot silently break every asset URL.
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+        run: |
+          export NEXT_PUBLIC_BASE_PATH="/${GITHUB_REPOSITORY#*/}"
+          echo "basePath: $NEXT_PUBLIC_BASE_PATH"
+          pnpm build
+
+      # The rename trap, asserted rather than assumed. Renaming the repository
+      # moves the published site to /<new-name>; a build that kept the old
+      # basePath deploys green and serves a page whose every script 404s. Read
+      # the built HTML back and confirm the prefix it actually carries.
+      - name: Assert the export carries the right basePath
+        run: |
+          expected="/${GITHUB_REPOSITORY#*/}"
+          if ! grep -q "\"$expected/_next/" out/index.html; then
+            echo "::error::out/index.html does not reference $expected/_next/. Every asset would 404 on the published site."
+            grep -o '"/[^"]*/_next/[^"]*"' out/index.html | head -3
+            exit 1
+          fi
+          echo "index.html references $expected/_next/"
 
       # The engines are only reachable through the registry's load(), so none of
       # them may appear in the entry chunk. Fails the build if that regresses.

@@ -4,7 +4,7 @@ import type { Format } from '@/lib/registry/types';
 /**
  * Whether a file is likely to be more than this browser can hold.
  *
- * Kiln holds the whole document in memory — the file, the parsed tree, and the
+ * Recast holds the whole document in memory — the file, the parsed tree, and the
  * output, all at once — and a browser that runs out does not throw. On iOS the
  * tab is killed outright, with no error to catch and nothing to report, so the
  * page simply disappears. That is the failure this module exists to get ahead
@@ -20,7 +20,7 @@ import type { Format } from '@/lib/registry/types';
  *
  * `peak` is peak working memory as a multiple of the content it is given.
  * `growth` is how much bigger the file it writes is than the content it read —
- * which only matters because most pairs Kiln offers are two converters run back
+ * which only matters because most pairs Recast offers are two converters run back
  * to back, and the second one is handed the first one's output.
  *
  * Keyed on the **edge**, not the pair. There are around a hundred pairs and
@@ -83,11 +83,11 @@ export const EDGE_COST: Record<string, EdgeCost> = {
   'ods>txt': { peak: 10, growth: 0.05 }, // ×5
   'ods>pdf': { peak: 25, growth: 0.2 }, // ×20
   'ods>docx': { peak: 70, growth: 0.01 }, // ×55
-  // The heaviest edge Kiln has, and the library's shape rather than a mistake:
+  // The heaviest edge Recast has, and the library's shape rather than a mistake:
   // SheetJS builds a cell object per value and then materialises the whole
   // workbook XML as one string before zipping any of it, with no streaming
-  // write in the build Kiln ships. Releasing the parsed rows the moment the
-  // sheet holds them was the one part Kiln controlled, and it already does.
+  // write in the build Recast ships. Releasing the parsed rows the moment the
+  // sheet holds them was the one part Recast controlled, and it already does.
   'csv>xlsx': { peak: 310, growth: 5.95 }, // ×257
   'csv>md': { peak: 45, growth: 1.46 }, // ×36
   'csv>txt': { peak: 5, growth: 1.0 }, // ×1
@@ -106,7 +106,7 @@ export const EDGE_COST: Record<string, EdgeCost> = {
 const UNMEASURED: EdgeCost = { peak: 100, growth: 1 };
 
 /**
- * The multiplier for one pair, however Kiln reaches it.
+ * The multiplier for one pair, however Recast reaches it.
  *
  * Two converters run one after the other, so the peak is the larger of their
  * two peaks — not their sum. The second one's peak is scaled by how much the
@@ -154,7 +154,7 @@ const PACKED: ReadonlySet<Format> = new Set<Format>([
 const ZIP_RATIO = 8;
 
 export interface Capacity {
-  /** Bytes of working memory Kiln is willing to assume it can use. */
+  /** Bytes of working memory Recast is willing to assume it can use. */
   budget: number;
   /** True on iOS, where every browser is WebKit and the tab dies without a word. */
   webkitMobile: boolean;
@@ -216,7 +216,7 @@ export function capacity(): Capacity {
   }
 
   // Safari exposes neither. These are guesses, and the iOS one is the tightest
-  // environment Kiln meets: a tab that overreaches is killed, not throttled.
+  // environment Recast meets: a tab that overreaches is killed, not throttled.
   // Provisional until someone measures a real device.
   if (webkitMobile) return { budget: 350 * MB, webkitMobile, basis: 'ios' };
   return { budget: 1024 * MB, webkitMobile, basis: 'assumed' };

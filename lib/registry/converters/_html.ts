@@ -2,12 +2,12 @@ import { fail } from '../shared';
 import { escapeXml } from './_odf';
 
 /**
- * HTML, which Kiln has always spoken internally and now reads and writes.
+ * HTML, which Recast has always spoken internally and now reads and writes.
  *
  * Every `docx → *` conversion already goes through HTML — mammoth produces it
  * and `htmlToBlocks` consumes it — so the format was half-supported before it
  * was declared. What was missing either side was a document wrapper: stripping
- * a real page down to the part Kiln can carry, and putting a plain one back
+ * a real page down to the part Recast can carry, and putting a plain one back
  * together.
  */
 
@@ -27,7 +27,7 @@ function count(html: string, pattern: RegExp): number {
  *
  * Scripts, styles and anything whose value is its layout are removed here
  * rather than left for the block layer, because they are not *stranded* text —
- * Kiln knows exactly what they are and that it cannot carry them, so they are
+ * Recast knows exactly what they are and that it cannot carry them, so they are
  * counted and named instead of being reported as words that got lost.
  */
 export function readHtmlDocument(source: string): HtmlRead {
@@ -70,7 +70,7 @@ export function reduceHtml(source: string): string {
     .replace(/<\/code>\s*<\/pre>/gi, '</pre>')
     .replace(/<(th)\b/gi, '<td')
     .replace(/<\/th>/gi, '</td>')
-    // Grouping elements carry no meaning Kiln can use, and their children do.
+    // Grouping elements carry no meaning Recast can use, and their children do.
     .replace(/<\/?(section|article|main|header|footer|aside|nav|hgroup)\b[^>]*>/gi, '');
 
   html = paragraphsFromDivs(html);
@@ -82,7 +82,7 @@ export function reduceHtml(source: string): string {
   return html;
 }
 
-/** What a page held that Kiln knows it cannot carry, named rather than lost. */
+/** What a page held that Recast knows it cannot carry, named rather than lost. */
 export function describeHtmlLosses(source: string): string[] {
   const warnings: string[] = [];
 
@@ -94,7 +94,7 @@ export function describeHtmlLosses(source: string): string[] {
 
   if (styles > 0) {
     warnings.push(
-      'Stylesheets were dropped. Kiln carries the structure of a page — headings, lists, tables and links — not how it looked.',
+      'Stylesheets were dropped. Recast carries the structure of a page — headings, lists, tables and links — not how it looked.',
     );
   }
   if (images > 0) {
@@ -158,7 +158,7 @@ function paragraphsFromDivs(html: string): string {
 /**
  * Markdown as a standalone HTML document.
  *
- * Rendered with `marked` rather than through Kiln's block model, which is the
+ * Rendered with `marked` rather than through Recast's block model, which is the
  * one place it is worth stepping outside: the block model deliberately does not
  * carry inline emphasis, and HTML is the one target that can express all of it
  * exactly. Going through blocks here would throw away bold, italics and links

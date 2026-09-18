@@ -2,7 +2,7 @@ import { MAX_LIST_DEPTH, listCounter } from './_md';
 import type { Block } from './_md';
 import { toPipeTable } from './_sheet';
 
-/** Kiln's block list back out as Markdown. */
+/** Recast's block list back out as Markdown. */
 export function blocksToMarkdown(blocks: Block[]): string {
   const parts: string[] = [];
   let nextOrdinal = listCounter();

@@ -18,13 +18,13 @@ export interface ArchiveAnswer {
 }
 
 /**
- * The worker is built separately into public/kiln-worker/ and referenced by
+ * The worker is built separately into public/recast-worker/ and referenced by
  * URL. Next's bundler does not compile `new Worker(new URL('./x.ts', ...))` for
  * the client build — it copies the TypeScript source through as a static asset,
  * so the deployed page would fetch raw TypeScript and fail every conversion
  * while dev, tests and the build all stayed green. See scripts/build-worker.mjs.
  */
-const WORKER_URL = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/kiln-worker/convert.worker.js`;
+const WORKER_URL = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/recast-worker/convert.worker.js`;
 
 let worker: Worker | null = null;
 
@@ -136,7 +136,7 @@ export function enqueue(id: string): void {
     // session. runOne resolves rather than rejects, so this should never fire,
     // which is exactly why it must not be left to chance.
     .catch((cause) => {
-      console.error('[kiln] job runner failed', cause);
+      console.error('[recast] job runner failed', cause);
       const job = useJobs.getState().jobs.find((j) => j.id === id);
       if (job && job.state === 'firing') {
         useJobs

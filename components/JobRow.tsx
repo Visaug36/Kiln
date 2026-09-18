@@ -46,7 +46,7 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
       : `Download ${outputName}`;
 
   return (
-    <li className="kiln-row-enter border-b border-separator py-4 last:border-b-0">
+    <li className="recast-row-enter border-b border-separator py-4 last:border-b-0">
       <div className="flex flex-col gap-y-1 sm:flex-row sm:items-baseline sm:gap-x-3">
         <div className="flex min-w-0 items-baseline gap-x-3">
           <span
@@ -69,7 +69,7 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
               type="button"
               onClick={onStart}
               aria-label={`Convert ${job.file.name} to .${job.to}`}
-              className="kiln-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+              className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
             >
               Convert
             </button>
@@ -86,7 +86,7 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
               type="button"
               onClick={onDownload}
               aria-label={downloadTitle}
-              className="kiln-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+              className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
             >
               {downloadLabel}
             </button>
@@ -98,12 +98,12 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
         </span>
       </div>
 
-      {/* The extension lied. Say which one Kiln believed. */}
+      {/* The extension lied. Say which one Recast believed. */}
       {job.detectedAs && (
         <p className="mt-1 max-w-prose text-body text-secondary">
           This file is named{' '}
           <span className="font-mono text-[13px]">.{job.detectedAs}</span> but its
-          contents are {job.from.toUpperCase()}. Kiln went with the contents.
+          contents are {job.from.toUpperCase()}. Recast went with the contents.
         </p>
       )}
 

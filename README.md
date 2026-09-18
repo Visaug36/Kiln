@@ -1,7 +1,7 @@
-# Kiln
+# Recast
 
 A document converter that runs entirely in your browser. Drop a file, pick a
-target format, download the result. Kiln handles fourteen formats — PDF, Word,
+target format, download the result. Recast handles fourteen formats — PDF, Word,
 OpenDocument, RTF, HTML, EPUB, Markdown, plain text, PowerPoint, Excel, CSV and
 JSON — in 114 combinations.
 
@@ -11,7 +11,7 @@ JSON — in 114 combinations.
 
 This is the product, not a feature of it. People convert contracts, medical
 letters, drafts they have not shown anyone — documents they should not have to
-hand to a stranger's server to change a file extension. So Kiln has no server,
+hand to a stranger's server to change a file extension. So Recast has no server,
 no API, no database, and no analytics. It is a static bundle of HTML, CSS and
 JavaScript; once the page has loaded you could pull the network cable and every
 conversion would still work.
@@ -22,7 +22,7 @@ What that rules out, permanently:
   `output: 'export'`, so Next.js would refuse to build one anyway.
 - No telemetry or analytics package, and Next.js build telemetry is disabled in
   the `dev` and `build` scripts.
-- Fonts are downloaded at build time by `next/font` and served from Kiln's own
+- Fonts are downloaded at build time by `next/font` and served from Recast's own
   origin. Opening the page contacts no font CDN.
 - **No conversion library that needs a network round trip with file contents.**
   If a library uploads the document to render it, it is disqualified no matter
@@ -42,7 +42,7 @@ affected parsers (ICNS, JXL, HEIF) appear in any of them.
 
 The `xlsx` line is a different story and was worth acting on: npm's `xlsx`
 stops at 0.18.5 with two unpatched high advisories that trigger on _parsing
-untrusted input_, which is the whole job here. Kiln uses `@e965/xlsx`, the
+untrusted input_, which is the whole job here. Recast uses `@e965/xlsx`, the
 maintained SheetJS build published to npm.
 
 ## Running it
@@ -78,12 +78,27 @@ asserted. Several bugs reached that script and nothing earlier: the worker
 shipping as uncompiled TypeScript, `Packer.toBuffer` asking for a Node buffer,
 mammoth's CommonJS interop. All of them passed the unit tests.
 
+It serves the export at the root by default. A GitHub Pages project site is
+served from `/<repo>` instead, and that prefix is baked into every asset URL at
+build time, so the published site is reproduced by giving both commands the same
+prefix:
+
+```bash
+NEXT_PUBLIC_BASE_PATH=/Recast pnpm build
+NEXT_PUBLIC_BASE_PATH=/Recast pnpm verify:browser
+```
+
+Any request the export makes that the prefix does not cover is reported as a
+missing asset and fails the run. Renaming the repository is the way this breaks:
+the site moves, the build keeps the old prefix, and the page still renders its
+heading from static HTML while every script is gone.
+
 `pnpm build` writes a static site to `out/`. Deploy that directory anywhere that
 serves files — there is no framework runtime to provision.
 
 ## Recommended tooling
 
-Kiln commits its own operating instructions: `CLAUDE.md`, the history in `docs/`,
+Recast commits its own operating instructions: `CLAUDE.md`, the history in `docs/`,
 seven skills under `.claude/skills/`, and one verifier agent under
 `.claude/agents/`. Everything below is worth installing **globally**, and is
 deliberately not vendored here.
@@ -100,7 +115,7 @@ deliberately not vendored here.
   codebase where the registry, the engines and the worker are deliberately
   separate modules.
 - **Context7** — current documentation for SheetJS, pdfmake, mammoth, docx and
-  pdfjs. Several of Kiln's bugs came from an API that had moved since whatever
+  pdfjs. Several of Recast's bugs came from an API that had moved since whatever
   the model last saw.
 
 ### Skills
@@ -109,7 +124,7 @@ deliberately not vendored here.
 - **Web Design Guidelines** from `vercel-labs/agent-skills`.
 - **`systematic-debugging`** and **`verification-before-completion`**, from the
   Superpowers plugin on the official marketplace. Both earn their place here
-  specifically: most of Kiln's bugs produced output that looked entirely
+  specifically: most of Recast's bugs produced output that looked entirely
   plausible and shipped under a green suite.
 
 ### Why none of them are committed
@@ -119,12 +134,12 @@ with that agent's permissions. Vendoring third-party skills into a repository
 means everyone who clones it runs them, having agreed to nothing. Install the
 ones you trust into your own environment instead.
 
-The same reasoning is why Kiln's own committed hooks in `.claude/settings.json`
+The same reasoning is why Recast's own committed hooks in `.claude/settings.json`
 call only the repo's own package scripts — no network, no third-party service, no
 proxy.
 
 One conflict worth knowing about: `frontend-design` discourages Inter as
-overused. Inter is a deliberate choice for Kiln, and `CLAUDE.md` overrides that
+overused. Inter is a deliberate choice for Recast, and `CLAUDE.md` overrides that
 advice.
 
 ### The skills in this repo
@@ -135,7 +150,7 @@ advice.
 | `add-converter`  | Adding a format or a conversion edge                           |
 | `probe`          | Checking a conversion is correct, not merely producing a file  |
 | `interface-copy` | Anything a person reads: buttons, warnings, errors, caveats    |
-| `kiln-design`    | Colour, type, spacing, motion                                  |
+| `recast-design`  | Colour, type, spacing, motion                                  |
 | `measure-memory` | Re-measuring `EDGE_COST` after a library upgrade               |
 | `release-check`  | Finishing a stage                                              |
 
@@ -182,7 +197,7 @@ Four modules behind one façade, `lib/registry/index.ts`, which is all the page
 imports.
 
 **`table.ts` — the edges.** One-step conversions, written by hand. It is a list
-of edges, not of pairs: most pairs Kiln offers are two of these composed.
+of edges, not of pairs: most pairs Recast offers are two of these composed.
 
 ```ts
 export interface Converter {
@@ -261,7 +276,7 @@ The registry exposes:
 | `targetsFor(from)`      | `routing.ts`     | Every format `from` can reach, direct or routed. Drives the picker. |
 | `find(from, to)`        | `routing.ts`     | The `Route` for one pair, or `undefined`.                           |
 | `edge(from, to)`        | `routing.ts`     | The one-step converter for a pair, if there is one.                 |
-| `allRoutes()`           | `routing.ts`     | Every pair Kiln offers. Used by the matrix snapshot.                |
+| `allRoutes()`           | `routing.ts`     | Every pair Recast offers. Used by the matrix snapshot.              |
 | `isUnsupported(a, b)`   | `unsupported.ts` | Whether a pair is refused, whatever route could reach it.           |
 | `engineFor(from, to)`   | `engines.ts`     | The loader for one **edge**. Worker only.                           |
 | `runRoute(route, file)` | `run-route.ts`   | Runs a route's steps in order. Worker only.                         |
@@ -327,7 +342,7 @@ Steps 2 and 3 are separate files, so they can drift. They cannot drift silently:
 `lib/registry/index.test.ts` fails if a declared pair has no engine, or an engine
 has no declared pair.
 
-If the new format is one Kiln has never seen, also add it to the `Format` union
+If the new format is one Recast has never seen, also add it to the `Format` union
 and to `FORMATS` — that array is the canonical display order.
 
 ### Conventions engines must follow
@@ -348,7 +363,7 @@ import()` inside the engine.
 **Fourteen formats, 114 pairs**, all verified in a real browser
 (`pnpm verify:browser`).
 
-Those pairs are not 114 converters. Kiln declares **44 edges** — one-step
+Those pairs are not 114 converters. Recast declares **44 edges** — one-step
 conversions written by hand — and computes the rest as two of them run back to
 back. Fourteen formats would otherwise be 182 hand-written converters, each with
 its own bugs and its own caveat to keep true.
@@ -360,7 +375,7 @@ and a writer from it, and it is reachable from the whole family.
 ### How a pair is reached
 
 `✓` is a direct converter. A format name is the one the file passes through on
-the way. `—` is a pair Kiln does not offer, and the interface says why.
+the way. `—` is a pair Recast does not offer, and the interface says why.
 
 | from \ to  | `pdf` | `docx` | `odt` | `rtf` | `html` | `epub` | `md` | `txt` | `pptx` | `odp` | `xlsx` | `ods` | `csv` | `json` |
 | ---------- | ----- | ------ | ----- | ----- | ------ | ------ | ---- | ----- | ------ | ----- | ------ | ----- | ----- | ------ |
@@ -466,13 +481,13 @@ reads both, and the engines work on rows. Declaring the edges records a
 capability that already existed — leaving them out would have offered
 `xlsx → odt` while refusing `ods → odt`.
 
-**JSON is a spreadsheet, not a document.** The only JSON Kiln reads or writes is
+**JSON is a spreadsheet, not a document.** The only JSON Recast reads or writes is
 tabular: an array of records becomes rows with the keys as a header, and a
 workbook of several sheets becomes an object of arrays keyed by sheet name — the
 shape it reads back, so a round trip survives. A nested object flattens to dotted
 keys (`lead.name`), an array inside a value becomes comma-separated text, and
 both are said out loud in the caveat. Arbitrary nested JSON is not a table and
-Kiln does not pretend it is one.
+Recast does not pretend it is one.
 
 #### Slides
 
@@ -485,7 +500,7 @@ Kiln does not pretend it is one.
 | md   | pptx | good     | Images, tables, emphasis. Each top-level heading starts a slide. |
 | md   | odp  | good     | Images, tables, emphasis. Each top-level heading starts a slide. |
 
-Slides have no hub, and no deck becomes another deck. Kiln reads a deck as text
+Slides have no hub, and no deck becomes another deck. Recast reads a deck as text
 only — there is no browser-sized library that can rebuild a layout — so
 `pptx → odp` would hand you the words and lose every design decision in the
 original.
@@ -497,7 +512,7 @@ while `md → pptx` is not, and why `txt → pptx` is offered — `txt → md` i
 byte-for-byte copy, so a `.txt` file is Markdown as far as this is concerned.
 
 **Values, not formulas.** Reading a workbook exports what Excel last computed,
-so a cell holding `=SUM(C2:C3)` converts as `4000`. Kiln does not recalculate.
+so a cell holding `=SUM(C2:C3)` converts as `4000`. Recast does not recalculate.
 
 **Warnings, not silence.** When an engine has to drop something — charts, images,
 pivot tables, a footnote, a script tag, a page with no text layer, a CSV that
@@ -512,14 +527,14 @@ Vietnamese block, Greek and Cyrillic** — 927 code points, listed exactly in
 `lib/registry/converters/_pdf.ts` and read out of the font rather than guessed
 from the Unicode blocks it looks like it covers.
 
-When a document contains **Chinese or Japanese**, Kiln fetches a Noto face from
+When a document contains **Chinese or Japanese**, Recast fetches a Noto face from
 its own origin and uses it for those characters only, so a document mixing
 Japanese with Greek and Cyrillic keeps all three — a CJK face has no Greek or
 Cyrillic, and Roboto has no CJK, so the text is split into runs per font rather
 than the document being switched wholesale to one of them.
 
 Everything else — Korean, Arabic, Hebrew, Indic scripts, emoji, and the
-dot-below letters Yoruba and Sanskrit transliteration use — Kiln cannot draw. It
+dot-below letters Yoruba and Sanskrit transliteration use — Recast cannot draw. It
 does not pretend to: those characters are replaced with `U+FFFD`, named in
 `warnings`, and a document with nothing else in it is refused with a note that
 Markdown and plain text keep every character.
@@ -558,7 +573,7 @@ conversions. Keyed on the source format it carried the worst target's figure, so
 few megabytes. The two heaviest are `csv → xlsx` at ×227 and `xlsx → docx` at
 ×181; both are the shape of the library underneath — SheetJS materialises the
 whole workbook XML before it zips anything, and there is no streaming write in
-the build Kiln ships — rather than a mistake to fix.
+the build Recast ships — rather than a mistake to fix.
 
 For DOCX, XLSX and PPTX the multiplier is applied to the **unpacked** size, which
 the detection step reads out of the zip headers while identifying the file.
@@ -572,7 +587,7 @@ refuse: the estimate is far too rough to block work on.
 
 The iOS thresholds are provisional guesses awaiting a real device.
 
-## What Kiln will not do
+## What Recast will not do
 
 **Sixty-four pairs are deliberately absent**, and four more are simply out of
 reach in two steps. They are written as rules in `lib/registry/unsupported.ts` —
@@ -586,12 +601,12 @@ pairs nobody should be offered, so the router checks here first.
 
 | From              | To              | Why not                                                                                                                                                                        |
 | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| any text document | any spreadsheet | Kiln will not guess which parts of a document are a table. A spreadsheet that is subtly wrong is worse than none.                                                              |
+| any text document | any spreadsheet | Recast will not guess which parts of a document are a table. A spreadsheet that is subtly wrong is worse than none.                                                            |
 | prose documents   | `pptx`, `odp`   | Splitting prose into slides means deciding what deserves a slide, which is a writing task. Markdown and plain text are the exception: a `#` heading says where a slide starts. |
-| `pptx`, `odp`     | `pdf`           | A deck converted to PDF should look like the deck. Kiln reads slides as text, and rendering the real layout needs a full presentation engine.                                  |
+| `pptx`, `odp`     | `pdf`           | A deck converted to PDF should look like the deck. Recast reads slides as text, and rendering the real layout needs a full presentation engine.                                |
 | `pptx`, `odp`     | any spreadsheet | A deck is not a grid. The text on a slide has no rows or columns to recover.                                                                                                   |
 | any spreadsheet   | `pptx`, `odp`   | Turning a sheet into slides is an editorial judgement, not a conversion.                                                                                                       |
-| `pptx`, `odp`     | each other      | Kiln reads a deck as text only, so there is no layout to carry across.                                                                                                         |
+| `pptx`, `odp`     | each other      | Recast reads a deck as text only, so there is no layout to carry across.                                                                                                       |
 
 Two of these used to be absolute and are not any more. `pdf → docx` and
 `pptx → docx` are now offered as two-step conversions, because refusing them
@@ -608,11 +623,11 @@ genuinely its own, has only the one edge into the family.
 
 The refusals all reduce to one of two things: the output's value is its visual
 layout, and reconstructing that means shipping a rendering engine to the browser
-or sending the document to a server — the second being the one thing Kiln will
+or sending the document to a server — the second being the one thing Recast will
 not do. Or the conversion is an editorial judgement, and a converter that guesses
 at one produces something you have to redo.
 
-This is not hedging. The constraint that makes Kiln private is the same
+This is not hedging. The constraint that makes Recast private is the same
 constraint that limits it, and a product that hides the second half while
 advertising the first is not telling the truth. So the limits are in the
 interface, with reasons, and there is no waitlist.
@@ -647,7 +662,7 @@ terminated, that job fails with an explanation, and a fresh worker is built so
 later jobs still run.
 
 **The worker is built separately**, by `scripts/build-worker.mjs`, into
-`public/kiln-worker/`. This is not a stylistic choice. Next's bundler does not
+`public/recast-worker/`. This is not a stylistic choice. Next's bundler does not
 compile `new Worker(new URL('./x.ts', import.meta.url))` for the client build —
 it copies the TypeScript source into the output as a static asset, so the
 deployed page fetches raw TypeScript, is handed a non-JavaScript MIME type by

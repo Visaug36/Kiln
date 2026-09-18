@@ -18,7 +18,7 @@ Object.defineProperty(globalThis, 'Blob', { value: NodeBlob, writable: true });
 Object.defineProperty(globalThis, 'File', { value: NodeFile, writable: true });
 
 /**
- * The CJK faces are fetched from Kiln's own origin at conversion time. jsdom has
+ * The CJK faces are fetched from Recast's own origin at conversion time. jsdom has
  * no server behind that URL, so the same files the build copies into `out/` are
  * served straight off disk. `fontRequests` lets a test assert that a document
  * with no CJK in it never asks for one.

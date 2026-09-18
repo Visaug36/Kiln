@@ -1,9 +1,9 @@
 import type { Converter } from './types';
 
 /**
- * Every conversion Kiln performs in one step.
+ * Every conversion Recast performs in one step.
  *
- * This is a list of **edges**, not of pairs. Most pairs Kiln offers are two of
+ * This is a list of **edges**, not of pairs. Most pairs Recast offers are two of
  * these run back to back — `routing.ts` computes those. Adding a format here
  * means declaring its edges to the nearest existing format and letting routing
  * reach the rest; fourteen formats would otherwise be 182 hand-written
@@ -102,7 +102,7 @@ export const converters: Converter[] = [
     to: 'pdf',
     fidelity: 'good',
     caveat:
-      'Rendered with Kiln’s own typography, not your Markdown preview’s. Inline emphasis and links are not carried.',
+      'Rendered with Recast’s own typography, not your Markdown preview’s. Inline emphasis and links are not carried.',
   },
   {
     from: 'md',

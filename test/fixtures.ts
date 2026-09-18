@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const DIR = join(process.cwd(), 'test', 'fixtures');
 
 /** The string every generated fixture contains, for round-trip assertions. */
-export const MARKER = 'Kiln fixture marker 4711';
+export const MARKER = 'Recast fixture marker 4711';
 
 /**
  * Loads a fixture as a real `File`, which is what every engine takes.

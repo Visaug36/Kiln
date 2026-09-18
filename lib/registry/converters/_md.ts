@@ -48,7 +48,7 @@ type Token = {
 /**
  * Markdown into a flat block list.
  *
- * Kiln's writers (DOCX, PDF, PPTX, RTF) all want a linear sequence of typed
+ * Recast's writers (DOCX, PDF, PPTX, RTF) all want a linear sequence of typed
  * blocks rather than a tree, so nesting is flattened here once instead of in
  * four places. Inline emphasis is deliberately not modelled: the writers set
  * whole blocks, and carrying inline runs through four formats is a much bigger

@@ -4,7 +4,7 @@
  * Without these, every PDF conversion dies with "Promise.try is not a function"
  * or "hashOriginal.toHex is not a function" — on any browser older than roughly
  * Chrome 140 / Safari 18.2 / Firefox 134, which is a large share of real users.
- * Kiln would have no way to explain that, so it would just look broken.
+ * Recast would have no way to explain that, so it would just look broken.
  *
  * Both gaps were found because the test runner (Node 22) has the same holes.
  * Each is installed only when missing, so a modern engine keeps its native one.

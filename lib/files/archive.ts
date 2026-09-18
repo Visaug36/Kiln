@@ -7,7 +7,7 @@ const OOXML_PART = '[Content_Types].xml';
  *
  * OpenDocument and EPUB both require it to be the archive's first entry, stored
  * uncompressed, precisely so that a reader can tell what it has without
- * unpacking anything. Kiln writes them that way too.
+ * unpacking anything. Recast writes them that way too.
  */
 const BY_MIMETYPE: Record<string, Format> = {
   'application/vnd.oasis.opendocument.text': 'odt',

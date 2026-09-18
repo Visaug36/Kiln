@@ -10,7 +10,7 @@ import type { Block } from './_md';
  * ODT, ODS and ODP are the same archive with a different `mimetype` and a
  * different root element inside `content.xml`, so the parts that open and build
  * the package live here once. There is no browser-sized OpenDocument library,
- * and there does not need to be — the markup Kiln reads and writes is a small,
+ * and there does not need to be — the markup Recast reads and writes is a small,
  * regular subset, handled the same way `_docx.ts` and `_pptx.ts` handle theirs.
  *
  * ODT is the **sibling of DOCX** and is deliberately built to meet it: the
@@ -161,7 +161,7 @@ export interface OdfTextRead {
 /**
  * OpenDocument text markup rewritten as the HTML `htmlToBlocks` consumes.
  *
- * Deliberately a translation rather than a parser: every structure Kiln carries
+ * Deliberately a translation rather than a parser: every structure Recast carries
  * — headings, paragraphs, lists at any depth, tables, emphasis, links — has an
  * exact HTML counterpart, and handing the result to the layer DOCX already uses
  * means the two formats cannot drift apart in what they drop or what they say
@@ -181,13 +181,13 @@ export function odfTextToHtml(content: string): OdfTextRead {
 
   let html = body;
 
-  // Notes and comments are real content that Kiln has nowhere to put. Counted
+  // Notes and comments are real content that Recast has nowhere to put. Counted
   // before they are removed, so the person is told rather than left guessing.
   const notes = (html.match(new RegExp(`<text:note${END}`, 'g')) ?? []).length;
   const comments = (html.match(new RegExp(`<office:annotation${END}`, 'g')) ?? []).length;
   if (notes > 0) {
     warnings.push(
-      `${notes === 1 ? 'One footnote or endnote was' : `${notes} footnotes or endnotes were`} dropped — Kiln writes a single flow of text with nowhere to put them.`,
+      `${notes === 1 ? 'One footnote or endnote was' : `${notes} footnotes or endnotes were`} dropped — Recast writes a single flow of text with nowhere to put them.`,
     );
   }
   if (comments > 0) {
@@ -366,9 +366,9 @@ const CONTENT_NS = [
 ].join(' ');
 
 /**
- * Kiln's block list as the body of an OpenDocument text document.
+ * Recast's block list as the body of an OpenDocument text document.
  *
- * Numbering is the one place this does *not* mirror the DOCX writer. Kiln's
+ * Numbering is the one place this does *not* mirror the DOCX writer. Recast's
  * other writers draw the ordinal themselves, from the shared `listCounter`;
  * OpenDocument numbers from the list style, and gets "1, 1, 2" for a list with
  * a nested one in it from the nesting alone — provided the parent's
@@ -399,7 +399,7 @@ export function blocksToOdfText(blocks: Block[]): string {
 
       case 'bullet': {
         const depth = Math.min(block.depth, MAX_LIST_DEPTH);
-        const style = block.ordered ? 'KilnNumbering' : 'KilnBullets';
+        const style = block.ordered ? 'RecastNumbering' : 'RecastBullets';
 
         if (depth > listDepth) {
           while (listDepth < depth) {
@@ -460,19 +460,19 @@ export function blocksToOdfText(blocks: Block[]): string {
   closeLists(-1);
   // The `<office:text>` wrapper is not decoration: it is what marks the body as
   // a text document rather than a sheet or a deck, and it is what every reader,
-  // Kiln's own included, looks for first.
+  // Recast's own included, looks for first.
   return `<office:text>${parts.join('')}</office:text>`;
 }
 
 /** The list and paragraph styles the writers above refer to by name. */
 const AUTOMATIC_STYLES = `<office:automatic-styles>
-<text:list-style style:name="KilnBullets">${[0, 1, 2, 3, 4, 5]
+<text:list-style style:name="RecastBullets">${[0, 1, 2, 3, 4, 5]
   .map(
     (level) =>
       `<text:list-level-style-bullet text:level="${level + 1}" text:bullet-char="•"><style:list-level-properties text:space-before="${0.25 + level * 0.25}in" text:min-label-width="0.25in"/></text:list-level-style-bullet>`,
   )
   .join('')}</text:list-style>
-<text:list-style style:name="KilnNumbering">${[0, 1, 2, 3, 4, 5]
+<text:list-style style:name="RecastNumbering">${[0, 1, 2, 3, 4, 5]
   .map(
     (level) =>
       `<text:list-level-style-number text:level="${level + 1}" style:num-format="1" style:num-suffix="."><style:list-level-properties text:space-before="${0.25 + level * 0.25}in" text:min-label-width="0.25in"/></text:list-level-style-number>`,
@@ -524,7 +524,7 @@ const MANIFEST = (mime: string) => `<?xml version="1.0" encoding="UTF-8"?>
 
 const META = (title: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <office:document-meta ${CONTENT_NS} xmlns:dc="http://purl.org/dc/elements/1.1/" office:version="1.3">
-<office:meta><dc:title>${escapeXml(title)}</dc:title><meta:generator xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0">Kiln</meta:generator></office:meta>
+<office:meta><dc:title>${escapeXml(title)}</dc:title><meta:generator xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0">Recast</meta:generator></office:meta>
 </office:document-meta>`;
 
 /**
@@ -532,7 +532,7 @@ const META = (title: string) => `<?xml version="1.0" encoding="UTF-8"?>
  *
  * `mimetype` must be the archive's **first** entry and must be stored
  * uncompressed — that is what lets a reader identify the package from the first
- * bytes without unzipping it, and it is how Kiln's own detection recognises the
+ * bytes without unzipping it, and it is how Recast's own detection recognises the
  * file coming back in. JSZip writes entries in the order they were added, so
  * the order of the calls below is load-bearing.
  */
@@ -639,14 +639,14 @@ export function odfPresentationToSlides(content: string): Slide[] {
   }
   if (slides.every((slide) => !slide.title && slide.body.length === 0)) {
     fail(
-      'These slides have no text on them — only images or shapes, which Kiln cannot read.',
+      'These slides have no text on them — only images or shapes, which Recast cannot read.',
     );
   }
 
   return slides;
 }
 
-/** Kiln's slides as the body of an OpenDocument presentation. */
+/** Recast's slides as the body of an OpenDocument presentation. */
 export function slidesToOdfPresentation(slides: Deck[]): string {
   const parts: string[] = ['<office:presentation>'];
 
@@ -666,7 +666,7 @@ export function slidesToOdfPresentation(slides: Deck[]): string {
       const body = slide.bullets
         .map(
           ({ text, depth }) =>
-            `${'<text:list text:style-name="KilnBullets"><text:list-item>'.repeat(Math.min(depth, MAX_LIST_DEPTH) + 1)}<text:p>${odfText(text)}</text:p>${'</text:list-item></text:list>'.repeat(Math.min(depth, MAX_LIST_DEPTH) + 1)}`,
+            `${'<text:list text:style-name="RecastBullets"><text:list-item>'.repeat(Math.min(depth, MAX_LIST_DEPTH) + 1)}<text:p>${odfText(text)}</text:p>${'</text:list-item></text:list>'.repeat(Math.min(depth, MAX_LIST_DEPTH) + 1)}`,
         )
         .join('');
 

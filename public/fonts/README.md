@@ -1,10 +1,10 @@
 # The CJK fonts
 
-`NotoSansJP.ttf` and `NotoSansSC.ttf` are what Kiln embeds when a document
+`NotoSansJP.ttf` and `NotoSansSC.ttf` are what Recast embeds when a document
 contains Chinese, Japanese or Korean text and the target is PDF. Roboto, which
 every other PDF uses, has no CJK glyphs at all.
 
-They are served from Kiln's own origin like every other font here: nothing is
+They are served from Recast's own origin like every other font here: nothing is
 fetched from a CDN, and the worker only asks for one when a conversion actually
 needs it.
 
@@ -42,6 +42,6 @@ person converts and keeps. So TTF, and the extra 1.3 MB is the price.
 ## Why two files and not one pan-CJK font
 
 A pan-CJK face is three to four times the size, and almost nobody needs both at
-once. Kiln picks by what is in the document: kana means Japanese, otherwise
+once. Recast picks by what is in the document: kana means Japanese, otherwise
 Simplified Chinese. Each is fetched on its own, so a Japanese document never
 downloads the Chinese face.

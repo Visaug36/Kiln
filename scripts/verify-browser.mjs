@@ -21,7 +21,7 @@ import { chromium } from 'playwright';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'out');
 const fixtures = join(root, 'test', 'fixtures');
-const downloads = join(process.env.SCRATCH ?? '/tmp', 'kiln-verify');
+const downloads = join(process.env.SCRATCH ?? '/tmp', 'recast-verify');
 mkdirSync(downloads, { recursive: true });
 
 /** What a plain static host sends. Deliberately conservative. */
@@ -39,13 +39,38 @@ const TYPES = {
   '.ts': 'video/mp2t',
 };
 
+/**
+ * A GitHub Pages project site is served from `/<repo>`, not from the root, and
+ * the export is built with that prefix baked into every asset URL. Serving it
+ * at the root would answer paths this host will never be asked for, so the
+ * prefix is honoured here: pass the same NEXT_PUBLIC_BASE_PATH the build used
+ * and this script reproduces the published site exactly, 404s included.
+ *
+ * That is the check for the rename trap. Renaming the repository moves the
+ * site to a new prefix, and a build carrying the old one deploys green and
+ * serves a page whose every script is missing.
+ */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
+const missing = [];
+
 const server = createServer((req, res) => {
   const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
-  let file = join(outDir, url);
-  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
-  if (!existsSync(file)) {
+  const send404 = () => {
+    missing.push(url);
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');
+  };
+
+  if (basePath && !(url === basePath || url.startsWith(`${basePath}/`))) {
+    send404();
+    return;
+  }
+
+  let file = join(outDir, basePath ? url.slice(basePath.length) : url);
+  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
+  if (!existsSync(file)) {
+    send404();
     return;
   }
   res.writeHead(200, {
@@ -55,13 +80,14 @@ const server = createServer((req, res) => {
 });
 
 await new Promise((resolve) => server.listen(4173, resolve));
-const base = 'http://localhost:4173';
+const origin = 'http://localhost:4173';
+const base = `${origin}${basePath}`;
 
 /**
  * One fixture per source format. The **targets are not listed here** — they are
  * read off the format picker once the file is dropped.
  *
- * Most pairs Kiln offers are now two converters composed by the router rather
+ * Most pairs Recast offers are now two converters composed by the router rather
  * than anything written by hand, and a list in this file would be a third copy
  * of the matrix to keep in step with the registry and the snapshot. Reading the
  * interface instead means this script checks exactly what a person is actually
@@ -92,11 +118,11 @@ const SOURCES = [
  * carries something specific to it. Checked on the formats that are readable as
  * text — the compressed ones are covered by the unit suite, which can open them.
  */
-const MARKER = 'Kiln fixture marker 4711';
+const MARKER = 'Recast fixture marker 4711';
 const EXPECTED = {
   'sample.docx': [MARKER, 'Quarterly report', 'Emphasis cell'],
   'sample.odt': [MARKER, 'Field notes', 'Nested item'],
-  'sample.md': [MARKER, 'Kiln test document'],
+  'sample.md': [MARKER, 'Recast test document'],
   'sample.txt': [MARKER],
   'sample.rtf': [MARKER, 'Plain paragraph text.'],
   'sample.html': [MARKER, 'Quarterly report', 'Nested bullet'],
@@ -158,8 +184,10 @@ page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
 page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
 page.on('request', (request) => {
   const url = request.url();
-  if (url.endsWith('.ttf')) fontFetches.push(url.replace(base, ''));
-  if (!url.startsWith(base) && !url.startsWith('data:') && !url.startsWith('blob:')) {
+  if (url.endsWith('.ttf')) fontFetches.push(url.replace(origin, ''));
+  // Same-origin is the test, not same-prefix: a request that escaped the
+  // basePath is a missing asset, which the 404 list below reports.
+  if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) {
     offOrigin.push(`${request.method()} ${url}`);
   }
   // Any request carrying a body while a document is loaded is the thing the
@@ -370,10 +398,22 @@ console.log(
   `Console errors: ${consoleErrors.length === 0 ? 'none' : consoleErrors.slice(0, 5).join(' | ')}`,
 );
 
+// A wrong basePath does not throw; it 404s every asset and leaves a blank page.
+// Reported here because that is the failure the workflow's green tick hides.
+const notFound = [...new Set(missing)];
+console.log(
+  `Assets served at ${basePath || '/'}: ${
+    notFound.length === 0
+      ? 'all found'
+      : `${notFound.length} missing — ${notFound.slice(0, 5).join(', ')}`
+  }`,
+);
+
 await browser.close();
 server.close();
 
 console.log(
   `\n${results.length - failures}/${results.length} pairs converted in the browser.`,
 );
-if (failures > 0 || offOrigin.length > 0 || uploads.length > 0) process.exit(1);
+if (failures > 0 || offOrigin.length > 0 || uploads.length > 0 || notFound.length > 0)
+  process.exit(1);

@@ -13,7 +13,7 @@ describe('the registry table', () => {
     expect(converters.filter((c) => c.from === c.to)).toEqual([]);
   });
 
-  it('only uses formats Kiln knows about', () => {
+  it('only uses formats Recast knows about', () => {
     for (const converter of converters) {
       expect(FORMATS).toContain(converter.from);
       expect(FORMATS).toContain(converter.to);
@@ -148,7 +148,7 @@ describe('find', () => {
     expect(find('ods', 'json')).toMatchObject({ via: 'xlsx' });
   });
 
-  it('returns undefined for a pair Kiln will not do', () => {
+  it('returns undefined for a pair Recast will not do', () => {
     expect(find('txt', 'txt')).toBeUndefined();
     expect(find('pptx', 'pdf')).toBeUndefined();
     expect(find('xlsx', 'pptx')).toBeUndefined();

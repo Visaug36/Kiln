@@ -7,8 +7,8 @@ import type { Block } from './_md';
  *
  * Every maintained RTF parser on npm is either a Node-only binding or a wrapper
  * around a native converter, neither of which can run in a browser tab — and
- * shipping a document to a server to read it is the one thing Kiln will not do.
- * RTF's control-word syntax is simple enough to walk directly, and what Kiln
+ * shipping a document to a server to read it is the one thing Recast will not do.
+ * RTF's control-word syntax is simple enough to walk directly, and what Recast
  * needs from it (text, paragraph breaks, heading-ish and emphasis-ish runs) is
  * the part that is genuinely tractable.
  */
@@ -228,7 +228,7 @@ export function rtfToPlainText(source: string): string {
  *
  * Sizes are **ranked**, not compared against fixed ratios. A ratio has to pick a
  * number, and the one it picked was wrong for the most common input there is: a
- * document Kiln itself wrote, whose h1 is 18pt against 12pt body. That is ×1.5,
+ * document Recast itself wrote, whose h1 is 18pt against 12pt body. That is ×1.5,
  * just under the ×1.6 the old rule wanted, so every top-level heading came back
  * as `##`. Ranking has no such number in it — the largest heading size in the
  * document is h1, whatever it happens to be.
@@ -322,7 +322,7 @@ function escapeRtf(text: string): string {
   return out;
 }
 
-/** Writes Kiln's block list as an RTF document. */
+/** Writes Recast's block list as an RTF document. */
 export function writeRtf(blocks: Block[]): string {
   const parts: string[] = [
     '{\\rtf1\\ansi\\ansicpg1252\\deff0',

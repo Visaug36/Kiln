@@ -92,7 +92,7 @@ describe('pairs declared exact', () => {
     const out = await textOf((await convert(fixture('sample.md'))).files[0]!.blob);
 
     expect(out).toContain(MARKER);
-    expect(out).toContain('Kiln test document');
+    expect(out).toContain('Recast test document');
     expect(out).toContain('First item');
     // The markers themselves are what gets removed.
     expect(out).not.toContain('**');
@@ -599,11 +599,11 @@ describe('CJK in PDF output', () => {
 
   it('still refuses Korean, and says Korean', async () => {
     // Neither face carries a single hangul syllable, so this is honest — and
-    // it must not claim Kiln cannot draw Chinese or Japanese any more.
+    // it must not claim Recast cannot draw Chinese or Japanese any more.
     const convert = await engineFor('md', 'pdf')!();
 
     await expect(convert(new File(['한국어 텍스트입니다'], 'ko.md'))).rejects.toThrow(
-      /written in Korean, which Kiln cannot draw/,
+      /written in Korean, which Recast cannot draw/,
     );
   });
 });
@@ -680,7 +680,7 @@ describe('OpenDocument text', () => {
 
     // The local file header names the first entry; ODF pins it to `mimetype`
     // so a reader can identify the package without unzipping it, which is what
-    // Kiln's own detection relies on.
+    // Recast's own detection relies on.
     const head = new TextDecoder().decode(bytes.subarray(0, 128));
     expect(head).toContain('mimetype');
     expect(head).toContain('application/vnd.oasis.opendocument.text');

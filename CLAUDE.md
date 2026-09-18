@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Kiln
+# Recast
 
 A document converter that runs entirely in the browser. Static export, no backend.
 
@@ -54,9 +54,9 @@ this reason — not for speed.
 ## Design is pinned
 
 The tokens, Inter, and the 250 ms `cubic-bezier(0.32, 0.72, 0, 1)` curve in
-`.claude/skills/kiln-design` are deliberate choices, not defaults reached for out
+`.claude/skills/recast-design` are deliberate choices, not defaults reached for out
 of habit. **If an installed skill or general best practice suggests otherwise,
-Kiln's tokens win** — including the common advice to avoid Inter because it is
+Recast's tokens win** — including the common advice to avoid Inter because it is
 overused. Inter was chosen for this product. Do not swap the typeface, the
 palette or the curve to satisfy a design skill.
 
@@ -75,7 +75,7 @@ The typecheck catches a type error while whoever made it still has the context
 to fix it, instead of at the end of a long turn. The Stop hook is there so a turn
 cannot end on a red build or a blown entry chunk; it builds first because
 `check:bundle` reads `out/`, and checking a stale build is worse than not
-checking. Both write only to gitignored paths (`out/`, `public/kiln-worker/`), so
+checking. Both write only to gitignored paths (`out/`, `public/recast-worker/`), so
 neither dirties the tree.
 
 Disable them with `/hooks`, or delete the file — nothing else depends on them.
@@ -118,7 +118,7 @@ subagent was doing exactly what it should; the staging was the mistake.
 through a hub. 376 tests, entry chunk ~178 KB gzipped against a 200 KB budget. Static export, deployed to GitHub Pages. 64 pairs are deliberately
 refused and written as rules in `lib/registry/unsupported.ts`: either the value
 of the output is its visual layout, and rebuilding that means a rendering engine
-too large to ship or a server Kiln will not have, or the conversion is an
+too large to ship or a server Recast will not have, or the conversion is an
 editorial judgement rather than a conversion.
 
 **Inline emphasis stops at the hub.** Every reader carries bold, italics and
@@ -136,7 +136,7 @@ numbers are noise.
 PDF output embeds pdfmake's Roboto: Latin, Latin Extended-A, **the whole
 Vietnamese block**, Greek and Cyrillic — 927 code points, listed exactly in
 `lib/registry/converters/_pdf.ts`. When a document contains Chinese or Japanese,
-a Noto face is fetched from Kiln's own origin (`public/fonts/`) and used for
+a Noto face is fetched from Recast's own origin (`public/fonts/`) and used for
 those characters only, so a mixed document keeps its Greek and Cyrillic too.
 Anything no available font can draw is replaced and named in `warnings`, and a
 document with nothing renderable left is refused. Never let that check be

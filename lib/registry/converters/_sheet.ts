@@ -14,7 +14,7 @@ export interface Workbook {
 
 /**
  * Charts, images and pivot tables live outside the cell grid, so nothing below
- * can see them and nothing Kiln writes can carry them. They are visible in the
+ * can see them and nothing Recast writes can carry them. They are visible in the
  * archive, though, so the file itself is asked what is being left behind.
  *
  * Both archive layouts are checked here rather than in two places. ODS is the
@@ -71,7 +71,7 @@ async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
  * `cellFormula: false` plus SheetJS's default `w` (formatted text) means a cell
  * holding `=SUM(A1:A9)` arrives as the number Excel last computed, not as the
  * formula string. A spreadsheet that converts to a column of "=SUM(...)" is
- * useless, and recomputing formulas in the browser is not something Kiln does.
+ * useless, and recomputing formulas in the browser is not something Recast does.
  */
 export async function readWorkbook(input: File): Promise<Workbook> {
   const buffer = await readArrayBuffer(input);

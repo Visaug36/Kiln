@@ -1,7 +1,7 @@
 /**
  * The CJK fonts, fetched only when a document actually contains CJK.
  *
- * Roboto — what every other PDF Kiln writes uses — has no CJK glyphs, so those
+ * Roboto — what every other PDF Recast writes uses — has no CJK glyphs, so those
  * characters used to be replaced and the conversion refused outright if there
  * was nothing else in the document. A person whose document is in Japanese got
  * a refusal and nothing else.
@@ -57,7 +57,7 @@ export function variantFor(codePoints: Iterable<number>): CjkVariant {
  * Handles the two subtable formats a modern font uses: 4 for the BMP and 12 for
  * everything above it. A format-4 segment can in principle map some of its
  * range to .notdef through `idRangeOffset`, which this does not follow — so it
- * could in principle over-claim. Checked against fontTools for both faces Kiln
+ * could in principle over-claim. Checked against fontTools for both faces Recast
  * ships: 6886 and 7946 code points, exactly, with nothing over-claimed and
  * nothing missed. Worth re-checking if the fonts are ever replaced.
  */
@@ -121,7 +121,7 @@ function fontUrl(file: string): string {
   const base =
     typeof self !== 'undefined' && self.location
       ? self.location.href
-      : 'http://localhost/kiln-worker/';
+      : 'http://localhost/recast-worker/';
   return new URL(`../fonts/${file}`, base).href;
 }
 

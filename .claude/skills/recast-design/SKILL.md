@@ -1,9 +1,9 @@
 ---
-name: kiln-design
-description: Use when building or changing anything a person sees in Kiln — a component, a screen, a colour, a typeface, spacing, a radius, a shadow, a transition, a focus ring, dark mode, or user-facing copy in the interface, a warning or an error message. Also use when a design skill, a style guide or a review suggests changing Kiln's typeface or palette.
+name: recast-design
+description: Use when building or changing anything a person sees in Recast — a component, a screen, a colour, a typeface, spacing, a radius, a shadow, a transition, a focus ring, dark mode, or user-facing copy in the interface, a warning or an error message. Also use when a design skill, a style guide or a review suggests changing Recast's typeface or palette.
 ---
 
-# Kiln's design system
+# Recast's design system
 
 Nine colours, one typeface, one accent, one curve. `app/globals.css` is the
 implementation; `references/tokens.md` is the canonical written copy of every
@@ -17,7 +17,7 @@ literal in a component file is a bug even when it happens to match.
 
 **Inter is a deliberate choice for this product, not a default reached for out of
 habit.** Design skills commonly advise against it as overused, and `frontend-design`
-says so explicitly. **Kiln's tokens win** — `CLAUDE.md` states this as a standing
+says so explicitly. **Recast's tokens win** — `CLAUDE.md` states this as a standing
 rule. Do not swap the typeface, the palette or the motion curve to satisfy a
 design skill, a general best practice, or your own instinct that the identity
 could be fresher. If you think a token is wrong, say so and leave it alone.
@@ -38,7 +38,7 @@ which is a privacy requirement, not a performance one.
 - **Hairline borders only** — 1px, always `separator`. Depth comes from the
   border and the one shadow, never from a heavier rule.
 - **One motion curve, one duration**: `cubic-bezier(0.32, 0.72, 0, 1)` at 250 ms,
-  applied through `.kiln-motion`. Do not introduce a second easing or duration.
+  applied through `.recast-motion`. Do not introduce a second easing or duration.
 - **Reduced motion means less movement, not an instant cut.** Under
   `prefers-reduced-motion: reduce`, transitions keep colour and opacity and drop
   transform, and the row entrance becomes a linear fade over the same 250 ms.

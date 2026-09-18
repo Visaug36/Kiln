@@ -10,7 +10,7 @@ export async function convert(input: File): Promise<ConversionResult> {
   const warnings: string[] = [];
   if (blocks.some((block) => block.kind === 'table')) {
     warnings.push(
-      'Tables became tab-separated lines. RTF has a table model, but not one Kiln writes.',
+      'Tables became tab-separated lines. RTF has a table model, but not one Recast writes.',
     );
   }
   if (/!\[[^\]]*\]\([^)]*\)/.test(source)) {

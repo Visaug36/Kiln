@@ -54,7 +54,7 @@ export default function JobList({
           <button
             type="button"
             onClick={onDownloadAll}
-            className="kiln-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+            className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
           >
             Download all
           </button>

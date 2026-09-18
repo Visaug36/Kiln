@@ -43,7 +43,7 @@ Arabic and Hebrew are reported, not rendered. fontkit can shape Arabic, but
 nothing in the stack implements the Unicode bidirectional algorithm.
 
 **Why it stays open:** a bidi bug looks entirely correct to anyone who does not
-read the script. This is the one failure mode Kiln cannot self-verify.
+read the script. This is the one failure mode Recast cannot self-verify.
 
 **What would change it:** a UAX #9 implementation _and_ someone who reads the
 script to check the output. The second is the binding constraint.
@@ -51,7 +51,7 @@ script to check the output. The second is the binding constraint.
 ### Korean has no PDF path
 
 Neither shipped Noto face carries a hangul syllable, so a Korean document is
-refused — and now says _Korean_, rather than claiming Kiln cannot draw Chinese or
+refused — and now says _Korean_, rather than claiming Recast cannot draw Chinese or
 Japanese.
 
 **Why it stays open:** a third multi-megabyte font is a decision about download
@@ -66,7 +66,7 @@ The write-up is at `docs/x2t-spike.md` on branch `spike/x2t-wasm`.
 
 **Why it stays open:** two blockers. The build needs Docker and roughly 20 GB, so
 the `.wasm` size is unknown and a figure from memory would be worse than none.
-And CryptPad's vendored ONLYOFFICE core is **AGPL-3.0**, which would reach Kiln's
+And CryptPad's vendored ONLYOFFICE core is **AGPL-3.0**, which would reach Recast's
 own source — the only irreversible part of adopting it.
 
 **What would change it:** one afternoon with Docker for the numbers, then your
@@ -80,7 +80,7 @@ A cell spanning two columns becomes one cell in a plain grid. The text survives
 and a warning names it — the silent part was fixed in stage 5 — but the structure
 does not.
 
-**Why it stays open:** every writer Kiln has writes a plain grid. Carrying spans
+**Why it stays open:** every writer Recast has writes a plain grid. Carrying spans
 would mean a span model through five writers.
 
 ### `xlsx → pdf` clips past 12 columns
@@ -133,7 +133,7 @@ Small, real, and waiting for the right stage rather than for a decision.
 `pptx → epub` and `xlsx → epub` warn _"There were no top-level headings, so the
 whole document became a single chapter. Add `#` headings to split it up."_ The
 outcome is accurate; the advice is addressed to someone who wrote the Markdown,
-and here Kiln wrote it.
+and here Recast wrote it.
 
 This is the copy-survives-composition problem in miniature, and belongs with the
 UI stage's warnings work rather than a patch now. See the `interface-copy` skill.

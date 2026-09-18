@@ -1,4 +1,4 @@
-/** Every document format Kiln knows how to read or write. */
+/** Every document format Recast knows how to read or write. */
 export type Format =
   | 'pdf'
   | 'docx'
@@ -65,7 +65,7 @@ export interface Converter {
 }
 
 /**
- * How Kiln will actually perform one pair: one declared converter, or two run
+ * How Recast will actually perform one pair: one declared converter, or two run
  * back to back.
  *
  * This is what the interface and the worker both hold. A single-step route and

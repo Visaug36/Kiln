@@ -1,5 +1,5 @@
 /**
- * Fails if Kiln's initial JavaScript payload exceeds its budget.
+ * Fails if Recast's initial JavaScript payload exceeds its budget.
  *
  * The engines are several megabytes together. They are only ever reached
  * through the registry's `load()`, so none of them may appear in the scripts
@@ -85,10 +85,10 @@ if (total > BUDGET_BYTES) {
 // The worker is the whole reason the page stays responsive, and it is built by
 // a separate step that is easy to forget. A missing or uncompiled worker breaks
 // every conversion in production while every other check stays green.
-const workerEntry = join(outDir, 'kiln-worker', 'convert.worker.js');
+const workerEntry = join(outDir, 'recast-worker', 'convert.worker.js');
 if (!existsSync(workerEntry)) {
   console.error(
-    '\nout/kiln-worker/convert.worker.js is missing — run `pnpm build:worker`.',
+    '\nout/recast-worker/convert.worker.js is missing — run `pnpm build:worker`.',
   );
   failed = true;
 } else {

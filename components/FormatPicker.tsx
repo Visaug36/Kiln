@@ -72,7 +72,7 @@ export default function FormatPicker({
             onClick={() => onChange(format)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={[
-              'kiln-motion rounded-control border px-2.5 py-1 font-mono text-[13px] leading-5',
+              'recast-motion rounded-control border px-2.5 py-1 font-mono text-[13px] leading-5',
               'disabled:cursor-not-allowed disabled:opacity-50',
               selected
                 ? 'border-separator bg-fill text-label'

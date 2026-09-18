@@ -173,12 +173,12 @@ function markListItems(html: string): string {
     const name = tag.toLowerCase();
 
     if (name === 'li') {
-      // Only the opening tag carries the markers; `</li data-kiln-depth="1">`
+      // Only the opening tag carries the markers; `</li data-recast-depth="1">`
       // would be malformed and would confuse the block matcher.
       if (closing) return match;
       const depth = Math.max(0, stack.length - 1);
-      const ordered = stack[stack.length - 1] === 'ol' ? ' data-kiln-ordered' : '';
-      return `${match}${ordered} data-kiln-depth="${depth}"`;
+      const ordered = stack[stack.length - 1] === 'ol' ? ' data-recast-ordered' : '';
+      return `${match}${ordered} data-recast-depth="${depth}"`;
     }
     if (closing) {
       // Tolerate stray closers rather than corrupting the rest of the document.
@@ -197,7 +197,7 @@ function markListItems(html: string): string {
  * non-greedy block matcher stops at the first `</li>`, which is the inner
  * one — so the outer item swallows its children and two bullets arrive as a
  * single run of text ("outer• inner"). Splitting the item at the nested list
- * keeps them separate. Depth is not modelled: Kiln's block list is flat, so
+ * keeps them separate. Depth is not modelled: Recast's block list is flat, so
  * a nested item becomes a sibling bullet rather than being lost.
  */
 function splitNestedItems(html: string): string {
@@ -259,7 +259,7 @@ export interface BlocksRead {
 }
 
 /**
- * HTML into Kiln's flat block list, used when writing DOCX/PDF/RTF/Markdown.
+ * HTML into Recast's flat block list, used when writing DOCX/PDF/RTF/Markdown.
  *
  * `inline: 'markdown'` keeps emphasis and links as Markdown punctuation, which
  * is what the `* → md` engines want. The other writers set whole blocks and
@@ -319,8 +319,8 @@ export function htmlToBlocks(
     } else if (tag === 'li') {
       blocks.push({
         kind: 'bullet',
-        ordered: attributes.includes('data-kiln-ordered'),
-        depth: Number(/data-kiln-depth="(\d+)"/.exec(attributes)?.[1] ?? 0),
+        ordered: attributes.includes('data-recast-ordered'),
+        depth: Number(/data-recast-depth="(\d+)"/.exec(attributes)?.[1] ?? 0),
         text: text.replace(/^•\s*/, ''),
       });
     } else if (tag === 'blockquote') {
@@ -367,13 +367,13 @@ function describeLosses(losses: Record<Loss, number>): string[] {
 
   if (losses.span > 0) {
     out.push(
-      `${losses.span} table cell${losses.span === 1 ? '' : 's'} spanned more than one row or column. Kiln writes a plain grid, so ${losses.span === 1 ? 'it is' : 'they are'} now ${losses.span === 1 ? 'a single cell' : 'single cells'} and the columns may not line up with the original.`,
+      `${losses.span} table cell${losses.span === 1 ? '' : 's'} spanned more than one row or column. Recast writes a plain grid, so ${losses.span === 1 ? 'it is' : 'they are'} now ${losses.span === 1 ? 'a single cell' : 'single cells'} and the columns may not line up with the original.`,
     );
   }
 
   if (losses.stranded > 0) {
     out.push(
-      `About ${losses.stranded} word${losses.stranded === 1 ? '' : 's'} sat in a layout element Kiln does not read — a text box, a caption or a frame — and could not be placed.`,
+      `About ${losses.stranded} word${losses.stranded === 1 ? '' : 's'} sat in a layout element Recast does not read — a text box, a caption or a frame — and could not be placed.`,
     );
   }
 
@@ -381,7 +381,7 @@ function describeLosses(losses: Record<Loss, number>): string[] {
 }
 
 /**
- * Writes Kiln's block list as a DOCX. Shared by every `* → docx` engine so the
+ * Writes Recast's block list as a DOCX. Shared by every `* → docx` engine so the
  * styling is identical no matter what the source was.
  *
  * Returns an ArrayBuffer rather than going through `Packer.toBuffer`, which
@@ -428,7 +428,7 @@ export async function writeDocx(blocks: Block[], title?: string): Promise<ArrayB
           new Paragraph({
             text: block.text,
             bullet: block.ordered ? undefined : { level },
-            numbering: block.ordered ? { reference: 'kiln-ordered', level } : undefined,
+            numbering: block.ordered ? { reference: 'recast-ordered', level } : undefined,
           }),
         );
         break;
@@ -504,8 +504,8 @@ export async function writeDocx(blocks: Block[], title?: string): Promise<ArrayB
     numbering: {
       config: [
         {
-          reference: 'kiln-ordered',
-          // One level per depth Kiln will write. Word restarts a level's count
+          reference: 'recast-ordered',
+          // One level per depth Recast will write. Word restarts a level's count
           // when a shallower item interrupts it, which is the behaviour a
           // nested list needs.
           levels: Array.from({ length: MAX_LIST_DEPTH + 1 }, (_, level) => ({

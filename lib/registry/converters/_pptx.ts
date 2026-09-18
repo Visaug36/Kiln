@@ -69,7 +69,7 @@ function decodeXml(text: string): string {
  *
  * There is no browser-sized library that parses PPTX, and there does not need
  * to be: the text lives in `ppt/slides/slideN.xml` as `<a:t>` runs, which is
- * exactly and only what Kiln carries out of a deck. Anything about how the deck
+ * exactly and only what Recast carries out of a deck. Anything about how the deck
  * *looks* is out of reach, which is why every `pptx → *` pair is lossy.
  */
 export async function readPptx(input: File): Promise<PptxRead> {
@@ -131,7 +131,7 @@ export async function readPptx(input: File): Promise<PptxRead> {
   }
   if (slides.every((s) => !s.title && s.body.length === 0)) {
     fail(
-      'These slides have no text on them — only images or shapes, which Kiln cannot read.',
+      'These slides have no text on them — only images or shapes, which Recast cannot read.',
     );
   }
 

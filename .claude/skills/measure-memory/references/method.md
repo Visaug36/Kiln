@@ -127,7 +127,7 @@ Built, not collected. A fixture repeated until a parser chokes is not a document
 - **JSON** — one large array built programmatically, since repeating an array is
   not valid JSON.
 - **Everything else** — produced by converting the large Markdown or CSV into it.
-  A real document of a known size, written by Kiln's own writer.
+  A real document of a known size, written by Recast's own writer.
 
 This does mean the inputs are regular in a way real documents are not, which is
 part of why these are order-of-magnitude figures. `md → pptx` measures a growth
@@ -141,7 +141,7 @@ used as a terminal step, where growth is not read.
 
 Do not round it away and do not paste it in. Either:
 
-- **Explain it in the table.** `csv → xlsx` is the heaviest edge Kiln has at
+- **Explain it in the table.** `csv → xlsx` is the heaviest edge Recast has at
   ×257, and the comment beside it says why: SheetJS builds a cell object per
   value and materialises the whole workbook XML as one string before zipping any
   of it. That is the library's shape, not a mistake, and saying so stops the next

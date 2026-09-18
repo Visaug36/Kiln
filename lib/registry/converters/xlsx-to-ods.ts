@@ -3,7 +3,7 @@ import { interop, outputFile } from '../shared';
 import { readWorkbook } from './_sheet';
 
 /**
- * Written through SheetJS's own ODS writer rather than Kiln's OpenDocument
+ * Written through SheetJS's own ODS writer rather than Recast's OpenDocument
  * one: a spreadsheet's content is cell values with types, which SheetJS already
  * knows how to spell, and `_odf.ts` builds documents and decks.
  */

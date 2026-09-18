@@ -1,6 +1,6 @@
 ---
 name: verify-fix
-description: Independently confirms a fix actually worked, by reproducing the original symptom rather than reading the change. Give it what went wrong — the input, the wrong output — and never the diff. Use after repairing a bug in Kiln, before reporting it fixed.
+description: Independently confirms a fix actually worked, by reproducing the original symptom rather than reading the change. Give it what went wrong — the input, the wrong output — and never the diff. Use after repairing a bug in Recast, before reporting it fixed.
 tools: Bash, Read, Glob, Grep
 model: sonnet
 ---

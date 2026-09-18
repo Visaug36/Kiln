@@ -9,7 +9,7 @@ import { parseMarkdown, stripInline } from './_md';
 import type { Block } from './_md';
 import { odfTextToHtml } from './_odf';
 import { readHtmlDocument } from './_html';
-import { KilnError, describeFailure } from '../shared';
+import { RecastError, describeFailure } from '../shared';
 
 /**
  * Regression tests for the parsing helpers.
@@ -172,8 +172,8 @@ describe('turning library errors into sentences', () => {
     });
   }
 
-  it('passes a KilnError through untouched, since it is already a sentence', () => {
-    const own = new KilnError('This PDF has no text in it.');
+  it('passes a RecastError through untouched, since it is already a sentence', () => {
+    const own = new RecastError('This PDF has no text in it.');
     expect(describeFailure(own, 'pdf')).toBe('This PDF has no text in it.');
   });
 });
@@ -320,7 +320,7 @@ describe('nested lists in Markdown', () => {
 
 describe('what the block layer admits to losing', () => {
   it('reports a merged cell instead of quietly flattening it', () => {
-    // The text survives; the grid does not. Kiln writes a plain table, so the
+    // The text survives; the grid does not. Recast writes a plain table, so the
     // row ends up short and the writer pads it — a phantom empty cell nobody
     // was told about.
     const { blocks, warnings } = htmlToBlocks(
@@ -360,7 +360,7 @@ describe('what the block layer admits to losing', () => {
 
       expect(blocks, html).toHaveLength(0);
       expect(warnings.join(' '), html).toMatch(
-        /sat in a layout element Kiln does not read/,
+        /sat in a layout element Recast does not read/,
       );
     }
   });
@@ -484,7 +484,7 @@ describe('list depth', () => {
 
 describe('inferring structure where the format does not record it', () => {
   it('ranks RTF heading sizes instead of measuring fixed ratios', () => {
-    // Kiln's own h1 is 18pt against 12pt body — ×1.5, just under the ×1.6 the
+    // Recast's own h1 is 18pt against 12pt body — ×1.5, just under the ×1.6 the
     // old rule wanted, so every top-level heading came back as `##`.
     // Enough body text for the median to be the body size, as in any real
     // document — the ranking is relative to it.
@@ -545,7 +545,7 @@ describe('inferring structure where the format does not record it', () => {
 
   it('ranks PDF heading sizes too, so `##` does not become `#`', () => {
     // The same miscalibration as the RTF reader, in its sibling path: ×1.5 put
-    // a 17pt heading over 11pt body — Kiln's own `##` — into level 1.
+    // a 17pt heading over 11pt body — Recast's own `##` — into level 1.
     const line = (text: string, size: number, y: number) => ({ text, size, page: 1, y });
     // Body lines outnumber headings, as in any real document: the body size is
     // the median, so it has to be the commonest size for the ranking to mean

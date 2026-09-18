@@ -27,7 +27,7 @@ export const MIME: Record<Format, string> = {
  */
 const ZIPPED = new Set<Format>(['docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp', 'epub']);
 
-/** Longest file Kiln will take on. Everything is held in memory. */
+/** Longest file Recast will take on. Everything is held in memory. */
 export const MAX_BYTES = 100 * 1024 * 1024;
 
 /**
@@ -35,11 +35,11 @@ export const MAX_BYTES = 100 * 1024 * 1024;
  * file. Engines throw these; anything else that escapes is replaced with a
  * generic sentence rather than shown raw.
  */
-export class KilnError extends Error {
+export class RecastError extends Error {
   readonly userFacing = true;
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
-    this.name = 'KilnError';
+    this.name = 'RecastError';
   }
 }
 
@@ -48,7 +48,7 @@ export class KilnError extends Error {
  * never shown in the interface — only the message is.
  */
 export function fail(message: string, cause?: unknown): never {
-  throw new KilnError(message, cause === undefined ? undefined : { cause });
+  throw new RecastError(message, cause === undefined ? undefined : { cause });
 }
 
 /**
@@ -96,7 +96,7 @@ export async function readArrayBuffer(input: File): Promise<ArrayBuffer> {
   }
   if (input.size > MAX_BYTES) {
     fail(
-      `This file is ${Math.round(input.size / 1024 / 1024)} MB. Kiln works in memory and stops at 100 MB.`,
+      `This file is ${Math.round(input.size / 1024 / 1024)} MB. Recast works in memory and stops at 100 MB.`,
     );
   }
   return input.arrayBuffer();
@@ -124,7 +124,7 @@ export async function readText(input: File): Promise<string> {
  * messages are matched by signature because none of them expose error codes.
  */
 export function describeFailure(cause: unknown, kind: Format): string {
-  if (cause instanceof KilnError) return cause.message;
+  if (cause instanceof RecastError) return cause.message;
 
   const raw = cause instanceof Error ? cause.message : String(cause);
   const text = raw.toLowerCase();
@@ -153,5 +153,5 @@ export function describeFailure(cause: unknown, kind: Format): string {
   }
 
   // Deliberately vague rather than leaking a stack trace or library internals.
-  return 'Kiln could not read this file. It may be damaged, or saved in a format this converter does not handle.';
+  return 'Recast could not read this file. It may be damaged, or saved in a format this converter does not handle.';
 }

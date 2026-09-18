@@ -3,7 +3,7 @@ import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { THEME_COLOR } from '@/lib/theme';
 import './globals.css';
 
-/* next/font downloads these at build time and serves them from Kiln's own
+/* next/font downloads these at build time and serves them from Recast's own
    origin. No request reaches a font CDN when someone opens the page. */
 const inter = Inter({
   subsets: ['latin'],
@@ -26,7 +26,7 @@ const plexMono = IBM_Plex_Mono({
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const metadata: Metadata = {
-  title: 'Kiln — convert documents in your browser',
+  title: 'Recast — convert documents in your browser',
   description:
     'Convert between PDF, Word, OpenDocument, RTF, HTML, EPUB, Markdown, plain text, PowerPoint, Excel, CSV and JSON. Every conversion runs in your browser; files never leave your machine.',
   icons: { icon: `${basePath}/icon.svg` },

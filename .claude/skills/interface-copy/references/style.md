@@ -1,4 +1,4 @@
-# Kiln's voice, in full
+# Recast's voice, in full
 
 ## Who is reading
 
@@ -7,7 +7,7 @@ developer, they did not choose the library, and they do not care which one
 failed. They care about two things: **did my document survive**, and **what do I
 do now**.
 
-Kiln also asks them to believe a promise — that the file never left the browser.
+Recast also asks them to believe a promise — that the file never left the browser.
 Copy that overclaims anywhere makes that promise harder to believe everywhere.
 
 ---
@@ -22,7 +22,7 @@ Copy that overclaims anywhere makes that promise harder to believe everywhere.
 ### Active voice, and name the actor
 
 > ✗ The contents were used to determine the format.
-> ✓ This file is named `.docx` but its contents are XLSX. Kiln went with the
+> ✓ This file is named `.docx` but its contents are XLSX. Recast went with the
 > contents.
 
 ### No exclamation marks
@@ -42,7 +42,7 @@ An error is not a status code with a friendly font.
 
 When there is genuinely nothing to do, say that instead of inventing advice:
 
-> ✓ This PDF has no text in it. It's probably a scan, and Kiln can't read those.
+> ✓ This PDF has no text in it. It's probably a scan, and Recast can't read those.
 
 ### Never leak the library
 
@@ -50,7 +50,7 @@ When there is genuinely nothing to do, say that instead of inventing advice:
 signature — none of them expose error codes — and returns a sentence. Its final
 fallback is deliberately vague rather than raw:
 
-> ✓ Kiln could not read this file. It may be damaged, or saved in a format this
+> ✓ Recast could not read this file. It may be damaged, or saved in a format this
 > converter does not handle.
 
 The real error goes to `console.error`, where a developer can find it. It never
@@ -58,7 +58,7 @@ leaves the browser and it never reaches the interface.
 
 ### Count things properly
 
-Singular and plural are both written out. Kiln does this everywhere:
+Singular and plural are both written out. Recast does this everywhere:
 
 ```ts
 `${n === 1 ? 'An image was' : `${n} images were`} not carried over.`;
@@ -84,7 +84,7 @@ The pattern: **what was lost, how much of it, and what you have instead.**
 > ✓ 3 charts were not carried over — only cell values convert.
 > ✓ A pivot table was not carried over; you get the cells it was built from, not
 > the pivot.
-> ✓ 2 table cells spanned more than one row or column. Kiln writes a plain grid,
+> ✓ 2 table cells spanned more than one row or column. Recast writes a plain grid,
 > so they are now single cells and the columns may not line up with the original.
 > ✓ 4 of 12 pages had no text to extract and came through empty — those pages are
 > probably scans.
@@ -139,15 +139,15 @@ allRoutes().filter((r) => r.steps.some((s) => s.from === 'md' && s.to === 'docx'
 
 ## The unsupported list
 
-A refusal is the place Kiln is most tempted to sound apologetic, and it should
-not. The constraint that makes Kiln private is the same one that limits it.
+A refusal is the place Recast is most tempted to sound apologetic, and it should
+not. The constraint that makes Recast private is the same one that limits it.
 
 **Give the real reason, not a hedge.** No "not yet", no "coming soon", no
 waitlist.
 
 > ✓ Splitting prose into slides means deciding what deserves a slide, which is a
 > writing task. Convert to Markdown first and put a heading where each slide
-> should start — Kiln will honour those.
+> should start — Recast will honour those.
 
 That one does three things worth copying: it refuses, it explains _why_ in terms
 of the work rather than the code, and it offers the route that does exist.
@@ -183,4 +183,4 @@ Before a sentence ships:
 | Memory caution                | `sizeCaution` in `lib/files/capacity.ts`                |
 | Interface chrome              | `app/page.tsx`, `components/`                           |
 
-Colour, type and spacing are the `kiln-design` skill's, not this one's.
+Colour, type and spacing are the `recast-design` skill's, not this one's.

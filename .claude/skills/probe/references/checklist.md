@@ -113,7 +113,7 @@ base-14 Helvetica turned `Καλημέρα` into `9£±;³·;Ã-<` and reported 
 `'revenue مرحبا 12% rose'`
 
 **Correct** Text formats keep the characters and their logical order. PDF must
-replace and warn — Kiln has no bidirectional ordering, so anything that _looked_
+replace and warn — Recast has no bidirectional ordering, so anything that _looked_
 rendered would be in the wrong visual order, which is worse than a warning.
 
 **Applies to** every pair.
@@ -288,7 +288,7 @@ document parts; for PDF, anything pdfjs raises `PasswordException` on.
 
 **Input** A PDF whose pages carry only images.
 
-**Correct** Refused, naming the cause: the text layer is empty and Kiln does no
+**Correct** Refused, naming the cause: the text layer is empty and Recast does no
 OCR. Not an empty `.txt` reported as done.
 
 **Applies to** `pdf → txt`, `pdf → md`.
@@ -332,7 +332,7 @@ each sheet with `## Sales` / `## Notes`.
 **Input** `sample.xlsx` cell `C4`, which holds `=SUM(C2:C3)` with a cached value
 of `4000`.
 
-**Correct** The output contains `4000` and **never** `SUM(` or `=`. Kiln exports
+**Correct** The output contains `4000` and **never** `SUM(` or `=`. Recast exports
 what Excel last computed and does not recalculate.
 
 **Applies to** `xlsx → *`.
@@ -380,7 +380,7 @@ is not slide order; `slide10.xml` sorts before `slide2.xml` as a string.
 
 - **Privacy.** `pnpm verify:browser` watches every request while conversions run.
   Off-origin requests: none. Requests with a body: none. Fonts and the pdfjs
-  worker come from Kiln's own origin.
+  worker come from Recast's own origin.
 - **The page stays usable.** Frame latency during a conversion stays in single
   digits; the drop zone stays interactive.
 - **The queue survives a bad file.** A job that fails, times out or kills its

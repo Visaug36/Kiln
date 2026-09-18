@@ -24,11 +24,11 @@ export const FORMATS: readonly Format[] = [
 /**
  * Which family each format belongs to.
  *
- * `pdf` sits in the text family because everything Kiln does with a PDF is
+ * `pdf` sits in the text family because everything Recast does with a PDF is
  * text-flow: it reads the text layer and it writes a flowed document. It is
- * not a spreadsheet or a deck in any sense Kiln can act on.
+ * not a spreadsheet or a deck in any sense Recast can act on.
  *
- * `json` is a spreadsheet, not a text format, because the only JSON Kiln reads
+ * `json` is a spreadsheet, not a text format, because the only JSON Recast reads
  * or writes is an array of objects — a grid with named columns.
  */
 export const FAMILY: Record<Format, Family> = {
@@ -79,7 +79,7 @@ export const FORMAT_LABEL: Record<Format, string> = {
  * in its family, so a path through it carries the most across; routing prefers
  * it over any other intermediate for exactly that reason.
  *
- * Slides have no hub. Kiln reads a deck as text and writes one from Markdown,
+ * Slides have no hub. Recast reads a deck as text and writes one from Markdown,
  * so nothing routes from one deck format to another — there is no layout to
  * carry, and `unsupported.ts` says so.
  */

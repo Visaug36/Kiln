@@ -1,12 +1,12 @@
 /**
- * The registry: what Kiln converts, and how it gets there.
+ * The registry: what Recast converts, and how it gets there.
  *
  * The interface reads this and nothing else, so the format picker updates on
  * its own when an edge is declared. Three pieces sit behind it:
  *
  * - `table.ts` — the **edges**, one declared converter each.
  * - `routing.ts` — turns a requested pair into a **route** of one or two edges.
- * - `unsupported.ts` — the pairs Kiln refuses, whatever route could reach them.
+ * - `unsupported.ts` — the pairs Recast refuses, whatever route could reach them.
  *
  * Nothing here reaches an `import()`. This module is imported by the page, and
  * a dynamic import in it makes the bundler emit a chunk for every engine.

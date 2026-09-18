@@ -9,7 +9,7 @@ out/
 next-env.d.ts
 
 # built by scripts/build-worker.mjs on every build
-public/kiln-worker/
+public/recast-worker/
 
 # testing
 coverage/

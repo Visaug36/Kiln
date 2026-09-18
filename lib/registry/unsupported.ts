@@ -19,7 +19,7 @@ const SHEET = (Object.keys(FAMILY) as Format[]).filter((f) => FAMILY[f] === 'she
 const SLIDES = (Object.keys(FAMILY) as Format[]).filter((f) => FAMILY[f] === 'slides');
 
 /**
- * Pairs Kiln deliberately does not offer, and why.
+ * Pairs Recast deliberately does not offer, and why.
  *
  * Written as rules rather than pairs because fourteen formats make 182 ordered
  * pairs, and a reason repeated eight times is a reason nobody maintains. The
@@ -29,7 +29,7 @@ const SLIDES = (Object.keys(FAMILY) as Format[]).filter((f) => FAMILY[f] === 'sl
  *
  * - **The output's value is its visual layout.** Rebuilding that means a layout
  *   and rendering engine — tens of megabytes in a browser, or a server, and
- *   sending the document to a server is the one thing Kiln will not do.
+ *   sending the document to a server is the one thing Recast will not do.
  * - **The conversion is an editorial judgement, not a conversion.** Splitting
  *   prose into slides, or finding the tables inside a document, is a decision
  *   about meaning. A converter that guesses produces something you have to redo,
@@ -37,7 +37,7 @@ const SLIDES = (Object.keys(FAMILY) as Format[]).filter((f) => FAMILY[f] === 'sl
  *
  * This list is also what stops routing being too clever. A two-step path can
  * reach pairs nobody should be offered, so `routing.ts` checks here first.
- * Listing them is not an apology: the constraint that makes Kiln private is the
+ * Listing them is not an apology: the constraint that makes Recast private is the
  * same constraint that limits it, and saying so plainly is more useful than a
  * disabled menu item.
  */
@@ -46,7 +46,7 @@ const RULES: Rule[] = [
     from: TEXT,
     to: SHEET,
     reason:
-      'Kiln will not guess which parts of a document are a table. Getting that wrong puts numbers in the wrong columns, and a spreadsheet that is subtly wrong is worse than no spreadsheet.',
+      'Recast will not guess which parts of a document are a table. Getting that wrong puts numbers in the wrong columns, and a spreadsheet that is subtly wrong is worse than no spreadsheet.',
   },
   {
     // `md` and `txt` are the exception, and deliberately so: a Markdown heading
@@ -57,19 +57,19 @@ const RULES: Rule[] = [
     from: TEXT.filter((f) => f !== 'md' && f !== 'txt'),
     to: SLIDES,
     reason:
-      'Splitting prose into slides means deciding what deserves a slide, which is a writing task. Convert to Markdown first and put a heading where each slide should start — Kiln will honour those.',
+      'Splitting prose into slides means deciding what deserves a slide, which is a writing task. Convert to Markdown first and put a heading where each slide should start — Recast will honour those.',
   },
   {
     from: SLIDES,
     to: ['pdf'],
     reason:
-      'A deck converted to PDF should look like the deck. Kiln reads slides as text, so what it could produce is a text document — not the slides — and rendering the real layout needs a full presentation engine, far too large to ship to a browser.',
+      'A deck converted to PDF should look like the deck. Recast reads slides as text, so what it could produce is a text document — not the slides — and rendering the real layout needs a full presentation engine, far too large to ship to a browser.',
   },
   {
     from: SLIDES,
     to: SHEET,
     reason:
-      'A deck is not a grid. The text on a slide has no rows or columns to recover, so anything Kiln produced here would be invented.',
+      'A deck is not a grid. The text on a slide has no rows or columns to recover, so anything Recast produced here would be invented.',
   },
   {
     from: SHEET,
@@ -81,7 +81,7 @@ const RULES: Rule[] = [
     from: SLIDES,
     to: SLIDES,
     reason:
-      'Kiln reads a deck as text only, so it has no layout to carry across. You would get the words in a new file and lose every design decision in the original.',
+      'Recast reads a deck as text only, so it has no layout to carry across. You would get the words in a new file and lose every design decision in the original.',
   },
 ];
 

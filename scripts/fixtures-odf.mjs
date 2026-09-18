@@ -3,9 +3,9 @@
  *
  * Kept out of `make-fixtures.mjs` only for length. The important thing about
  * them is what they are *not*: with the exception of ODS, which SheetJS writes,
- * these are not produced by Kiln's own writers. They are written here by hand
+ * these are not produced by Recast's own writers. They are written here by hand
  * in the dialect LibreOffice and real EPUB tooling actually emit — different
- * style names, different attribute order, markup Kiln never generates — because
+ * style names, different attribute order, markup Recast never generates — because
  * a reader tested only against its matching writer proves nothing except that
  * the two agree with each other.
  *
@@ -78,7 +78,7 @@ export async function writeOdfFixtures(write, MARKER) {
 <text:p text:style-name="Standard">${MARKER}</text:p>
 <text:h text:style-name="Heading_20_2" text:outline-level="2">Observations</text:h>
 <text:p text:style-name="Standard">A paragraph with <text:span text:style-name="T1">bold</text:span> and <text:span text:style-name="T2">italic</text:span> runs, plus <text:a xlink:href="https://example.com">a link</text:a>.</text:p>
-<text:p text:style-name="Standard">A line<text:line-break/>broken in two.<text:note text:id="ftn1" text:note-class="footnote"><text:note-citation>1</text:note-citation><text:note-body><text:p>A footnote Kiln has nowhere to put.</text:p></text:note-body></text:note></text:p>
+<text:p text:style-name="Standard">A line<text:line-break/>broken in two.<text:note text:id="ftn1" text:note-class="footnote"><text:note-citation>1</text:note-citation><text:note-body><text:p>A footnote Recast has nowhere to put.</text:p></text:note-body></text:note></text:p>
 <text:list text:style-name="L1">
 <text:list-item><text:p text:style-name="Standard">First item</text:p></text:list-item>
 <text:list-item><text:p text:style-name="Standard">Second item</text:p>

@@ -1,6 +1,6 @@
 # Non-Latin text in PDF output
 
-The same document rendered by Kiln's PDF path, before and after the font change.
+The same document rendered by Recast's PDF path, before and after the font change.
 
 `before-helvetica.png` is pdfmake driven by the base-14 Helvetica: the glyphs are
 never embedded, the font is addressed through a single-byte encoding roughly the

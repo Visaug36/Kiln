@@ -11,7 +11,7 @@ export async function convert(input: File): Promise<ConversionResult> {
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(sheet.rows), sheet.name);
     // The sheet holds the values now; keeping the source rows alive alongside
     // them doubles the peak for a large workbook, and this is the one part of
-    // it Kiln controls.
+    // it Recast controls.
     sheet.rows.length = 0;
   }
 

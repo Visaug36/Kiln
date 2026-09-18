@@ -19,7 +19,7 @@ const write = (name, data) => {
 };
 
 /** Text every reader test looks for, so a round trip can be asserted. */
-export const MARKER = 'Kiln fixture marker 4711';
+export const MARKER = 'Recast fixture marker 4711';
 
 // ---- DOCX -------------------------------------------------------------
 {
@@ -187,7 +187,7 @@ write(
   'sample.md',
   Buffer.from(
     [
-      '# Kiln test document',
+      '# Recast test document',
       '',
       MARKER,
       '',

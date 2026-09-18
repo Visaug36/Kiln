@@ -1,6 +1,6 @@
-# Kiln test document
+# Recast test document
 
-Kiln fixture marker 4711
+Recast fixture marker 4711
 
 ## A second heading
 

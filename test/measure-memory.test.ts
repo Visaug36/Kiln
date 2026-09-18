@@ -19,7 +19,7 @@ import type { Format } from '@/lib/registry/types';
  * stale the moment a library is upgraded, and a measurement nobody can repeat
  * is a guess with a decimal point on it.
  *
- * **Edges, not pairs.** Most pairs Kiln offers are two edges run back to back,
+ * **Edges, not pairs.** Most pairs Recast offers are two edges run back to back,
  * and there are around a hundred of them; a hundred separately measured numbers
  * would drift out of step with each other and with the engines underneath.
  * Composing a route's cost from its edges is less work and more honest, and it

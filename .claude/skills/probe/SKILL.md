@@ -1,13 +1,13 @@
 ---
 name: probe
-description: Use when checking whether a Kiln conversion is actually correct rather than merely producing a file — auditing an engine, chasing a reported fidelity bug ("the output looks wrong", "characters are mangled", "the table is broken", "text went missing"), reviewing a new or changed converter before it ships, or running a verification pass over some or all of Kiln's 114 format pairs.
+description: Use when checking whether a Recast conversion is actually correct rather than merely producing a file — auditing an engine, chasing a reported fidelity bug ("the output looks wrong", "characters are mangled", "the table is broken", "text went missing"), reviewing a new or changed converter before it ships, or running a verification pass over some or all of Recast's 114 format pairs.
 ---
 
 # Probing a converter
 
 **A conversion that completes is not a conversion that worked.**
 
-Kiln's stage-2 suite was green while five real bugs sat under it, because the
+Recast's stage-2 suite was green while five real bugs sat under it, because the
 tests asked "did this produce a non-empty blob of the right type" and never asked
 "is the output correct". Speaker notes landed on the wrong slide. Two bullets
 merged into one. Every non-ASCII RTF run gained a stray `?`. All of it looked
@@ -36,7 +36,7 @@ Those tests already exist and they are the floor, not the check.
    The `**`-in-table-cells bug was one function ignoring its caller's argument,
    and it affected three pairs — the two it was reported on and one nobody
    noticed.
-5. **Then check the sibling path, every time.** Kiln has two readers producing
+5. **Then check the sibling path, every time.** Recast has two readers producing
    the same block list and five writers consuming it. Three bugs so far were one
    bug fixed in one implementation and left standing in its twin. The checklist
    opens with the pairs to check and the assertion that pins them together.
@@ -67,7 +67,7 @@ encoding assumption that holds for ASCII.
 
 - **Silent loss is a bug.** If an engine discards something, it goes in
   `warnings`. A conversion that quietly drops a column, an image or a script is
-  the worst failure Kiln has, worse than refusing.
+  the worst failure Recast has, worse than refusing.
 - **No raw exception text reaches the interface.** Errors are sentences saying
   what happened and what to do.
 - **Never weaken a test to make it pass.** If an assertion is now wrong, the

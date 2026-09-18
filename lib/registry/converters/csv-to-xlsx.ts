@@ -9,7 +9,7 @@ export async function convert(input: File): Promise<ConversionResult> {
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   // The sheet holds the values now. Dropping the source array keeps one copy
   // of a large spreadsheet alive instead of two while SheetJS writes, which is
-  // the one part of this conversion's memory Kiln controls — the rest is the
+  // the one part of this conversion's memory Recast controls — the rest is the
   // workbook XML the writer builds in full before it zips anything.
   rows.length = 0;
 
@@ -22,7 +22,7 @@ export async function convert(input: File): Promise<ConversionResult> {
     delimiter === ','
       ? undefined
       : [
-          `This file used ${describeDelimiter(delimiter)} between values, not commas. Kiln read it that way.`,
+          `This file used ${describeDelimiter(delimiter)} between values, not commas. Recast read it that way.`,
         ];
 
   return { files: [outputFile(input.name, 'xlsx', new Uint8Array(bytes))], warnings };

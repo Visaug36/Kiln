@@ -7,7 +7,7 @@ import { runRoute } from './run-route';
 /**
  * The hand-off between two converters.
  *
- * Most pairs Kiln offers are two engines run back to back, and nothing in the
+ * Most pairs Recast offers are two engines run back to back, and nothing in the
  * unit suite exercised the joint between them until this existed: both halves
  * were tested, and the thing that carries a file from one to the other was not.
  */
@@ -36,7 +36,7 @@ describe('running a route', () => {
     const zip = await JSZip.loadAsync(await result.files[0]!.blob.arrayBuffer());
     const content = await zip.file('content.xml')!.async('string');
     expect(content).toContain('Chapter one');
-    expect(content).toContain('Kiln fixture marker 4711');
+    expect(content).toContain('Recast fixture marker 4711');
   }, 60_000);
 
   it('names the step each warning came from', async () => {

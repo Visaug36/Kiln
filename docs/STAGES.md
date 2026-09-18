@@ -1,6 +1,6 @@
 # Stages
 
-How Kiln got here, newest first. One entry per stage: **what shipped**, **what
+How Recast got here, newest first. One entry per stage: **what shipped**, **what
 broke**, **what it taught**. Skimmable in a minute — that is the whole point of
 it.
 
@@ -118,7 +118,7 @@ properly and rejected as a `docx → pdf` replacement. x2t itself unmeasurable
 without Docker. And the AGPL-3.0 question, which is the only irreversible part.
 
 **Taught.** A spike's job is to produce numbers or to say plainly which numbers
-it could not get. It also turned up two Kiln bugs in passing, both fixed later.
+it could not get. It also turned up two Recast bugs in passing, both fixed later.
 
 ---
 

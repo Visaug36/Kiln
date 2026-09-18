@@ -1,6 +1,6 @@
 # Bugs found so far
 
-Every bug Kiln has had, how it was **detected**, what the **root cause** turned
+Every bug Recast has had, how it was **detected**, what the **root cause** turned
 out to be, and the **test** that now pins it.
 
 Three of the twelve were one bug fixed in one implementation and left standing
@@ -139,7 +139,7 @@ not the matching one. If the input can nest, a regex cannot parse it.
 Hebrew and emoji all destroyed. The conversion reported success and the user
 downloaded a PDF of nonsense.
 
-**Detected** Reported by a human comparing Kiln's output against another
+**Detected** Reported by a human comparing Recast's output against another
 converter's. Confirmed by rendering a page of scripts and reading the text layer
 back.
 

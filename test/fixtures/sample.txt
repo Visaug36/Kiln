@@ -1,4 +1,4 @@
-Kiln fixture marker 4711
+Recast fixture marker 4711
 
 A second paragraph of plain text.
 

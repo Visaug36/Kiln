@@ -6,7 +6,7 @@ import { unsupportedGroupsFor, type Format } from '@/lib/registry';
 /**
  * Says plainly which targets do not exist for this format, and why.
  *
- * Kiln's privacy promise and its limits are the same fact seen from two sides:
+ * Recast's privacy promise and its limits are the same fact seen from two sides:
  * everything runs in the browser, so anything needing a rendering engine is out
  * of reach. Hiding that behind a disabled menu item or a "coming soon" would
  * make the promise look like marketing. There is no waitlist here on purpose.
@@ -25,7 +25,7 @@ export default function UnsupportedNote({ from }: { from: Format }) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="kiln-motion text-body text-secondary underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
+        className="recast-motion text-body text-secondary underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
       >
         Some formats aren’t available for .{from}.
       </button>

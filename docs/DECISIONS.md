@@ -1,12 +1,62 @@
 # Decisions
 
-Why Kiln is the way it is, newest first. Git records what changed; this records
+Why Recast is the way it is, newest first. Git records what changed; this records
 why, and — the part that matters most — **what was rejected and why**, so a
 future session does not cheerfully re-propose something already ruled out.
 
 An entry belongs here when reversing it would change the product, not just the
 code. Bug fixes go in `.claude/skills/probe/references/known-bugs.md`; stage
 narrative goes in `STAGES.md`; unresolved questions go in `OPEN.md`.
+
+---
+
+## 2026-09-18 — Kiln became Recast
+
+### The product is named Recast
+
+"Kiln" said firing: heat applied to a thing until it hardens. That is not what
+this product does. A document arrives and leaves in a new form, and the name now
+carries the identity — recasting a spell, which is where the purple and the staff
+come from.
+
+The rename is total: repository, package, wordmark, page title, the CSS classes
+and custom properties, the worker's build directory, `RecastError`, the ODF
+numbering style names, the fixture marker, `README.md`, `CLAUDE.md`, all three
+files in `docs/`, and the `kiln-design` skill, which is now `recast-design`.
+
+**Rejected:** renaming the interface and leaving the internals. A half-rename is
+a codebase where a grep for the product's name misses most of it, and the
+leftover identifiers are exactly what the next reader trips on.
+
+**Rejected:** leaving the history in `docs/` under the old name. The stages and
+the decisions are about this product, not a different one that used to exist,
+and reading them with two names in play costs more than the accuracy is worth.
+Git holds the pre-rename text for anyone who needs it.
+
+### The published site is verified at its basePath, not assumed
+
+Renaming the repository moves a GitHub Pages project site from `/Kiln` to
+`/Recast`. The export bakes `basePath` into every asset URL at build time, so a
+build carrying the old prefix publishes a page whose every script, stylesheet
+and font 404s — while the workflow reports success, because nothing in it ever
+asked the site a question.
+
+Three things now close that gap:
+
+- The workflow reads the prefix from `GITHUB_REPOSITORY`, which every trigger
+  sets, rather than from the event payload, which not all of them carry. The
+  comment claimed this already; the code did not.
+- It echoes the prefix, and then greps the built `out/index.html` for it. Same
+  shape as the `.nojekyll` guard: assert the artifact, not the intent.
+- `pnpm verify:browser` honours `NEXT_PUBLIC_BASE_PATH`, serving the export
+  under the same prefix a project site uses and failing on any 404. Running it
+  at `/Recast` reproduces the published site before it is published.
+
+**Rejected:** opening the deployed URL as the check. It is the last word, not
+the first, and it only exists after a bad deploy has already gone out. Measured
+here: serving the `/Recast` build at `/Kiln`, the page still renders the words
+"Drop a document" from static HTML while 11 assets are missing and nothing
+works. A person confirming the deploy by eye would have called that fine.
 
 ---
 
@@ -58,7 +108,7 @@ who did not get what they came for.
 A candidate path is only checked when its first segment exists at the repo root,
 or when it resolves relative to the file mentioning it.
 
-**Rejected:** checking every path-shaped string. Kiln's docs are full of paths
+**Rejected:** checking every path-shaped string. Recast's docs are full of paths
 _inside_ a document archive — `word/document.xml`, `META-INF/`, `OEBPS/` — and a
 checker that flagged those would need a list of exceptions that goes stale faster
 than the thing it is guarding.
@@ -85,7 +135,7 @@ and every shared bug fixed 182 times.
 ### A hub per family, and at most two hops
 
 Markdown is the hub for text documents, Excel for spreadsheets. Slides have no
-hub on purpose — Kiln reads a deck as text only, so no deck becomes another deck.
+hub on purpose — Recast reads a deck as text only, so no deck becomes another deck.
 
 **Rejected:** three or more hops. The loss compounds past usefulness and each
 step is a whole file written and parsed again. Four pairs are unreachable as a
@@ -163,7 +213,7 @@ there were 25 pairs and would not survive 114.
 
 ### CJK ships as two lazy faces, in TTF
 
-Japanese and Simplified Chinese as separate files, fetched from Kiln's own origin
+Japanese and Simplified Chinese as separate files, fetched from Recast's own origin
 only when a document contains those scripts.
 
 **Rejected:** a pan-CJK face (three to four times the size, and almost nobody
@@ -184,7 +234,7 @@ fontkit can shape Arabic, but nothing in the stack implements the Unicode
 bidirectional algorithm.
 
 **Rejected:** shipping it anyway and warning. A bidi bug looks entirely correct
-to anyone who does not read the script, which makes it the one failure mode Kiln
+to anyone who does not read the script, which makes it the one failure mode Recast
 cannot self-verify.
 
 ### Korean is refused rather than given a third font
@@ -243,12 +293,12 @@ silently mojibake. Text a font cannot draw is now replaced and named in
 **Rejected:** rendering it and hoping. Silent mojibake is the bug that check was
 written for; never let it be bypassed.
 
-### Fixtures are produced by real writers, in dialects Kiln did not write
+### Fixtures are produced by real writers, in dialects Recast did not write
 
 DOCX comes from the `docx` library, XLSX and ODS from SheetJS, ODT and ODP and
 EPUB hand-written in LibreOffice's and real EPUB tooling's shape.
 
-**Rejected:** generating fixtures from Kiln's own writers. A reader tested only
+**Rejected:** generating fixtures from Recast's own writers. A reader tested only
 against its matching writer proves nothing except that the two agree with each
 other.
 
@@ -271,7 +321,7 @@ SheetJS, which cost tens to hundreds of kilobytes.
 ### office2pdf is not a substitute
 
 Measured properly: 47.8 MB raw, 11.7 MB brotli, sub-second conversion. It is
-decisively better than Kiln on non-Latin text and decisively worse on tables,
+decisively better than Recast on non-Latin text and decisively worse on tables,
 which are commoner, and it breaks `fi` ligatures. It solves exactly one of the
 refused pairs.
 
@@ -309,7 +359,7 @@ Every maintained RTF parser on npm is a Node binding or a wrapper around a nativ
 converter, and neither runs in a tab. There is no browser-sized OpenDocument or
 PPTX library either.
 
-**Rejected:** shipping a document to a server to read it — the one thing Kiln
+**Rejected:** shipping a document to a server to read it — the one thing Recast
 will not do.
 
 ### The entry chunk budget is 200 KB gzipped, enforced in CI
@@ -328,23 +378,23 @@ letters and drafts they have not shown anyone. No route handlers, no middleware,
 no server actions, no database.
 
 **Rejected:** any library, dependency or code path that puts file contents on the
-network, however good its output. A WASM blob or a font from Kiln's own origin is
+network, however good its output. A WASM blob or a font from Recast's own origin is
 fine; a hosted rendering API is not. This one cannot be walked back.
 
 ### The browser-only constraint sets the format list
 
 Pairs whose value is their visual layout need a rendering engine too large to
-ship or a server Kiln will not have. They are listed with reasons in the
+ship or a server Recast will not have. They are listed with reasons in the
 interface.
 
-**Rejected:** hiding them. The constraint that makes Kiln private is the same one
+**Rejected:** hiding them. The constraint that makes Recast private is the same one
 that limits it, and a product that advertises the first while hiding the second
 is not telling the truth. There is no waitlist and no "coming soon".
 
 ### No analytics, telemetry or third-party script — ever
 
 Next.js build telemetry is disabled in the `dev` and `build` scripts. Fonts are
-downloaded at build time and served from Kiln's own origin, so opening the page
+downloaded at build time and served from Recast's own origin, so opening the page
 contacts no CDN.
 
 ### Static export to GitHub Pages
@@ -356,7 +406,7 @@ constraint is enforced by the toolchain, not only by discipline.
 
 The tokens, Inter and the 250 ms `cubic-bezier(0.32, 0.72, 0, 1)` curve are
 deliberate. If an installed skill or general best practice suggests otherwise,
-Kiln's tokens win.
+Recast's tokens win.
 
 **Rejected:** the common advice to avoid Inter as overused, which
 `frontend-design` gives. Inter was chosen for this product.

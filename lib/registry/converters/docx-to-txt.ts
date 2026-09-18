@@ -10,7 +10,7 @@ export async function convert(input: File): Promise<ConversionResult> {
   // back as a finished conversion is worse than refusing it.
   if (!text.trim()) {
     fail(
-      'This document has no text in it. It may hold only images, which Kiln cannot convert.',
+      'This document has no text in it. It may hold only images, which Recast cannot convert.',
     );
   }
 

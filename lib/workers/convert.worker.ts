@@ -65,7 +65,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   const route = find(from, to);
   if (!route) {
-    reply({ jobId, error: `Kiln cannot turn .${from} into .${to}.` });
+    reply({ jobId, error: `Recast cannot turn .${from} into .${to}.` });
     return;
   }
 
@@ -82,7 +82,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     // The interface only ever sees a sentence. The real error goes to the
     // console, where a developer can find it — it never leaves the browser,
     // and it is the only way to diagnose a bad conversion after the fact.
-    console.error(`[kiln] ${from} → ${to} failed`, cause);
+    console.error(`[recast] ${from} → ${to} failed`, cause);
     reply({ jobId, error: describeFailure(cause, from) });
   }
 };

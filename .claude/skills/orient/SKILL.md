@@ -1,9 +1,9 @@
 ---
 name: orient
-description: Use at the start of a session on Kiln, or when catching up on it — "where are we", "what's the state of the project", "what have we done so far", "what's left", "what's outstanding", "catch me up", "continue from the last session", "what did we decide about X", "why is it built this way", "why don't we just…", "why isn't X supported", "is there a reason we didn't…". Also use when handed a summary of a previous session, or when a plan is about to re-propose something the project may already have ruled out.
+description: Use at the start of a session on Recast, or when catching up on it — "where are we", "what's the state of the project", "what have we done so far", "what's left", "what's outstanding", "catch me up", "continue from the last session", "what did we decide about X", "why is it built this way", "why don't we just…", "why isn't X supported", "is there a reason we didn't…". Also use when handed a summary of a previous session, or when a plan is about to re-propose something the project may already have ruled out.
 ---
 
-# Where Kiln writes things down
+# Where Recast writes things down
 
 **Read one file, not four.** Each question below has exactly one home. Going to
 the right one first is the whole point of this skill — the history is long, and
@@ -16,7 +16,7 @@ loading all of it to answer one question is the thing it exists to prevent.
 | How did we get here? What shipped when, and what did it teach? | `docs/STAGES.md`                                |
 | What is still outstanding, and whose is it?                    | `docs/OPEN.md`                                  |
 | What has gone wrong before, and what shape did it take?        | `.claude/skills/probe/references/known-bugs.md` |
-| What does Kiln convert, and how is a pair reached?             | `README.md` → Support matrix                    |
+| What does Recast convert, and how is a pair reached?           | `README.md` → Support matrix                    |
 | How do I add a format or a pair?                               | the `add-converter` skill                       |
 | Is this conversion actually correct?                           | the `probe` skill                               |
 | What should this button, warning or error say?                 | the `interface-copy` skill                      |
@@ -35,7 +35,7 @@ deliberate and already have an owner — right-to-left, Korean, merged-cell layo
 the inline-run gap. They are open because of a decision, not an oversight, and
 each entry names what would have to change.
 
-**Read the shapes in `known-bugs.md`, not the details.** Kiln's bugs recur in
+**Read the shapes in `known-bugs.md`, not the details.** Recast's bugs recur in
 form and not in substance: a reader that mispairs two sequences, a regex that
 stops at the first closing tag, an encoding assumption that holds for ASCII, a
 pattern that silently drops what it does not match. Every one of them produced

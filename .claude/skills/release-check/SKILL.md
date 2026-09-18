@@ -1,6 +1,6 @@
 ---
 name: release-check
-description: Use when a stage of work on Kiln is finishing — "is this done", "ready to ship", "wrap this up", "run the verification pass", "check everything before I commit", "let's close this out", before writing the commit for a stage, or after pushing when the deploy needs confirming. Also use when asked whether the privacy promise still holds, or whether the entry chunk is still under budget.
+description: Use when a stage of work on Recast is finishing — "is this done", "ready to ship", "wrap this up", "run the verification pass", "check everything before I commit", "let's close this out", before writing the commit for a stage, or after pushing when the deploy needs confirming. Also use when asked whether the privacy promise still holds, or whether the entry chunk is still under budget.
 ---
 
 # Finishing a stage
@@ -34,8 +34,14 @@ deploy rather than waiting to be spotted.
 ## 2. Every pair in a real browser
 
 ```bash
-pnpm verify:browser
+NEXT_PUBLIC_BASE_PATH=/Recast pnpm build
+NEXT_PUBLIC_BASE_PATH=/Recast pnpm verify:browser
 ```
+
+The prefix matters. A Pages project site is served from `/<repo>`, and that
+value is baked into every asset URL at build time, so give the build and the run
+the same one and this reproduces the published site rather than a version of it
+that only works from the root. Drop it from both to check the root case.
 
 This is the check that catches what nothing earlier can. The unit tests call
 engines directly, which is how the production worker once shipped as uncompiled
@@ -43,15 +49,20 @@ TypeScript with a green suite. It serves the built export the way a static host
 would, drops a file on the real page, clicks Convert, and **reads the downloaded
 bytes back** — content, not just size.
 
-Three things must all appear at the end:
+Four things must all appear at the end:
 
 ```
 Off-origin requests: none
 Requests with a body: none
 Console errors: none
+Assets served at /Recast: all found
 
 114/114 pairs converted in the browser.
 ```
+
+`Assets served at ... : all found` is the other half. A build carrying the wrong
+prefix 404s every script and still renders the page's heading from static HTML,
+which is why looking at the deployed site is not the check.
 
 **That is the privacy verification.** It is not asserted anywhere else, and it is
 the product's one promise. The pair count comes from the interface itself — the

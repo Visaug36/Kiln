@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
-   Palette. Every colour in Kiln is one of these nine. Components reference the
+   Palette. Every colour in Recast is one of these nine. Components reference the
    Tailwind names below, never a literal value.
    --------------------------------------------------------------------------- */
 
@@ -27,7 +27,7 @@
 
   /* Derived once, so it follows whichever palette is active. */
   --canvas-blur: color-mix(in srgb, var(--canvas) 80%, transparent);
-  --ease-kiln: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-recast: cubic-bezier(0.32, 0.72, 0, 1);
 
   color-scheme: light;
 }
@@ -102,9 +102,9 @@
   --radius-control: 12px;
   --radius-drop: 20px;
 
-  --shadow-kiln: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  --shadow-recast: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
 
-  --ease-kiln: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-recast: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ---------------------------------------------------------------------------
@@ -145,24 +145,24 @@
    --------------------------------------------------------------------------- */
 
 @layer components {
-  .kiln-motion {
+  .recast-motion {
     transition-property: transform, background-color, border-color, color, opacity;
     transition-duration: 250ms;
-    transition-timing-function: var(--ease-kiln);
+    transition-timing-function: var(--ease-recast);
   }
 
-  .kiln-dropzone--active {
+  .recast-dropzone--active {
     transform: scale(1.012);
     background-color: var(--ember-tint);
     border-color: var(--ember);
   }
 
-  .kiln-row-enter {
-    animation: kiln-rise 250ms var(--ease-kiln) both;
+  .recast-row-enter {
+    animation: recast-rise 250ms var(--ease-recast) both;
   }
 }
 
-@keyframes kiln-rise {
+@keyframes recast-rise {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -174,19 +174,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kiln-motion {
+  .recast-motion {
     transition-property: opacity, background-color, border-color, color;
   }
 
-  .kiln-dropzone--active {
+  .recast-dropzone--active {
     transform: none;
   }
 
-  .kiln-row-enter {
-    animation: kiln-fade 250ms linear both;
+  .recast-row-enter {
+    animation: recast-fade 250ms linear both;
   }
 
-  @keyframes kiln-fade {
+  @keyframes recast-fade {
     from {
       opacity: 0;
     }

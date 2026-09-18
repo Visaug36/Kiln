@@ -1,5 +1,5 @@
 /**
- * Bundles the conversion worker into public/kiln-worker/.
+ * Bundles the conversion worker into public/recast-worker/.
  *
  * Next's bundler does not compile `new Worker(new URL('./x.ts', import.meta.url))`
  * for the client build: it copies the TypeScript source into the output as a
@@ -18,7 +18,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outdir = join(root, 'public', 'kiln-worker');
+const outdir = join(root, 'public', 'recast-worker');
 
 rmSync(outdir, { recursive: true, force: true });
 mkdirSync(outdir, { recursive: true });
@@ -59,7 +59,9 @@ const files = readdirSync(outdir)
 const total = files.reduce((sum, f) => sum + f.size, 0);
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
 
-console.log(`Worker bundle → public/kiln-worker/ (${files.length} files, ${kb(total)})`);
+console.log(
+  `Worker bundle → public/recast-worker/ (${files.length} files, ${kb(total)})`,
+);
 for (const file of files.slice(0, 8)) {
   console.log(`  ${kb(file.size).padStart(8)}  ${file.name}`);
 }

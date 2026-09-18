@@ -45,7 +45,7 @@ async function dropFiles(container: HTMLElement, files: File[]) {
 }
 
 function errorCount() {
-  return screen.queryAllByText(/Kiln cannot read|old binary Office|ZIP archive/).length;
+  return screen.queryAllByText(/Recast cannot read|old binary Office|ZIP archive/).length;
 }
 
 beforeEach(() => {
@@ -145,7 +145,7 @@ describe('reading the bytes rather than the name', () => {
     const { container } = render(<Home />);
     await dropFiles(container, [new File(['x'], 'budget.xyz')]);
 
-    expect(await screen.findByText(/Kiln cannot read budget\.xyz/)).toBeInTheDocument();
+    expect(await screen.findByText(/Recast cannot read budget\.xyz/)).toBeInTheDocument();
     expect(useJobs.getState().jobs).toEqual([]);
   });
 });
@@ -171,7 +171,7 @@ describe('the unsupported list', () => {
 
   it('lists only what is actually missing for the source', async () => {
     const { container } = render(<Home />);
-    // Markdown reaches every text and slide format Kiln knows. The only thing
+    // Markdown reaches every text and slide format Recast knows. The only thing
     // it cannot become is a spreadsheet, and that is the only line shown.
     await dropFiles(container, [fixture('sample.md')]);
 

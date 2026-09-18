@@ -9,7 +9,7 @@ export interface PdfContentResult {
 }
 
 /**
- * Kiln's block list as pdfmake content nodes.
+ * Recast's block list as pdfmake content nodes.
  *
  * Returns warnings rather than only content: a table wider than the page loses
  * its last columns, and a converter that drops data without saying so is the

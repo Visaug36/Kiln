@@ -40,13 +40,13 @@ export function formatFromExtension(filename: string): Format | undefined {
 }
 
 export interface Detection {
-  /** What Kiln will actually treat the file as. */
+  /** What Recast will actually treat the file as. */
   format?: Format;
   /** What the extension claimed, when it disagreed with the contents. */
   claimed?: Format;
   /** Set when the extension lied, so the row can say so. */
   mismatch: boolean;
-  /** Set when the bytes are a format Kiln does not handle at all. */
+  /** Set when the bytes are a format Recast does not handle at all. */
   reason?: string;
   /**
    * The leading bytes are a ZIP, so which OOXML type it is can only be settled
@@ -153,7 +153,7 @@ export function settleArchive(
       claimed,
       mismatch: false,
       reason:
-        'This is a ZIP archive, not a document Kiln can read. Unzip it and drop what is inside.',
+        'This is a ZIP archive, not a document Recast can read. Unzip it and drop what is inside.',
     };
   }
   return {

@@ -48,7 +48,7 @@ it.
 It resolves backticked paths and Markdown link targets in `CLAUDE.md`,
 `AGENTS.md`, `README.md`, `docs/` and `.claude/`. A candidate is checked only
 when its first segment exists at the repo root, or when it resolves relative to
-the file that mentions it. That rule is what keeps it quiet: Kiln's docs are full
+the file that mentions it. That rule is what keeps it quiet: Recast's docs are full
 of paths _inside_ a document archive — `word/document.xml`, `META-INF/`,
 `OEBPS/` — and none of those are repo files.
 
@@ -106,15 +106,24 @@ place that claim is verified rather than asserted.**
 rather than carrying its own list, so a pair that disappeared from the registry
 shows up as a smaller number.
 
+**That the assets resolve where they will be served.** Set
+`NEXT_PUBLIC_BASE_PATH` on both the build and the run and the export is served
+under the same prefix a Pages project site uses, with any request outside it
+counted as a missing asset. That is the check for a renamed repository: the site
+moves to a new prefix, the build keeps the old one, and the page still renders
+its heading from static HTML while nothing on it works.
+
 ### When it fails
 
 - **One pair fails, the rest pass** — an engine bug. Reach for `probe`; do not
   fix it from the script's output alone.
 - **Every pair fails** — the build, the server or the worker. Check the build
   landed in `out/` first.
+- **Assets missing, every pair fails** — the build and the run disagree about
+  `NEXT_PUBLIC_BASE_PATH`. Give both the same value.
 - **An off-origin request appears** — stop. This is the inviolable rule, and a
   dependency that fetches at runtime is disqualified whatever else it does.
-- **A console error with no failed pair** — still a defect. Kiln's interface
+- **A console error with no failed pair** — still a defect. Recast's interface
   shows sentences, not exceptions.
 
 ### What it does not cover

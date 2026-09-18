@@ -14,7 +14,7 @@ export async function convert(input: File): Promise<ConversionResult> {
 
   if (!markdown.trim()) {
     fail(
-      'This document has no text in it. It may hold only images, which Kiln cannot convert.',
+      'This document has no text in it. It may hold only images, which Recast cannot convert.',
     );
   }
 

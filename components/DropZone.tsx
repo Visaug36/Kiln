@@ -90,9 +90,9 @@ export default function DropZone({ onFiles, children }: DropZoneProps) {
         aria-label="Choose a document to convert, or drop one anywhere on the page"
         onClick={() => inputRef.current?.click()}
         className={[
-          'kiln-motion block w-full rounded-drop border border-dashed bg-surface',
-          'px-6 py-12 text-center shadow-kiln sm:px-10 sm:py-16',
-          dragging ? 'kiln-dropzone--active' : 'border-separator hover:border-tertiary',
+          'recast-motion block w-full rounded-drop border border-dashed bg-surface',
+          'px-6 py-12 text-center shadow-recast sm:px-10 sm:py-16',
+          dragging ? 'recast-dropzone--active' : 'border-separator hover:border-tertiary',
         ].join(' ')}
       >
         {children}

@@ -3,7 +3,7 @@ import { escapeXml } from './_odf';
 import type { Block } from './_md';
 
 /**
- * EPUB: a zip of XHTML with a manifest, which is close to what Kiln already
+ * EPUB: a zip of XHTML with a manifest, which is close to what Recast already
  * handles — so the work here is the book-shaped part, not the markup.
  *
  * The part worth getting right on read is **order**. An EPUB's chapters are not
@@ -54,7 +54,7 @@ export async function readEpub(input: File): Promise<EpubRead> {
   }
   const opfPath = /full-path="([^"]+)"/.exec(await container.async('string'))?.[1];
   if (!opfPath || !zip.file(opfPath)) {
-    fail('This EPUB’s container does not point at a package file Kiln can find.');
+    fail('This EPUB’s container does not point at a package file Recast can find.');
   }
 
   const opf = await zip.file(opfPath)!.async('string');
@@ -132,7 +132,7 @@ export interface Chapter {
  *
  * Anything before the first `#` becomes its own opening chapter rather than
  * being dropped — a document that starts with a paragraph is ordinary, and
- * losing it would be exactly the quiet data loss Kiln treats as a bug.
+ * losing it would be exactly the quiet data loss Recast treats as a bug.
  */
 export function toChapters(blocks: Block[], fallbackTitle: string): Chapter[] {
   const chapters: Chapter[] = [];
@@ -242,7 +242,7 @@ export async function packEpub(chapters: Chapter[], title: string): Promise<Arra
   const zip = new JSZip();
 
   // Derived from the content, so converting the same file twice produces the
-  // same book rather than a new one each time. Kiln has no clock or randomness
+  // same book rather than a new one each time. Recast has no clock or randomness
   // it wants baked into an output file.
   const uid = `urn:uuid:${uuidFrom([title, ...chapters.map((c) => c.title)].join('\n'))}`;
 

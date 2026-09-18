@@ -10,7 +10,7 @@ export async function convert(input: File): Promise<ConversionResult> {
   const markdown = blocksToMarkdown(blocks);
 
   if (!markdown.trim()) {
-    fail('This page has no readable text in it — only markup Kiln cannot carry.');
+    fail('This page has no readable text in it — only markup Recast cannot carry.');
   }
 
   const notes = [...warnings, ...dropped];

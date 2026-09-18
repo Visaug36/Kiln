@@ -4,7 +4,7 @@ import { loadFace, variantFor, type LoadedFace } from './_cjk';
 /**
  * pdfmake with its bundled Roboto, embedded in the file.
  *
- * Kiln used the base-14 Helvetica before, which costs nothing to ship because
+ * Recast used the base-14 Helvetica before, which costs nothing to ship because
  * every PDF reader already has the face. But a base-14 font is addressed with a
  * single-byte encoding roughly the size of Latin-1, so anything above U+00FF had
  * nowhere to render from: `Καλημέρα` came out as `9£±;³·;Ã-<`, and the
@@ -52,7 +52,7 @@ async function pdfmake() {
 /**
  * Every code point Roboto can draw, as `start-end` ranges in hex.
  *
- * Derived from the font Kiln actually ships rather than from the Unicode blocks
+ * Derived from the font Recast actually ships rather than from the Unicode blocks
  * it looks like it covers — guessing here would put the silent-mojibake bug
  * straight back. Regenerate with fontTools if pdfmake's Roboto ever changes:
  *
@@ -95,7 +95,7 @@ function canDraw(code: number): boolean {
  * warning naming both "Chinese or Japanese" and "Japanese" tells the reader
  * nothing they can act on — one label per writing system is the useful grain.
  *
- * Korean is separate from the other two because Kiln now draws Chinese and
+ * Korean is separate from the other two because Recast now draws Chinese and
  * Japanese and does not draw Korean: neither face carries a single hangul
  * syllable, so a Korean document is still refused, and the sentence has to say
  * Korean rather than lumping it in with two scripts that work.
@@ -242,7 +242,7 @@ function listScripts(scripts: Set<string>): string {
     : `${rest.join(', ')} and ${last}`;
 }
 
-/** Page setup and type scale shared by every PDF Kiln writes. */
+/** Page setup and type scale shared by every PDF Recast writes. */
 export function pdfDocument(
   content: unknown[],
   extra: Record<string, unknown> = {},
@@ -288,11 +288,11 @@ export async function renderPdf(doc: PdfDoc): Promise<PdfRender> {
     }
   }
 
-  // A document Kiln could only render as a page of replacement characters is
+  // A document Recast could only render as a page of replacement characters is
   // not a conversion. Say what it is and where the text would survive.
   if (scan.kept === 0 && scan.dropped > 0) {
     fail(
-      `This document is written in ${listScripts(scan.scripts)}, which Kiln cannot draw in a PDF. Converting it to Markdown or plain text keeps every character.`,
+      `This document is written in ${listScripts(scan.scripts)}, which Recast cannot draw in a PDF. Converting it to Markdown or plain text keeps every character.`,
     );
   }
 
@@ -317,7 +317,7 @@ export async function renderPdf(doc: PdfDoc): Promise<PdfRender> {
   const warnings =
     scan.dropped > 0
       ? [
-          `${listScripts(scan.scripts)} cannot be drawn with the font Kiln embeds, so ${scan.dropped} character${scan.dropped === 1 ? ' was' : 's were'} replaced with “${REPLACEMENT}”. Converting to Markdown or plain text keeps them.`,
+          `${listScripts(scan.scripts)} cannot be drawn with the font Recast embeds, so ${scan.dropped} character${scan.dropped === 1 ? ' was' : 's were'} replaced with “${REPLACEMENT}”. Converting to Markdown or plain text keeps them.`,
         ]
       : [];
 

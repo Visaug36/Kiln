@@ -1,11 +1,11 @@
-# Kiln's tokens, verbatim
+# Recast's tokens, verbatim
 
 The canonical written copy of every design value, taken from `app/globals.css`.
 If the two ever disagree, `globals.css` is what ships — fix both.
 
 ## Colour
 
-Nine colours plus one accessibility step. Every colour in Kiln is one of these.
+Nine colours plus one accessibility step. Every colour in Recast is one of these.
 
 | Token        | Tailwind           | Light     | Dark      | Use                            |
 | ------------ | ------------------ | --------- | --------- | ------------------------------ |
@@ -80,7 +80,7 @@ follows the live theme instead of baking in the light-mode value at build time.
 --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 ```
 
-Both loaded by `next/font` at build time and served from Kiln's own origin.
+Both loaded by `next/font` at build time and served from Recast's own origin.
 
 | Step      | Token          | Size | Line height | Weight | Tracking |
 | --------- | -------------- | ---- | ----------- | ------ | -------- |
@@ -115,7 +115,7 @@ Filenames, format badges and code use `font-mono` at `13px` with `leading-5`.
 --radius-control: 12px;
 --radius-drop: 20px;
 
---shadow-kiln: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+--shadow-recast: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
 ```
 
 Radius 12 on controls (`rounded-control`), 20 on the drop zone (`rounded-drop`).
@@ -149,27 +149,27 @@ Focus, never removed:
 One curve, one duration.
 
 ```css
---ease-kiln: cubic-bezier(0.32, 0.72, 0, 1);
+--ease-recast: cubic-bezier(0.32, 0.72, 0, 1);
 ```
 
 ```css
-.kiln-motion {
+.recast-motion {
   transition-property: transform, background-color, border-color, color, opacity;
   transition-duration: 250ms;
-  transition-timing-function: var(--ease-kiln);
+  transition-timing-function: var(--ease-recast);
 }
 
-.kiln-dropzone--active {
+.recast-dropzone--active {
   transform: scale(1.012);
   background-color: var(--ember-tint);
   border-color: var(--ember);
 }
 
-.kiln-row-enter {
-  animation: kiln-rise 250ms var(--ease-kiln) both;
+.recast-row-enter {
+  animation: recast-rise 250ms var(--ease-recast) both;
 }
 
-@keyframes kiln-rise {
+@keyframes recast-rise {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -188,19 +188,19 @@ notice consciously. That restraint is the point.
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .kiln-motion {
+  .recast-motion {
     transition-property: opacity, background-color, border-color, color;
   }
 
-  .kiln-dropzone--active {
+  .recast-dropzone--active {
     transform: none;
   }
 
-  .kiln-row-enter {
-    animation: kiln-fade 250ms linear both;
+  .recast-row-enter {
+    animation: recast-fade 250ms linear both;
   }
 
-  @keyframes kiln-fade {
+  @keyframes recast-fade {
     from {
       opacity: 0;
     }

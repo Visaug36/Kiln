@@ -24,7 +24,7 @@ export function edge(from: Format, to: Format): Converter | undefined {
  * How many times a path leaves one family for another.
  *
  * A single crossing is an honest reduction — a spreadsheet read out as a table
- * in prose, a deck read out as an outline — and Kiln already ships direct
+ * in prose, a deck read out as an outline — and Recast already ships direct
  * converters that do exactly that. Two crossings is not: a deck flattened into
  * Markdown and then re-inflated into a spreadsheet is technically a conversion
  * and completely useless, because the second step has to invent the structure
@@ -54,7 +54,7 @@ function worst(steps: Converter[]): Fidelity {
  * already gone when the second starts.
  */
 function viaNote(via: Format): string {
-  return `Kiln converts this in two steps, through ${FORMAT_LABEL[via]}. Whatever the first step cannot carry is gone before the second one runs.`;
+  return `Recast converts this in two steps, through ${FORMAT_LABEL[via]}. Whatever the first step cannot carry is gone before the second one runs.`;
 }
 
 function toRoute(from: Format, to: Format, steps: Converter[]): Route {
@@ -70,7 +70,7 @@ function toRoute(from: Format, to: Format, steps: Converter[]): Route {
 }
 
 /**
- * How Kiln will perform a pair: one converter, or two run back to back.
+ * How Recast will perform a pair: one converter, or two run back to back.
  *
  * A direct converter always wins, even where a path also exists — it was
  * written for this pair and a path was not. Beyond that, paths are ranked by
@@ -142,7 +142,7 @@ export function targetsFor(from: Format): Format[] {
   return FORMATS.filter((to) => to !== from && find(from, to) !== undefined);
 }
 
-/** Every pair Kiln offers, for tests and for the support matrix. */
+/** Every pair Recast offers, for tests and for the support matrix. */
 export function allRoutes(): Route[] {
   const routes: Route[] = [];
   for (const from of FORMATS) {
