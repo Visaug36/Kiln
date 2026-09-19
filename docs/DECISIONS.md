@@ -101,6 +101,21 @@ either "fix" them or trust them without checking.
 
 ## 2026-09-19 — A deploy is only done when the site says so
 
+### `main` is the default branch, and the site publishes from it
+
+Closed from `OPEN.md`, where it sat as "needs repository settings" for two
+stages. The rename made it urgent: `/Kiln` and the old feature branch both
+stopped being the right answer on the same afternoon.
+
+Two settings changes, both outside this repository: the default branch, and the
+`github-pages` environment's deployment branch policy, which GitHub pins to
+whatever the default branch was when it created the environment and does not
+update afterwards. Missing the second is what made runs #21 and #22 fail.
+
+Published at **https://visaug36.github.io/Recast/**, confirmed by the guard
+below reading `build-sha.txt` back off the live site rather than by anyone
+trusting a green tick.
+
 ### The publishing branch is looked up, not read off the event
 
 The deploy job was gated on `github.event.repository.default_branch`. That

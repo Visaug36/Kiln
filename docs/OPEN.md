@@ -10,12 +10,9 @@ a future session needs in order not to reopen it.
 
 ## Yours
 
-Two things nothing in this repo can do.
-
-### Flip the default branch to `main`
-
-The Pages workflow only deploys from the default branch, so until this happens
-every stage deploys from its feature branch. Needs repository settings.
+One thing nothing in this repo can do. The default branch flip and the
+`github-pages` branch policy are both done — see `DECISIONS.md` for what they
+cost and what now guards against a repeat.
 
 ### Test the iOS memory threshold on a real phone
 
