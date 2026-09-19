@@ -40,6 +40,13 @@ no index in it. And the same run found a bug in the check itself: dead links
 were counted into the conversion total, so it printed "112/114 pairs converted"
 when all 114 had converted.
 
+**Then, after all three had shipped:** the live site was still the pre-rename
+build. Run #20 had been green and published nothing — a deploy job skipped on a
+stale payload field, and a skipped job does not fail a run. Known-bugs #18–#19.
+The workflow now looks the publishing branch up rather than reading it off the
+event, stamps the export with its commit, and fails the run unless the deployed
+site is serving that commit at the right path.
+
 **Taught.** Three things.
 
 A classification has to live where the fact is known. Deciding severity in the
@@ -54,6 +61,12 @@ then it meant "wedged, or merely long".
 And a check written this stage found two bugs in its first two runs, one of them
 its own. A new check is worth more than the thing it was written for, and is
 itself worth distrusting until it has failed on purpose at least once.
+
+The fourth, learned last and the most expensive: **a workflow reports on its own
+execution, so it can only be trusted about the world if something in it goes and
+looks.** Four guards in this file assert things about `out/`, and every one of
+them passed while the published site was three days old. The only check that
+could have caught it is the one that fetches the URL.
 
 ---
 

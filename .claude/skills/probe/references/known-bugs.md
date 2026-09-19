@@ -435,6 +435,70 @@ something else starts reporting liveness. Ask what the clock is actually for.
 
 ---
 
+## The deploy that reported success and published nothing
+
+### 18. A skipped job does not fail a run
+
+**Symptom** Workflow run #20 was green. The live site stayed three days old at
+the pre-rename URL. Nothing in the run said anything was wrong.
+
+**Detected** By somebody opening the site. Every automated signal said the run
+had succeeded, because by its own lights it had.
+
+**Root cause** Two things, and only both together.
+
+The deploy job is gated on
+`github.ref_name == github.event.repository.default_branch`. The right-hand
+side is a **snapshot taken when the push event was created**, not the
+repository's current state. Run #20 pushed the rename to `main` at 08:27, a few
+minutes before `main` became the default branch; the payload still named the
+old branch, the condition read false, and the job was skipped.
+
+And a skipped job's conclusion is `skipped`, which does not fail a run. So the
+whole thing went green with no deployment record created at all — the
+deployments API jumps straight from 16 September to run #21.
+
+Runs #21 and #22 were a different failure that looked like the same one: by
+then the condition was true, the job ran, and the `github-pages` environment
+rejected it because its branch policy still named the deleted default branch.
+Two causes, three runs, one symptom.
+
+**Test** `test/check-deploy.test.ts`, thirteen cases against a real server:
+deploy skipped on the publishing branch, deploy errored, no page URL, the live
+site serving the previous commit, a missing stamp, a page built for a different
+basePath, Pages publishing at the wrong path, and a build whose outputs are
+empty. Plus the two cases that must **not** fail: a non-default branch skipping
+deliberately, and a CDN that catches up while the check is waiting.
+
+**The shape to watch for** Anything derived from an event payload is a
+photograph, not a window. And a job that "does nothing" is not the same as a
+job that succeeded — a workflow reports on its own execution, so it can only be
+trusted about the world if something in it goes and looks.
+
+### 19. The local basePath derivation went stale the same way
+
+**Symptom** `pnpm verify:browser` printed `Assets served at /Kiln` and passed,
+in a repository called Recast.
+
+**Detected** By reading the output of a run that passed. It passed because the
+build and the check agreed with each other — both wrong, consistently.
+
+**Root cause** The documented local command derives the prefix from the git
+remote. A rename does not update a remote, and GitHub redirects the old URL, so
+a stale remote keeps working and quietly hands over the previous name. The CI
+derivation from `GITHUB_REPOSITORY` was right the whole time; only the local
+one was wrong, which is why nothing caught it.
+
+**Test** None that can be automated — the flaw is in a person's git config, not
+in the repo. The command now echoes the prefix it derived and the docs say to
+read it against the repository's name, which is the honest fix.
+
+**The shape to watch for** Two things derived from the same stale source agree
+with each other perfectly. Agreement is not evidence when both sides read the
+same field.
+
+---
+
 ## Two tests that passed for the wrong reason
 
 Worth recording separately, because a test that passes against broken code is

@@ -35,8 +35,15 @@ deploy rather than waiting to be spotted.
 
 ```bash
 # The prefix is the repository name, the same value CI derives from
-# GITHUB_REPOSITORY. Deriving it here too means it survives a rename.
+# GITHUB_REPOSITORY. Locally it has to come from the git remote — and a rename
+# does not update that on its own. GitHub redirects the old URL, so a stale
+# remote keeps working and quietly hands over the previous name, which is how
+# a check at the wrong prefix passes while telling you nothing.
+#
+# So it is echoed. Read the line against the repository's current name, and
+# run `git remote set-url origin <new url>` if they disagree.
 BASE="/$(basename -s .git "$(git remote get-url origin)")"
+echo "basePath: $BASE"
 
 NEXT_PUBLIC_BASE_PATH="$BASE" pnpm build
 NEXT_PUBLIC_BASE_PATH="$BASE" pnpm verify:browser

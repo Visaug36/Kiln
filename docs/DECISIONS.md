@@ -99,6 +99,73 @@ either "fix" them or trust them without checking.
 
 ---
 
+## 2026-09-19 — A deploy is only done when the site says so
+
+### The publishing branch is looked up, not read off the event
+
+The deploy job was gated on `github.event.repository.default_branch`. That
+field is a snapshot of the repository as it was when the push event was
+created, and it can be behind reality by minutes. It was, once: run #20 pushed
+to `main` just before `main` became the default, the condition read false, and
+the job was skipped.
+
+`build` now asks the API for the current default branch and hands it to
+`deploy` as an output.
+
+**Rejected:** hardcoding `main` in the condition. It is correct today and
+becomes a lie the moment anybody renames a branch — the same class of mistake
+as the field it replaces, with a longer fuse.
+
+**Rejected:** dropping the condition and letting Pages reject non-default
+branches. That is the instant unexplained red X the condition was added to
+avoid, and the reason it exists at all.
+
+### The workflow fails if it did not publish, or published something else
+
+`published` runs after `deploy` under `!cancelled()`, so it runs **when deploy
+skipped** — the case nothing else notices. It fails the run when the deploy
+job did not succeed on the publishing branch, and then asks the deployed site
+two questions: is `build-sha.txt` this commit, and does the page reference
+`/<repo>/_next/`.
+
+The build stamps the export with `GITHUB_SHA` for exactly that. Without it,
+"the deploy succeeded" and "the new build is live" are the same claim taken on
+trust — and they are not the same thing, as a stale CDN or a basePath baked for
+a different repository name both demonstrate while every workflow-level check
+stays green.
+
+**Rejected:** asserting on the workflow's own state alone. A workflow reports
+on its own execution, so it can only be trusted about the world if something in
+it goes and looks. Every guard here is a `GET` against the published URL.
+
+**Rejected:** settling on the first successful response for the stamp. A CDN
+mid-update serves the previous deploy with a 200, so the check waits for the
+**right** answer rather than any answer, up to ninety seconds.
+
+### The guard's logic lives in a script, so its failures are testable
+
+`scripts/check-deploy.mjs` is a function the workflow calls, not a block of
+YAML. `test/check-deploy.test.ts` runs thirteen cases against a real local
+server: each way it must fail, and the two ways it must not.
+
+**Rejected:** proving it by pushing a deliberately broken workflow. That is a
+negative control run once, on `main`, that nobody can repeat. These run on
+every commit, and the two that matter — deploy skipped, and the live site still
+serving the previous commit — reproduce runs #20 and the thing #20 hid.
+
+### The documented local basePath command echoes what it derived
+
+It reads the repository name from the git remote, which a rename does not
+update — and GitHub redirects the old URL, so a stale remote keeps working and
+hands over the previous name. `verify:browser` then builds and serves at the
+same wrong prefix and passes, because both halves agree.
+
+It prints the prefix now, and the docs say to read it against the repository's
+name. There is no automatable fix: the stale value is in a person's git config,
+not in this repository.
+
+---
+
 ## 2026-09-19 — Five controls: three built, two cut
 
 The design carried a language switcher, a "Conversion guide" nav item, "See the

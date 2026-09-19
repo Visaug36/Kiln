@@ -37,8 +37,39 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      default_branch: ${{ steps.repo.outputs.default_branch }}
+      base_path: ${{ steps.repo.outputs.base_path }}
     steps:
       - uses: actions/checkout@v7
+
+      # The **live** default branch, asked for now, rather than
+      # github.event.repository.default_branch — which is a snapshot taken when
+      # the push event was created and can be behind reality.
+      #
+      # That is not hypothetical. Run #20 pushed the rename to `main` minutes
+      # before `main` became the default; the payload still named the old
+      # branch, the deploy job's condition read false, the job was skipped, and
+      # a skipped job does not fail a run. The workflow went green, no
+      # deployment record was created, and the site stayed three days old.
+      - name: Resolve the publishing branch and base path
+        id: repo
+        run: |
+          default=$(curl -sS \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY" | jq -r .default_branch)
+
+          if [ -z "$default" ] || [ "$default" = "null" ]; then
+            echo "::error::Could not read the repository's default branch."
+            exit 1
+          fi
+
+          echo "default_branch=$default" >> "$GITHUB_OUTPUT"
+          echo "base_path=/${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+          echo "publishing branch: $default (this run is on ${GITHUB_REF_NAME})"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       # Reads the pnpm version from packageManager in package.json.
       - uses: pnpm/action-setup@v6
@@ -86,6 +117,14 @@ jobs:
           fi
           echo "index.html references $expected/_next/"
 
+      # Which commit this export is. Read back off the *published* site later,
+      # so "the deploy succeeded" and "the new build is live" stop being the
+      # same claim taken on trust.
+      - name: Stamp the export with this commit
+        run: |
+          printf '%s' "$GITHUB_SHA" > out/build-sha.txt
+          echo "out/build-sha.txt = $GITHUB_SHA"
+
       # The engines are only reachable through the registry's load(), so none of
       # them may appear in the entry chunk. Fails the build if that regresses.
       - name: Check bundle budget
@@ -119,11 +158,46 @@ jobs:
     # environment rejects any other ref, instantly and without a log, which
     # reads as a mysterious red X. Every branch in the trigger list still gets
     # built and tested — only the publish step is skipped where it could not
-    # have worked. This stays correct whichever branch is the default.
-    if: github.ref_name == github.event.repository.default_branch
+    # have worked.
+    #
+    # Gated on the branch `build` just looked up, not on the event payload. A
+    # skip here is no longer silent either way: `published` below fails the run
+    # if this job skips on the branch that is supposed to publish.
+    if: github.ref_name == needs.build.outputs.default_branch
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  # The guard this workflow was missing.
+  #
+  # Runs even when deploy skipped — which is the whole point, because that is
+  # the case nothing else notices. `!cancelled()` rather than `always()`, so
+  # stopping a run by hand does not also report a deploy failure.
+  #
+  # It asks the published site what it is serving rather than asking the
+  # workflow how it feels about itself.
+  published:
+    needs: [build, deploy]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Assert this build is the one being served
+        run: node scripts/check-deploy.mjs
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ needs.build.outputs.default_branch }}
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_BASE_PATH: ${{ needs.build.outputs.base_path }}
