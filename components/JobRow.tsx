@@ -1,7 +1,9 @@
 'use client';
 
 import FormatPicker from '@/components/FormatPicker';
+import JobWarnings from '@/components/JobWarnings';
 import UnsupportedNote from '@/components/UnsupportedNote';
+import { announceProgress, describeProgress } from '@/lib/jobs/progress';
 import { baseName } from '@/lib/files/detect';
 import { sizeCaution } from '@/lib/files/capacity';
 import type { Job } from '@/lib/jobs/types';
@@ -18,8 +20,8 @@ interface JobRowProps {
  * One document, one line. No card, no file-type icon — the format badge and the
  * filename already say everything a row needs to say.
  *
- * Ember is spent on the single firing job and nowhere else, so a screen full of
- * finished conversions stays warm neutral.
+ * Ember is spent on the single converting job and nowhere else, so a screen full
+ * of finished conversions stays warm neutral.
  */
 export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowProps) {
   const targets = targetsFor(job.from);
@@ -75,9 +77,13 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
             </button>
           )}
 
-          {job.state === 'firing' && (
+          {job.state === 'converting' && (
+            // The visible text carries the page count; the live region carries
+            // the phase without it. A polite region that fires on every page of
+            // a long PDF is read out several hundred times.
             <span className="font-medium text-ember-text" role="status">
-              Firing…
+              <span aria-hidden="true">{describeProgress(job.progress, job.to)}</span>
+              <span className="sr-only">{announceProgress(job.progress, job.to)}</span>
             </span>
           )}
 
@@ -134,15 +140,7 @@ export default function JobRow({ job, onTarget, onStart, onDownload }: JobRowPro
 
       {job.state === 'queued' && <UnsupportedNote from={job.from} />}
 
-      {job.state === 'done' && warnings.length > 0 && (
-        <ul className="mt-2 max-w-prose space-y-1">
-          {warnings.map((warning) => (
-            <li key={warning} className="text-body text-secondary">
-              {warning}
-            </li>
-          ))}
-        </ul>
-      )}
+      {job.state === 'done' && <JobWarnings warnings={warnings} />}
 
       {job.state === 'failed' && job.error && (
         <p className="mt-1 max-w-prose text-body text-secondary">{job.error}</p>

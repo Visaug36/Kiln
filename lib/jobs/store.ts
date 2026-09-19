@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ConversionResult, Format } from '@/lib/registry/types';
+import type { ConversionResult, Format, Progress } from '@/lib/registry/types';
 import type { Job, JobState } from './types';
 
 let counter = 0;
@@ -29,6 +29,8 @@ export interface JobsStore {
   /** Changes the chosen target while the job is still queued. */
   setTarget: (id: string, to: Format) => void;
   setState: (id: string, state: JobState) => void;
+  /** Records what the worker is doing now. Ignored once a job has settled. */
+  setProgress: (id: string, progress: Progress) => void;
   /** Recording a result also moves the job to 'done'. */
   setResult: (id: string, result: ConversionResult) => void;
   /** Recording an error also moves the job to 'failed'. */
@@ -64,14 +66,35 @@ export const useJobs = create<JobsStore>((set) => ({
 
   setState: (id, state) => set((s) => ({ jobs: patchJob(s.jobs, id, { state }) })),
 
+  // A progress message can arrive after the result, because both cross the
+  // worker boundary and only the result ends the job. Dropping it for anything
+  // but a converting job is what stops a finished row reverting to "reading
+  // page 3 of 12".
+  setProgress: (id, progress) =>
+    set((s) => ({
+      jobs: s.jobs.map((job) =>
+        job.id === id && job.state === 'converting' ? { ...job, progress } : job,
+      ),
+    })),
+
   setResult: (id, result) =>
     set((s) => ({
-      jobs: patchJob(s.jobs, id, { state: 'done', result, error: undefined }),
+      jobs: patchJob(s.jobs, id, {
+        state: 'done',
+        result,
+        error: undefined,
+        progress: undefined,
+      }),
     })),
 
   setError: (id, error) =>
     set((s) => ({
-      jobs: patchJob(s.jobs, id, { state: 'failed', error, result: undefined }),
+      jobs: patchJob(s.jobs, id, {
+        state: 'failed',
+        error,
+        result: undefined,
+        progress: undefined,
+      }),
     })),
 
   clear: () => set({ jobs: [] }),

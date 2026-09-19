@@ -688,4 +688,5 @@ colours in component files. Dark mode follows `prefers-color-scheme` and can be
 forced with a `.dark` or `.light` class on `<html>`.
 
 Ember — the one warm accent — is spent on at most one thing per screen: the
-single firing job. Everything else is warm neutral. Keep it that way in review.
+single converting job. Everything else is warm neutral. Keep it that way in
+review.

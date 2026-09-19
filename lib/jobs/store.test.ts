@@ -54,7 +54,7 @@ describe('setTarget', () => {
     const id = useJobs
       .getState()
       .addJob({ file: file('notes.md'), from: 'md', to: 'txt' });
-    useJobs.getState().setState(id, 'firing');
+    useJobs.getState().setState(id, 'converting');
     useJobs.getState().setTarget(id, 'pdf');
 
     expect(useJobs.getState().jobs[0]?.to).toBe('txt');
@@ -66,15 +66,15 @@ describe('setState', () => {
     const id = useJobs
       .getState()
       .addJob({ file: file('notes.md'), from: 'md', to: 'txt' });
-    useJobs.getState().setState(id, 'firing');
+    useJobs.getState().setState(id, 'converting');
 
-    expect(useJobs.getState().jobs[0]?.state).toBe('firing');
+    expect(useJobs.getState().jobs[0]?.state).toBe('converting');
   });
 
   it('ignores an unknown id', () => {
     useJobs.getState().addJob({ file: file('notes.md'), from: 'md', to: 'txt' });
     const before = useJobs.getState().jobs;
-    useJobs.getState().setState('nope', 'firing');
+    useJobs.getState().setState('nope', 'converting');
 
     expect(useJobs.getState().jobs[0]?.state).toBe('queued');
     expect(useJobs.getState().jobs).toHaveLength(before.length);
@@ -86,7 +86,7 @@ describe('setResult', () => {
     const id = useJobs
       .getState()
       .addJob({ file: file('notes.md'), from: 'md', to: 'txt' });
-    useJobs.getState().setState(id, 'firing');
+    useJobs.getState().setState(id, 'converting');
     useJobs.getState().setResult(id, result('notes.txt'));
 
     expect(useJobs.getState().jobs[0]).toMatchObject({
@@ -162,11 +162,11 @@ describe('multi-file results', () => {
       .addJob({ file: file('book.xlsx'), from: 'xlsx', to: 'md' });
     useJobs.getState().setResult(id, {
       ...result('book.md'),
-      warnings: ['A chart was not carried over.'],
+      warnings: [{ severity: 'lost', message: 'A chart was not carried over.' }],
     });
 
     expect(useJobs.getState().jobs[0]?.result?.warnings).toEqual([
-      'A chart was not carried over.',
+      { severity: 'lost', message: 'A chart was not carried over.' },
     ]);
   });
 });

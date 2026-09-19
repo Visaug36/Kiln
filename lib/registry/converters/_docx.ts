@@ -1,11 +1,19 @@
-import { describeFailure, fail, interop, readArrayBuffer } from '../shared';
+import {
+  changed,
+  describeFailure,
+  fail,
+  interop,
+  lost,
+  readArrayBuffer,
+} from '../shared';
+import type { Warning } from '../types';
 import { MAX_LIST_DEPTH } from './_md';
 import type { Block } from './_md';
 import type { Row } from './_sheet';
 
 export interface DocxRead {
   html: string;
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -60,19 +68,25 @@ export async function readDocx(input: File): Promise<DocxRead> {
  * the tag, and the picture left the document without a word — which is the one
  * thing an engine may not do.
  */
-function summariseDocxWarnings(messages: string[], html: string): string[] {
+function summariseDocxWarnings(messages: string[], html: string): Warning[] {
   const unrecognised = messages.filter((m) => m.includes('Unrecognised paragraph style'));
   const images = [...html.matchAll(/<img\b/gi)];
-  const out: string[] = [];
+  const out: Warning[] = [];
 
+  // The words a custom style was applied to are all still there, set plainly:
+  // `changed`. The pictures are not there at all: `lost`.
   if (unrecognised.length > 0) {
     out.push(
-      `${unrecognised.length} custom Word style${unrecognised.length === 1 ? '' : 's'} had no equivalent and fell back to normal text.`,
+      changed(
+        `${unrecognised.length} custom Word style${unrecognised.length === 1 ? '' : 's'} had no equivalent and fell back to normal text.`,
+      ),
     );
   }
   if (images.length > 0) {
     out.push(
-      `${images.length} image${images.length === 1 ? '' : 's'} in the document ${images.length === 1 ? 'was' : 'were'} not carried over.`,
+      lost(
+        `${images.length} image${images.length === 1 ? '' : 's'} in the document ${images.length === 1 ? 'was' : 'were'} not carried over.`,
+      ),
     );
   }
   return out;
@@ -255,7 +269,7 @@ type Loss = 'span' | 'stranded';
 export interface BlocksRead {
   blocks: Block[];
   /** Everything this layer had to drop or flatten. Empty when nothing was. */
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -362,18 +376,24 @@ function strandedWords(source: string, consumed: [number, number][]): number {
 }
 
 /** One sentence per kind of loss, in the interface's voice. */
-function describeLosses(losses: Record<Loss, number>): string[] {
-  const out: string[] = [];
+function describeLosses(losses: Record<Loss, number>): Warning[] {
+  const out: Warning[] = [];
 
+  // A merged cell still holds its text, in a grid that no longer matches:
+  // `changed`. Stranded words reached no block at all, so they are `lost`.
   if (losses.span > 0) {
     out.push(
-      `${losses.span} table cell${losses.span === 1 ? '' : 's'} spanned more than one row or column. Recast writes a plain grid, so ${losses.span === 1 ? 'it is' : 'they are'} now ${losses.span === 1 ? 'a single cell' : 'single cells'} and the columns may not line up with the original.`,
+      changed(
+        `${losses.span} table cell${losses.span === 1 ? '' : 's'} spanned more than one row or column. Recast writes a plain grid, so ${losses.span === 1 ? 'it is' : 'they are'} now ${losses.span === 1 ? 'a single cell' : 'single cells'} and the columns may not line up with the original.`,
+      ),
     );
   }
 
   if (losses.stranded > 0) {
     out.push(
-      `About ${losses.stranded} word${losses.stranded === 1 ? '' : 's'} sat in a layout element Recast does not read — a text box, a caption or a frame — and could not be placed.`,
+      lost(
+        `About ${losses.stranded} word${losses.stranded === 1 ? '' : 's'} sat in a layout element Recast does not read — a text box, a caption or a frame — and could not be placed.`,
+      ),
     );
   }
 

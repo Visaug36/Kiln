@@ -1,11 +1,14 @@
-import type { ConversionResult } from '../types';
+import type { ConversionResult, ProgressFn } from '../types';
 import { outputFile } from '../shared';
 import { readWorkbook } from './_sheet';
 import { clippedWarning, pdfTable, tableWasClipped } from './_blocks-to-pdf';
 import { pdfDocument, renderPdf, requireContent } from './_pdf';
 
-export async function convert(input: File): Promise<ConversionResult> {
-  const { sheets, warnings } = await readWorkbook(input);
+export async function convert(
+  input: File,
+  onProgress?: ProgressFn,
+): Promise<ConversionResult> {
+  const { sheets, warnings } = await readWorkbook(input, onProgress);
   const many = sheets.length > 1;
 
   const content: Record<string, unknown>[] = [];
@@ -24,6 +27,7 @@ export async function convert(input: File): Promise<ConversionResult> {
     content.push(pdfTable(sheet.rows));
   }
 
+  onProgress?.({ phase: 'writing' });
   const render = await renderPdf(
     pdfDocument(requireContent(content, 'data'), { pageOrientation: 'landscape' }),
   );

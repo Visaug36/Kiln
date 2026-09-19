@@ -5,7 +5,7 @@ import { find } from '@/lib/registry/routing';
 import { runRoute } from '@/lib/registry/run-route';
 import { installPolyfills } from './polyfills';
 import { describeFailure } from '@/lib/registry/shared';
-import type { Format, OutputFile } from '@/lib/registry/types';
+import type { Format, OutputFile, Progress, Warning } from '@/lib/registry/types';
 
 installPolyfills();
 
@@ -33,9 +33,20 @@ export interface DetectRequest {
 export type WorkerRequest = ConvertRequest | DetectRequest;
 
 export type ConvertResponse =
-  | { jobId: string; result: { files: OutputFile[]; warnings?: string[] } }
+  | { jobId: string; result: { files: OutputFile[]; warnings?: Warning[] } }
   | { jobId: string; error: string }
+  | { jobId: string; progress: Progress }
   | { jobId: string; detected: Format | undefined; expanded?: number };
+
+/**
+ * Least time between two progress messages, in milliseconds.
+ *
+ * A 500-page PDF reports 500 times, and each one is a structured clone and a
+ * React render for a line of text that a person cannot read that fast anyway.
+ * The last state of a phase is always sent — see `send` below — so throttling
+ * drops intermediate frames and never the one that matters.
+ */
+const PROGRESS_MS = 100;
 
 /**
  * Conversions run here so the page keeps responding while a large file is being
@@ -69,8 +80,26 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     return;
   }
 
+  // Throttled, and the pending frame is flushed when the phase, step or unit
+  // changes — so "reading page 400 of 500" may be skipped, but the move to
+  // "writing the PDF" never is.
+  let lastSent = 0;
+  let pending: Progress | undefined;
+
+  const send = (progress: Progress) => {
+    const now = Date.now();
+    const shape = (p: Progress) => `${p.phase}/${p.unit ?? ''}/${p.step ?? ''}`;
+    const changed = !pending || shape(pending) !== shape(progress);
+
+    pending = progress;
+    if (changed || now - lastSent >= PROGRESS_MS) {
+      lastSent = now;
+      reply({ jobId, progress });
+    }
+  };
+
   try {
-    const { files, warnings } = await runRoute(route, file);
+    const { files, warnings } = await runRoute(route, file, send);
 
     if (files.length === 0) {
       reply({ jobId, error: 'The conversion produced nothing. The file may be empty.' });

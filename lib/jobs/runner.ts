@@ -64,6 +64,10 @@ function runOne(request: WorkerRequest): Promise<void> {
     const active = getWorker();
     let settled = false;
 
+    // Declared before `restartTimer` runs: the first call clears it, and a
+    // `let` read before its initialiser throws rather than reading undefined.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     /** Returns true when this round is already over, so callers can bail. */
     const finish = () => {
       if (settled) return true;
@@ -78,6 +82,17 @@ function runOne(request: WorkerRequest): Promise<void> {
 
     const onMessage = (event: MessageEvent<ConvertResponse>) => {
       if (event.data.jobId !== request.jobId) return;
+
+      // Progress is not the end of the round: it must not call finish(), and it
+      // restarts the clock. A conversion that is visibly getting somewhere is
+      // not wedged, and killing it at sixty seconds because a long PDF is still
+      // on page 300 would be the wrong answer.
+      if ('progress' in event.data) {
+        useJobs.getState().setProgress(request.jobId, event.data.progress);
+        timer = restartTimer();
+        return;
+      }
+
       if (finish()) return;
 
       const store = useJobs.getState();
@@ -103,16 +118,21 @@ function runOne(request: WorkerRequest): Promise<void> {
 
     // A wedged engine would otherwise hold the queue forever, so the worker is
     // killed and rebuilt — later jobs still run.
-    const timer = setTimeout(() => {
-      if (finish()) return;
-      replaceWorker();
-      useJobs
-        .getState()
-        .setError(
-          request.jobId,
-          'This file took more than a minute and was stopped. It may be very large or unusually complex, or this browser may have run out of memory holding it.',
-        );
-    }, TIMEOUT_MS);
+    function restartTimer() {
+      if (timer !== undefined) clearTimeout(timer);
+      return setTimeout(() => {
+        if (finish()) return;
+        replaceWorker();
+        useJobs
+          .getState()
+          .setError(
+            request.jobId,
+            'This file took more than a minute without reporting any progress and was stopped. It may be very large or unusually complex, or this browser may have run out of memory holding it.',
+          );
+      }, TIMEOUT_MS);
+    }
+
+    timer = restartTimer();
 
     active.addEventListener('message', onMessage);
     active.addEventListener('error', onError);
@@ -128,7 +148,7 @@ export function enqueue(id: string): void {
       const job = store.jobs.find((j) => j.id === id);
       if (!job || job.state !== 'queued') return;
 
-      store.setState(id, 'firing');
+      store.setState(id, 'converting');
       await runOne({ jobId: id, file: job.file, from: job.from, to: job.to });
     })
     // A rejection here would leave `queue` permanently rejected, and every job
@@ -138,7 +158,7 @@ export function enqueue(id: string): void {
     .catch((cause) => {
       console.error('[recast] job runner failed', cause);
       const job = useJobs.getState().jobs.find((j) => j.id === id);
-      if (job && job.state === 'firing') {
+      if (job && job.state === 'converting') {
         useJobs
           .getState()
           .setError(id, 'Something went wrong while converting this file.');

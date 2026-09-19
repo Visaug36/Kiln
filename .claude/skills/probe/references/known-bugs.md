@@ -387,6 +387,54 @@ writing it down.
 
 ---
 
+## The warnings stage: advice for a reader who does not exist
+
+### 16. Four warnings addressed somebody who never saw the file they named
+
+**Symptom** Converting a spreadsheet or a deck to EPUB answered _"There were no
+top-level headings, so the whole document became a single chapter. Add `#`
+headings to split it up."_ The reader dropped an `.xlsx`. They have no Markdown
+and no headings to add, and the only thing that wrote any was Recast.
+
+**Detected** Recorded in `OPEN.md` during the routing stage rather than found
+by a test, because nothing about it is detectable from one edge — the sentence
+is perfectly correct for `md → epub`, which is the only pair its author was
+looking at.
+
+**Root cause** Not a wrong sentence; a sentence whose **reader changed** when
+routing landed. Eleven pairs reach EPUB through Markdown and two reach a deck
+that way, and on every one of them the intermediate is Recast's own work. Three
+more had the same shape: `_slides.ts` told the reader to "split those headings
+up", and `md → docx` and `md → odt` both reported dropping "raw HTML in the
+Markdown" to people who had handed over a PDF.
+
+**Test** `lib/registry/composed-copy.test.ts`, which runs real engines over
+real fixtures and asserts a routed pair gives no advice about a file Recast
+wrote and never names Markdown to somebody who did not hand any over. Verified
+by restoring the old sentence and watching two tests fail.
+
+**The shape to watch for** Every sentence in a `md → *` writer is read by
+people who never wrote Markdown. Before shipping one, list the routed pairs it
+will appear on and read it as somebody arriving from each.
+
+### 17. A progress message could have killed a long conversion
+
+**Symptom** None yet — caught while wiring progress up, before it shipped.
+
+**Root cause** The runner kills a job that has not settled within sixty
+seconds, which is right for a wedged engine and wrong for a 400-page PDF that
+is visibly on page 300. Adding progress without touching the timeout would have
+introduced a conversion that reports its way steadily to being killed.
+
+**Test** `lib/jobs/runner.test.ts` advances four full timeouts, reporting once
+per timeout, and asserts the job is still converting — then asserts that
+silence after the last report still ends it.
+
+**The shape to watch for** A timeout measures the wrong thing the moment
+something else starts reporting liveness. Ask what the clock is actually for.
+
+---
+
 ## Two tests that passed for the wrong reason
 
 Worth recording separately, because a test that passes against broken code is

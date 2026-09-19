@@ -1,3 +1,5 @@
+import { changed, lost } from '../shared';
+import type { Warning } from '../types';
 import { MAX_LIST_DEPTH } from './_md';
 import type { Block } from './_md';
 
@@ -114,17 +116,28 @@ export function toSlides(blocks: Block[]): Deck[] {
 }
 
 /** The notes a written deck carries, whatever format it is written in. */
-export function deckWarnings(source: string, slides: Deck[]): string[] {
-  const warnings: string[] = [];
+export function deckWarnings(source: string, slides: Deck[]): Warning[] {
+  const warnings: Warning[] = [];
 
+  // "In the Markdown" is only ever read by somebody who dropped Markdown. No
+  // reader can put an image here: `Block` has no image kind, so nothing
+  // `blocksToMarkdown` writes matches this pattern, and a routed deck reaches
+  // this line with the images already reported gone by its first step. If a
+  // reader ever starts emitting `![]()`, this sentence needs rewriting too.
   if (/!\[[^\]]*\]\([^)]*\)/.test(source)) {
-    warnings.push('Images in the Markdown were not carried onto the slides.');
+    warnings.push(lost('Images in the Markdown were not carried onto the slides.'));
   }
 
   const long = slides.filter((slide) => slide.bullets.length > 12).length;
   if (long > 0) {
+    // No advice here on purpose. This used to end "split those headings up",
+    // which is addressed to whoever wrote the Markdown — and on all nine pairs
+    // routed into a deck, that is Recast, from a document the reader never saw
+    // as headings at all. The outcome is true from every direction.
     warnings.push(
-      `${long} slide${long === 1 ? '' : 's'} had more than 12 bullets and will overflow — split those headings up.`,
+      changed(
+        `${long} slide${long === 1 ? ' has' : 's have'} more than 12 bullets and will run off the bottom.`,
+      ),
     );
   }
 

@@ -1,9 +1,12 @@
-import type { ConversionResult } from '../types';
+import type { ConversionResult, ProgressFn } from '../types';
 import { outputFile } from '../shared';
 import { readWorkbook } from './_sheet';
 
-export async function convert(input: File): Promise<ConversionResult> {
-  const { sheets, warnings } = await readWorkbook(input);
+export async function convert(
+  input: File,
+  onProgress?: ProgressFn,
+): Promise<ConversionResult> {
+  const { sheets, warnings } = await readWorkbook(input, onProgress);
   const many = sheets.length > 1;
 
   const text = sheets

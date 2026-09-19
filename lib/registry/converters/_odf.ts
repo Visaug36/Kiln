@@ -1,5 +1,5 @@
-import { describeFailure, fail, readArrayBuffer } from '../shared';
-import type { Format } from '../types';
+import { describeFailure, fail, lost, readArrayBuffer } from '../shared';
+import type { Format, Warning } from '../types';
 import { MAX_LIST_DEPTH } from './_md';
 import type { Deck, Slide } from './_slides';
 import type { Block } from './_md';
@@ -67,8 +67,8 @@ export async function readOdf(input: File, kind: Format): Promise<OdfPackage> {
 }
 
 /** Images and objects live outside the text, so nothing below can carry them. */
-export function describeOdfMedia(names: string[]): string[] {
-  const warnings: string[] = [];
+export function describeOdfMedia(names: string[]): Warning[] {
+  const warnings: Warning[] = [];
   const pictures = names.filter(
     (n) => /^(Pictures|media)\//i.test(n) && !n.endsWith('/'),
   ).length;
@@ -80,12 +80,16 @@ export function describeOdfMedia(names: string[]): string[] {
 
   if (pictures > 0) {
     warnings.push(
-      `${pictures === 1 ? 'An image was' : `${pictures} images were`} not carried over — only text converts.`,
+      lost(
+        `${pictures === 1 ? 'An image was' : `${pictures} images were`} not carried over — only text converts.`,
+      ),
     );
   }
   if (objects > 0) {
     warnings.push(
-      `${objects === 1 ? 'An embedded object — a chart or a formula — was' : `${objects} embedded objects, such as charts or formulas, were`} not carried over.`,
+      lost(
+        `${objects === 1 ? 'An embedded object — a chart or a formula — was' : `${objects} embedded objects, such as charts or formulas, were`} not carried over.`,
+      ),
     );
   }
   return warnings;
@@ -155,7 +159,7 @@ function orderedListStyles(xml: string): Set<string> {
 
 export interface OdfTextRead {
   html: string;
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -172,7 +176,7 @@ export interface OdfTextRead {
 export function odfTextToHtml(content: string): OdfTextRead {
   const spans = textStyles(content);
   const ordered = orderedListStyles(content);
-  const warnings: string[] = [];
+  const warnings: Warning[] = [];
 
   const body = /<office:text[^>]*>([\s\S]*)<\/office:text>/.exec(content)?.[1] ?? '';
   if (!body.trim()) {
@@ -187,12 +191,16 @@ export function odfTextToHtml(content: string): OdfTextRead {
   const comments = (html.match(new RegExp(`<office:annotation${END}`, 'g')) ?? []).length;
   if (notes > 0) {
     warnings.push(
-      `${notes === 1 ? 'One footnote or endnote was' : `${notes} footnotes or endnotes were`} dropped — Recast writes a single flow of text with nowhere to put them.`,
+      lost(
+        `${notes === 1 ? 'One footnote or endnote was' : `${notes} footnotes or endnotes were`} dropped — Recast writes a single flow of text with nowhere to put them.`,
+      ),
     );
   }
   if (comments > 0) {
     warnings.push(
-      `${comments === 1 ? 'One comment was' : `${comments} comments were`} dropped.`,
+      lost(
+        `${comments === 1 ? 'One comment was' : `${comments} comments were`} dropped.`,
+      ),
     );
   }
 

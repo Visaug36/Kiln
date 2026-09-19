@@ -1,5 +1,5 @@
 import type { ConversionResult } from '../types';
-import { outputFile } from '../shared';
+import { note, outputFile } from '../shared';
 import { readCsv, toPipeTable } from './_sheet';
 
 export async function convert(input: File): Promise<ConversionResult> {
@@ -10,7 +10,9 @@ export async function convert(input: File): Promise<ConversionResult> {
     delimiter === ','
       ? undefined
       : [
-          'This file was not comma-separated. Recast detected the separator it actually used.',
+          note(
+            'This file was not comma-separated. Recast detected the separator it actually used.',
+          ),
         ];
 
   return { files: [outputFile(input.name, 'md', `${markdown}\n`)], warnings };

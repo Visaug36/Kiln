@@ -1,11 +1,12 @@
-import { describeFailure, fail, readArrayBuffer } from '../shared';
+import { describeFailure, fail, lost, readArrayBuffer } from '../shared';
+import type { Warning } from '../types';
 import type { Slide } from './_slides';
 
 export type { Slide } from './_slides';
 
 export interface PptxRead {
   slides: Slide[];
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /** `slide12.xml` sorts after `slide2.xml` as a string; order by the number. */
@@ -110,7 +111,7 @@ export async function readPptx(input: File): Promise<PptxRead> {
     });
   }
 
-  const warnings: string[] = [];
+  const warnings: Warning[] = [];
   const names = Object.keys(zip.files);
   const media = names.filter(
     (n) => n.startsWith('ppt/media/') && !n.endsWith('/'),
@@ -121,12 +122,14 @@ export async function readPptx(input: File): Promise<PptxRead> {
 
   if (media > 0) {
     warnings.push(
-      `${media === 1 ? 'One image or video was' : `${media} images or videos were`} not carried over — only slide text converts.`,
+      lost(
+        `${media === 1 ? 'One image or video was' : `${media} images or videos were`} not carried over — only slide text converts.`,
+      ),
     );
   }
   if (charts > 0) {
     warnings.push(
-      `${charts === 1 ? 'A chart was' : `${charts} charts were`} not carried over.`,
+      lost(`${charts === 1 ? 'A chart was' : `${charts} charts were`} not carried over.`),
     );
   }
   if (slides.every((s) => !s.title && s.body.length === 0)) {

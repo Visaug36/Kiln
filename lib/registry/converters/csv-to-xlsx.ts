@@ -1,5 +1,5 @@
 import type { ConversionResult } from '../types';
-import { interop, outputFile } from '../shared';
+import { interop, note, outputFile } from '../shared';
 import { readCsv } from './_sheet';
 
 export async function convert(input: File): Promise<ConversionResult> {
@@ -22,7 +22,9 @@ export async function convert(input: File): Promise<ConversionResult> {
     delimiter === ','
       ? undefined
       : [
-          `This file used ${describeDelimiter(delimiter)} between values, not commas. Recast read it that way.`,
+          note(
+            `This file used ${describeDelimiter(delimiter)} between values, not commas. Recast read it that way.`,
+          ),
         ];
 
   return { files: [outputFile(input.name, 'xlsx', new Uint8Array(bytes))], warnings };

@@ -1,4 +1,12 @@
-import { describeFailure, fail, interop, readArrayBuffer, readText } from '../shared';
+import {
+  describeFailure,
+  fail,
+  interop,
+  lost,
+  readArrayBuffer,
+  readText,
+} from '../shared';
+import type { ProgressFn, Warning } from '../types';
 
 export type Row = string[];
 
@@ -9,7 +17,7 @@ export interface Sheet {
 
 export interface Workbook {
   sheets: Sheet[];
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -22,8 +30,8 @@ export interface Workbook {
  * that only knew `xl/` would have gone quiet the moment ODS was added, and
  * quiet is the failure mode this whole channel exists to prevent.
  */
-async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
-  const warnings: string[] = [];
+async function describeDroppedParts(buffer: ArrayBuffer): Promise<Warning[]> {
+  const warnings: Warning[] = [];
   try {
     const { default: JSZip } = await import('jszip');
     const zip = await JSZip.loadAsync(buffer);
@@ -45,17 +53,23 @@ async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
 
     if (charts > 0) {
       warnings.push(
-        `${charts === 1 ? 'A chart was' : `${charts} charts were`} not carried over — only cell values convert.`,
+        lost(
+          `${charts === 1 ? 'A chart was' : `${charts} charts were`} not carried over — only cell values convert.`,
+        ),
       );
     }
     if (media > 0) {
       warnings.push(
-        `${media === 1 ? 'An image was' : `${media} images were`} not carried over.`,
+        lost(
+          `${media === 1 ? 'An image was' : `${media} images were`} not carried over.`,
+        ),
       );
     }
     if (pivots > 0) {
       warnings.push(
-        `${pivots === 1 ? 'A pivot table was' : `${pivots} pivot tables were`} not carried over; you get the cells it was built from, not the pivot.`,
+        lost(
+          `${pivots === 1 ? 'A pivot table was' : `${pivots} pivot tables were`} not carried over; you get the cells it was built from, not the pivot.`,
+        ),
       );
     }
   } catch {
@@ -73,7 +87,10 @@ async function describeDroppedParts(buffer: ArrayBuffer): Promise<string[]> {
  * formula string. A spreadsheet that converts to a column of "=SUM(...)" is
  * useless, and recomputing formulas in the browser is not something Recast does.
  */
-export async function readWorkbook(input: File): Promise<Workbook> {
+export async function readWorkbook(
+  input: File,
+  onProgress?: ProgressFn,
+): Promise<Workbook> {
   const buffer = await readArrayBuffer(input);
   const XLSX = interop(await import('@e965/xlsx'));
 
@@ -92,7 +109,14 @@ export async function readWorkbook(input: File): Promise<Workbook> {
   const warnings = await describeDroppedParts(buffer);
   const sheets: Sheet[] = [];
 
-  for (const name of book.SheetNames) {
+  for (const [index, name] of book.SheetNames.entries()) {
+    onProgress?.({
+      phase: 'reading',
+      unit: 'sheet',
+      done: index + 1,
+      total: book.SheetNames.length,
+    });
+
     const sheet = book.Sheets[name];
     if (!sheet) continue;
 

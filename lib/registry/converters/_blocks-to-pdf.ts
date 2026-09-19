@@ -1,3 +1,5 @@
+import { lost } from '../shared';
+import type { Warning } from '../types';
 import { MAX_LIST_DEPTH, listCounter } from './_md';
 import type { Block } from './_md';
 import type { Row } from './_sheet';
@@ -5,7 +7,7 @@ import type { Row } from './_sheet';
 export interface PdfContentResult {
   content: Record<string, unknown>[];
   /** What the page could not hold. Empty when nothing was dropped. */
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -92,8 +94,10 @@ export function blocksToPdfContent(blocks: Block[]): PdfContentResult {
 }
 
 /** The one sentence every clipping path uses, so they cannot drift apart. */
-export function clippedWarning(noun: 'Tables' | 'Sheets' = 'Tables'): string {
-  return `${noun} wider than ${MAX_PDF_COLUMNS} columns were cut off at that point — a page can only hold so much.`;
+export function clippedWarning(noun: 'Tables' | 'Sheets' = 'Tables'): Warning {
+  return lost(
+    `${noun} wider than ${MAX_PDF_COLUMNS} columns were cut off at that point — a page can only hold so much.`,
+  );
 }
 
 /**

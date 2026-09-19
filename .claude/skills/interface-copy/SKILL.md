@@ -23,16 +23,46 @@ the product lying.
 
 ## The two rules this project learned the hard way
 
+### 0. Every warning carries a severity, set where it is written
+
+`warnings` is `Warning[]`, not `string[]`. Each one is built with `lost`,
+`changed` or `note` from `lib/registry/shared.ts`, at the point of loss:
+
+- **`lost`** — something in the source is not in the output. An image, a
+  footnote, a clipped column, a character no font can draw. **Never collapsed
+  in the interface**, so do not reach for it to add weight to something that
+  actually survived.
+- **`changed`** — everything is there, in a different shape. A merged cell in a
+  plain grid, a table written as tab-separated lines, a stylesheet that no
+  longer applies.
+- **`note`** — nothing lost, nothing reshaped: how the conversion works and
+  what to check. Inferred headings, the shape of a multi-sheet JSON.
+
+The component reads the field and never the sentence. That is the point: one
+that decided severity by looking for the word "dropped" would go wrong the
+first time somebody rephrased a warning, and would go wrong quietly, in the
+direction of saying less than happened. **Choose the constructor deliberately**
+— it is the difference between a line a person cannot miss and one folded away
+behind a disclosure.
+
 ### 1. Copy must survive composition
 
 A sentence written for one place now appears in places its author never saw. 70
 of Recast's 114 pairs are two converters composed, and **each step's caveat and
 every warning it emits is shown on every pair routed through it.**
 
-The live example: `pptx → epub` and `xlsx → epub` warn _"There were no top-level
-headings, so the whole document became a single chapter. Add `#` headings to
-split it up."_ The outcome is accurate. The advice is addressed to somebody who
-wrote that Markdown — and here Recast wrote it, from a deck.
+The live example, now fixed: `pptx → epub` and `xlsx → epub` warned _"There were
+no top-level headings, so the whole document became a single chapter. Add `#`
+headings to split it up."_ The outcome was accurate. The advice was addressed to
+somebody who wrote that Markdown — and there, Recast wrote it, from a deck. It
+now reads _"The document had no top-level headings, so it became a single
+chapter."_, which is true from every direction.
+
+`lib/registry/composed-copy.test.ts` is the standing check. It runs real engines
+over real fixtures and asserts that a routed pair never gives advice about a
+file Recast wrote, and never names Markdown to somebody who handed over a
+workbook. **Add a case when you write a warning in a `md → *` writer**, which is
+where this bug keeps coming from.
 
 So: **write a sentence that is true wherever the file came from.** State the
 outcome always; give advice only when the reader is certainly the person who can

@@ -1,4 +1,5 @@
-import { fail } from '../shared';
+import { fail, lost } from '../shared';
+import type { Warning } from '../types';
 import { loadFace, variantFor, type LoadedFace } from './_cjk';
 
 /**
@@ -25,7 +26,7 @@ export interface PdfDoc {
 export interface PdfRender {
   bytes: Uint8Array;
   /** Populated when characters had to be replaced to be written at all. */
-  warnings: string[];
+  warnings: Warning[];
 }
 
 let ready: Promise<typeof import('pdfmake/build/pdfmake').default> | null = null;
@@ -317,7 +318,9 @@ export async function renderPdf(doc: PdfDoc): Promise<PdfRender> {
   const warnings =
     scan.dropped > 0
       ? [
-          `${listScripts(scan.scripts)} cannot be drawn with the font Recast embeds, so ${scan.dropped} character${scan.dropped === 1 ? ' was' : 's were'} replaced with “${REPLACEMENT}”. Converting to Markdown or plain text keeps them.`,
+          lost(
+            `${listScripts(scan.scripts)} cannot be drawn with the font Recast embeds, so ${scan.dropped} character${scan.dropped === 1 ? ' was' : 's were'} replaced with “${REPLACEMENT}”. Converting to Markdown or plain text keeps them.`,
+          ),
         ]
       : [];
 

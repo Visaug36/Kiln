@@ -1,4 +1,5 @@
-import { describeFailure, fail, readArrayBuffer } from '../shared';
+import { changed, describeFailure, fail, lost, readArrayBuffer } from '../shared';
+import type { ProgressFn, Warning } from '../types';
 import { escapeXml } from './_odf';
 import type { Block } from './_md';
 
@@ -18,7 +19,7 @@ export interface EpubRead {
   html: string;
   chapters: number;
   title?: string;
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /** Resolves an href against the directory its manifest sits in. */
@@ -36,7 +37,7 @@ function resolve(base: string, href: string): string {
   return out.join('/');
 }
 
-export async function readEpub(input: File): Promise<EpubRead> {
+export async function readEpub(input: File, onProgress?: ProgressFn): Promise<EpubRead> {
   const buffer = await readArrayBuffer(input);
   const { default: JSZip } = await import('jszip');
 
@@ -80,7 +81,14 @@ export async function readEpub(input: File): Promise<EpubRead> {
   const order = spine.length > 0 ? spine : [...manifest.keys()];
   const bodies: string[] = [];
 
-  for (const id of order) {
+  for (const [index, id] of order.entries()) {
+    onProgress?.({
+      phase: 'reading',
+      unit: 'chapter',
+      done: index + 1,
+      total: order.length,
+    });
+
     const item = manifest.get(id);
     if (!item) continue;
     if (!/x?html/.test(item.type) && !/\.x?html?$/i.test(item.href)) continue;
@@ -102,17 +110,20 @@ export async function readEpub(input: File): Promise<EpubRead> {
   }
 
   const names = Object.keys(zip.files);
-  const warnings: string[] = [];
+  const warnings: Warning[] = [];
   const images = names.filter((n) => /\.(png|jpe?g|gif|svg|webp)$/i.test(n)).length;
   const fonts = names.filter((n) => /\.(ttf|otf|woff2?)$/i.test(n)).length;
 
   if (images > 0) {
     warnings.push(
-      `${images === 1 ? 'One image, probably the cover, was' : `${images} images, including the cover, were`} not carried over.`,
+      lost(
+        `${images === 1 ? 'One image, probably the cover, was' : `${images} images, including the cover, were`} not carried over.`,
+      ),
     );
   }
+  // The text is all there; it is set differently. That is `changed`.
   if (fonts > 0) {
-    warnings.push('Embedded fonts and styling were dropped.');
+    warnings.push(changed('Embedded fonts and styling were dropped.'));
   }
 
   return { html: bodies.join('\n'), chapters: bodies.length, title, warnings };

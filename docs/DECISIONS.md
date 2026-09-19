@@ -10,6 +10,95 @@ narrative goes in `STAGES.md`; unresolved questions go in `OPEN.md`.
 
 ---
 
+## 2026-09-19 — Warnings have a severity, and progress has a number
+
+### Severity is set where the warning is written, never read off its wording
+
+`ConversionResult.warnings` is `Warning[]`, not `string[]`. Each one is built
+with `lost`, `changed` or `note` from `shared.ts`, at the point of loss. The
+component groups on the field and never looks at the sentence.
+
+The line between them is one question — what is different between the document
+that went in and the one that came out? Something missing is `lost`; something
+present in another shape is `changed`; something that describes how the
+conversion works is a `note`. So a stylesheet that no longer applies is
+`changed` (every word survived, differently dressed) while an image is `lost`.
+
+**Rejected:** classifying in the component by matching words like "dropped" or
+"not carried over". It was the smaller change and it fails in the worst
+direction — the first rephrasing silently demotes a real loss to a note, and
+nothing tells you. Thirty-odd warning sites was a one-time cost; a classifier
+that drifts from its inputs is a permanent one.
+
+**Rejected:** a fourth level. Three tiers map onto three treatments and three
+answers to "did I lose anything". A fourth would need a rule nobody could state
+in a sentence.
+
+### `lost` never collapses, and notes start closed
+
+Notes sit behind a native `<details>`. `lost` is always visible, always first.
+
+**Rejected:** collapsing everything behind one "N warnings" disclosure, which
+is tidier and is the whole bug: silent loss is what the warnings channel exists
+to prevent, and a click is close enough to silent.
+
+**Rejected:** a hand-built disclosure. `<details>` is keyboard-operable and
+works with no JavaScript; a custom one would have to earn that back.
+
+### The step a warning came from is a field, not a prefix on the sentence
+
+`runRoute` used to write `.odt → .md: An image was not carried over`. It now
+sets `warning.step` and leaves the message alone, so the interface can group by
+severity first and still say which half lost what — and a warning's text stays
+the text somebody wrote, which is what makes it assertable.
+
+### Progress is structured; the words live in the interface
+
+An engine reports `{ phase, unit, done, total }` and `lib/jobs/progress.ts`
+turns that into "Reading page 3 of 12". `ConvertFn` gained an optional second
+parameter, so the thirty-nine engines with nothing to say did not have to
+change at all.
+
+**Rejected:** engines reporting a ready-made sentence. Copy would end up spread
+across every engine, and a progress bar would have to re-derive the numbers
+from a string.
+
+**Rejected:** reporting every page. A 500-page PDF is 500 structured clones and
+500 renders for text nobody can read that fast. The worker throttles to 100 ms
+and always sends the frame where the phase, step or unit changes.
+
+### A reporting conversion is not a wedged one
+
+The runner kills a job that has not settled in sixty seconds. Each progress
+message now restarts that clock, because the timeout is there for an engine
+that has stopped, and a PDF visibly on page 300 has not stopped. Silence after
+the last report still ends it.
+
+### `firing` became `converting`
+
+The state name was a kiln's word for it. The interface no longer shows a state
+name at all — it shows what the worker is doing.
+
+### Advice is only given to a reader who can take it
+
+Four warnings gave instructions about a file the reader never had. The worst
+was `* → epub`'s "Add `#` headings to split it up", shown on eleven routed
+pairs where Recast wrote the Markdown itself. All four now state the outcome
+and stop.
+
+**Rejected:** keeping the advice and showing it only on the direct pair. The
+interface would have to carry a second version of every sentence, and the
+version people actually needed would be the one nobody tested.
+
+`lib/registry/composed-copy.test.ts` is the standing check, running real
+engines over real fixtures. Three sentences that name Markdown were left
+alone deliberately: `Block` has no image kind, so no reader can emit `![]()`,
+and those lines can only ever be read by somebody who dropped Markdown. The
+reasoning is in a comment at each one, because the next person will otherwise
+either "fix" them or trust them without checking.
+
+---
+
 ## 2026-09-18 — Kiln became Recast
 
 ### The product is named Recast

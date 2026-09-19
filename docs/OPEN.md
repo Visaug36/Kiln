@@ -128,12 +128,17 @@ do not claim more.
 
 Small, real, and waiting for the right stage rather than for a decision.
 
-### A routed warning can give advice aimed at the wrong person
+### The three severities are real; their treatment is provisional
 
-`pptx → epub` and `xlsx → epub` warn _"There were no top-level headings, so the
-whole document became a single chapter. Add `#` headings to split it up."_ The
-outcome is accurate; the advice is addressed to someone who wrote the Markdown,
-and here Recast wrote it.
+Every warning is classified `lost`, `changed` or `note` at the point of loss,
+notes collapse and lost never does. What that looks like — the grouping
+headings, the weight of each tier — was chosen inside the existing nine-colour
+palette because `design/Recast.dc.html` was not in the repo when the work was
+done. The behaviour is settled and tested; the styling is the design's to
+decide.
 
-This is the copy-survives-composition problem in miniature, and belongs with the
-UI stage's warnings work rather than a patch now. See the `interface-copy` skill.
+### `xlsx → pdf` clipping is now a `lost` warning, and still clips
+
+Unchanged in substance — see above — but it is worth knowing the severity
+channel now marks it as data gone, which is the strongest thing the interface
+can say short of refusing.

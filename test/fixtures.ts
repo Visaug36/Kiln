@@ -1,3 +1,4 @@
+import type { Warning } from '@/lib/registry/types';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -26,4 +27,15 @@ export async function textOf(blob: Blob): Promise<string> {
 
 export async function bytesOf(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
+}
+
+/**
+ * Every warning's sentence, joined, for tests that assert on wording.
+ *
+ * Warnings carry a severity now, so `warnings.join(' ')` produces a row of
+ * `[object Object]` and an assertion that can only fail. This keeps those tests
+ * about the words while the severity is asserted where it matters.
+ */
+export function said(warnings: Warning[] | undefined): string {
+  return (warnings ?? []).map((warning) => warning.message).join(' ');
 }

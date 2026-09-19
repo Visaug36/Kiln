@@ -1,4 +1,30 @@
-import type { Format, OutputFile } from './types';
+import type { Format, OutputFile, Severity, Warning } from './types';
+
+/**
+ * The three ways to write a warning, and the only three.
+ *
+ * Calling one of these at the point of loss is what makes the hierarchy real
+ * rather than cosmetic. The alternative — a component matching on words like
+ * "dropped" — breaks the first time somebody rewrites a sentence, and breaks
+ * silently, in the direction of under-reporting.
+ *
+ * `lost` is for something that is in the source and not in the output.
+ * `changed` is for something that survived in a different shape.
+ * `note` is for how the conversion works, where nothing went missing.
+ * `Severity` in `types.ts` has the full test.
+ */
+const warn =
+  (severity: Severity) =>
+  (message: string): Warning => ({ severity, message });
+
+/** Something in the source is not in the output. Never collapsed. */
+export const lost = warn('lost');
+
+/** Everything is there, in a different shape. */
+export const changed = warn('changed');
+
+/** Nothing lost or reshaped — how it works, and what to check. */
+export const note = warn('note');
 
 /** MIME type written onto each produced blob. */
 export const MIME: Record<Format, string> = {

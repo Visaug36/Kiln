@@ -34,6 +34,11 @@ class FakeWorker {
     for (const handler of this.listeners.get(type) ?? []) handler(event);
   }
 
+  /** Sends one progress message for this job, as the real worker would. */
+  report(jobId: string, progress: Record<string, unknown>) {
+    this.emit('message', { data: { jobId, progress } });
+  }
+
   postMessage(request: { jobId: string }) {
     if (FakeWorker.behaviour === 'hang') return;
 
@@ -83,7 +88,7 @@ afterEach(() => {
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 describe('running a conversion', () => {
-  it('moves the job through firing to done', async () => {
+  it('moves the job through converting to done', async () => {
     const id = useJobs.getState().addJob({ file: file('a.md'), from: 'md', to: 'txt' });
 
     enqueue(id);
@@ -131,7 +136,7 @@ describe('when a conversion wedges', () => {
     enqueue(id);
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(useJobs.getState().jobs[0]?.state).toBe('firing');
+    expect(useJobs.getState().jobs[0]?.state).toBe('converting');
 
     await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 10);
 
@@ -223,7 +228,7 @@ describe('when the worker dies without saying so', () => {
   it('reports a message that could not be handed across at all', async () => {
     // A worker the browser kills fires nothing, but a payload it cannot clone
     // fires `messageerror` — which used to be ignored, leaving the job to sit
-    // at "Firing…" for the full minute.
+    // showing progress for the full minute.
     FakeWorker.behaviour = 'messageerror';
 
     const id = useJobs.getState().addJob({ file: file('a.md'), from: 'md', to: 'txt' });
@@ -290,5 +295,76 @@ describe('when the worker dies without saying so', () => {
     await vi.advanceTimersByTimeAsync(10);
 
     expect(useJobs.getState().jobs[1]?.state).toBe('done');
+  });
+});
+
+describe('progress from the worker', () => {
+  it('records what the worker is doing on the job', async () => {
+    vi.useFakeTimers();
+    FakeWorker.behaviour = 'hang';
+
+    const id = useJobs
+      .getState()
+      .addJob({ file: file('big.pdf'), from: 'pdf', to: 'md' });
+    enqueue(id);
+    await vi.advanceTimersByTimeAsync(0);
+
+    FakeWorker.instances[0]!.report(id, {
+      phase: 'reading',
+      unit: 'page',
+      done: 3,
+      total: 40,
+    });
+
+    expect(useJobs.getState().jobs[0]?.state).toBe('converting');
+    expect(useJobs.getState().jobs[0]?.progress).toEqual({
+      phase: 'reading',
+      unit: 'page',
+      done: 3,
+      total: 40,
+    });
+
+    // The queue is one shared promise chain, so a hung job has to be let go of
+    // or every test after this one waits behind it.
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 10);
+  });
+
+  it('does not treat a reporting conversion as wedged', async () => {
+    // The timeout exists for an engine that has stopped. A 400-page PDF has
+    // not stopped, and killing it at sixty seconds would be the wrong answer —
+    // so each progress message restarts the clock.
+    vi.useFakeTimers();
+    FakeWorker.behaviour = 'hang';
+
+    const id = useJobs
+      .getState()
+      .addJob({ file: file('big.pdf'), from: 'pdf', to: 'md' });
+    enqueue(id);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const worker = FakeWorker.instances[0]!;
+    for (let page = 1; page <= 4; page += 1) {
+      await vi.advanceTimersByTimeAsync(TIMEOUT_MS - 100);
+      worker.report(id, { phase: 'reading', unit: 'page', done: page, total: 400 });
+    }
+
+    // Four times the timeout has passed in total, and it is still converting.
+    expect(useJobs.getState().jobs[0]?.state).toBe('converting');
+
+    // Silence after the last report still ends it.
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 10);
+    expect(useJobs.getState().jobs[0]?.state).toBe('failed');
+  });
+
+  it('ignores a progress message that arrives after the result', async () => {
+    const id = useJobs.getState().addJob({ file: file('a.md'), from: 'md', to: 'txt' });
+    enqueue(id);
+    await settle();
+
+    // Both cross the worker boundary, and only the result ends the job.
+    FakeWorker.instances[0]!.report(id, { phase: 'reading' });
+
+    expect(useJobs.getState().jobs[0]?.state).toBe('done');
+    expect(useJobs.getState().jobs[0]?.progress).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
 import type { ConversionResult } from '../types';
-import { fail, interop, outputFile, readText } from '../shared';
+import { changed, fail, interop, outputFile, readText } from '../shared';
+import type { Warning } from '../types';
 import { jsonToSheets } from './_json';
 
 export async function convert(input: File): Promise<ConversionResult> {
@@ -11,13 +12,16 @@ export async function convert(input: File): Promise<ConversionResult> {
   const XLSX = interop(await import('@e965/xlsx'));
   const book = XLSX.utils.book_new();
 
-  const warnings: string[] = [];
+  const warnings: Warning[] = [];
   const nested = sheets.some((sheet) =>
     (sheet.rows[0] ?? []).some((name) => name.includes('.')),
   );
   if (nested) {
+    // Every value survives; the nesting does not. That is `changed`.
     warnings.push(
-      'Nested values were flattened into columns with dotted names, such as `address.city`.',
+      changed(
+        'Nested values were flattened into columns with dotted names, such as `address.city`.',
+      ),
     );
   }
 

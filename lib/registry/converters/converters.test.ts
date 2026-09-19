@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MARKER, bytesOf, fixture, textOf } from '@/test/fixtures';
+import { MARKER, bytesOf, fixture, said, textOf } from '@/test/fixtures';
 import { fontRequests } from '@/test/setup';
 import { converters, type Format } from '../index';
 import { engineFor } from '../engines';
@@ -203,7 +203,7 @@ describe('spreadsheets', () => {
       'sample-sales.csv',
       'sample-notes.csv',
     ]);
-    expect(result.warnings?.[0]).toMatch(/2 sheets/);
+    expect(result.warnings?.[0]?.message).toMatch(/2 sheets/);
   });
 
   it('gives a single-sheet workbook a plain name and no sheet warning', async () => {
@@ -233,7 +233,7 @@ describe('spreadsheets', () => {
 
     expect(out).toContain('| Region | Units | Revenue |');
     expect(out).toContain('| North | 120 | 2400 |');
-    expect(result.warnings?.join(' ')).toMatch(/not comma-separated/i);
+    expect(said(result.warnings)).toMatch(/not comma-separated/i);
   });
 });
 
@@ -362,7 +362,7 @@ describe('scripts in PDF output', () => {
     const convert = await engineFor('txt', 'pdf')!();
     const result = await convert(new File(['Yoruba ṣe and Sanskrit ṛṣi'], 'y.txt'));
 
-    expect(result.warnings?.join(' ')).toMatch(/Latin letters with less common accents/);
+    expect(said(result.warnings)).toMatch(/Latin letters with less common accents/);
   });
 
   it('names what it could not draw instead of inventing glyphs', async () => {
@@ -371,7 +371,7 @@ describe('scripts in PDF output', () => {
       new File(['Quarterly report\n\ngreetings in مرحبا and 한국어'], 'mixed.txt'),
     );
 
-    const notes = result.warnings?.join(' ') ?? '';
+    const notes = said(result.warnings);
     expect(notes).toMatch(/Arabic/);
     expect(notes).toMatch(/Korean/);
     expect(notes).toMatch(/replaced/);
@@ -461,7 +461,7 @@ describe('wide tables', () => {
       new File([`| ${header} |\n| ${rule} |\n| ${header} |`], 'wide.md'),
     );
 
-    expect(result.warnings?.join(' ')).toMatch(/wider than 12 columns/);
+    expect(said(result.warnings)).toMatch(/wider than 12 columns/);
   });
 
   it('md → pdf stays quiet when the table fits', async () => {
@@ -481,7 +481,7 @@ describe('wide tables', () => {
     const convert = await engineFor('xlsx', 'pdf')!();
     const result = await convert(new File([book.blob], 'wide.xlsx'));
 
-    expect(result.warnings?.join(' ')).toMatch(/Sheets wider than 12 columns/);
+    expect(said(result.warnings)).toMatch(/Sheets wider than 12 columns/);
   });
 });
 
@@ -520,7 +520,7 @@ describe('pictures in a Word document', () => {
     const convert = await engineFor('docx', 'md')!();
     const result = await convert(await withImage('Some words here.'));
 
-    expect(result.warnings?.join(' ')).toMatch(/1 image .* not carried over/);
+    expect(said(result.warnings)).toMatch(/1 image .* not carried over/);
   });
 
   it('refuses a document that is nothing but pictures', async () => {
@@ -659,7 +659,7 @@ describe('OpenDocument text', () => {
   it('says what it left behind rather than dropping it quietly', async () => {
     const convert = await engineFor('odt', 'md')!();
     const warnings = (await convert(fixture('sample.odt'))).warnings ?? [];
-    const joined = warnings.join(' ');
+    const joined = said(warnings);
 
     expect(joined).toContain('An image was not carried over');
     expect(joined).toContain('One footnote or endnote was');
@@ -840,7 +840,7 @@ describe('JSON and the sheet model', () => {
 
     expect(md).toContain('lead.name');
     expect(md).toContain('lead.office');
-    expect(result.warnings?.join(' ')).toContain('dotted names');
+    expect(said(result.warnings)).toContain('dotted names');
   });
 
   it('keeps a column that only appears in a later record', async () => {

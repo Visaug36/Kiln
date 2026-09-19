@@ -28,7 +28,7 @@ which is a privacy requirement, not a performance one.
 
 ## Working rules
 
-- **Ember appears at most once per screen.** It is spent on the single firing
+- **Ember appears at most once per screen.** It is spent on the single converting
   job and nothing else. Everything else is warm neutral. Two ember elements on
   screen at once is a regression; catch it in review.
 - **Ember on small text uses `ember-text`.** `#d2551f` reaches only 4.04:1 on

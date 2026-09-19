@@ -1,4 +1,5 @@
-import { fail } from '../shared';
+import { changed, fail, lost } from '../shared';
+import type { Warning } from '../types';
 import { escapeXml } from './_odf';
 
 /**
@@ -14,7 +15,7 @@ import { escapeXml } from './_odf';
 export interface HtmlRead {
   /** The body, reduced to the elements the block layer understands. */
   html: string;
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /** Counts an element, singular or plural, in the interface's voice. */
@@ -83,8 +84,8 @@ export function reduceHtml(source: string): string {
 }
 
 /** What a page held that Recast knows it cannot carry, named rather than lost. */
-export function describeHtmlLosses(source: string): string[] {
-  const warnings: string[] = [];
+export function describeHtmlLosses(source: string): Warning[] {
+  const warnings: Warning[] = [];
 
   const scripts = count(source, /<script\b/gi);
   const styles = count(source, /<style\b/gi) + count(source, /<link\b[^>]*stylesheet/gi);
@@ -92,29 +93,41 @@ export function describeHtmlLosses(source: string): string[] {
   const frames = count(source, /<iframe\b/gi) + count(source, /<embed\b/gi);
   const forms = count(source, /<form\b/gi);
 
+  // Styling is `changed`, not `lost`: every word of the page is still in the
+  // output, wearing different clothes. The four below are content that is gone.
   if (styles > 0) {
     warnings.push(
-      'Stylesheets were dropped. Recast carries the structure of a page — headings, lists, tables and links — not how it looked.',
+      changed(
+        'Stylesheets were dropped. Recast carries the structure of a page — headings, lists, tables and links — not how it looked.',
+      ),
     );
   }
   if (images > 0) {
     warnings.push(
-      `${images === 1 ? 'One image was' : `${images} images were`} not carried over.`,
+      lost(
+        `${images === 1 ? 'One image was' : `${images} images were`} not carried over.`,
+      ),
     );
   }
   if (scripts > 0) {
     warnings.push(
-      `${scripts === 1 ? 'One script was' : `${scripts} scripts were`} ignored, along with anything they would have put on the page.`,
+      lost(
+        `${scripts === 1 ? 'One script was' : `${scripts} scripts were`} ignored, along with anything they would have put on the page.`,
+      ),
     );
   }
   if (frames > 0) {
     warnings.push(
-      `${frames === 1 ? 'An embedded frame was' : `${frames} embedded frames were`} dropped — their content lives in another file.`,
+      lost(
+        `${frames === 1 ? 'An embedded frame was' : `${frames} embedded frames were`} dropped — their content lives in another file.`,
+      ),
     );
   }
   if (forms > 0) {
     warnings.push(
-      `${forms === 1 ? 'A form was' : `${forms} forms were`} dropped; the fields have nothing to submit to in a document.`,
+      lost(
+        `${forms === 1 ? 'A form was' : `${forms} forms were`} dropped; the fields have nothing to submit to in a document.`,
+      ),
     );
   }
 

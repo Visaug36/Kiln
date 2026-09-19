@@ -1,9 +1,12 @@
-import type { ConversionResult } from '../types';
+import type { ConversionResult, ProgressFn } from '../types';
 import { interop, outputFile } from '../shared';
 import { readWorkbook } from './_sheet';
 
-export async function convert(input: File): Promise<ConversionResult> {
-  const { sheets, warnings } = await readWorkbook(input);
+export async function convert(
+  input: File,
+  onProgress?: ProgressFn,
+): Promise<ConversionResult> {
+  const { sheets, warnings } = await readWorkbook(input, onProgress);
   const XLSX = interop(await import('@e965/xlsx'));
 
   const book = XLSX.utils.book_new();
@@ -15,6 +18,7 @@ export async function convert(input: File): Promise<ConversionResult> {
     sheet.rows.length = 0;
   }
 
+  onProgress?.({ phase: 'writing' });
   const bytes = XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
 
   return {

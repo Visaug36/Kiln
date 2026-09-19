@@ -45,14 +45,33 @@ describe('running a route', () => {
 
     expect(warnings.length).toBeGreaterThan(0);
     // "Images were dropped" reads very differently depending on which half of
-    // the conversion dropped them.
-    expect(warnings.every((w) => /^\.\w+ → \.\w+: /.test(w))).toBe(true);
-    expect(warnings.join(' ')).toContain('.odt → .md: An image was not carried over');
+    // the conversion dropped them. The label is a field, so the sentence the
+    // engine wrote is still exactly the sentence that arrives.
+    expect(warnings.every((w) => /^\.\w+ → \.\w+$/.test(w.step ?? ''))).toBe(true);
+    expect(
+      warnings.some(
+        (w) =>
+          w.step === '.odt → .md' &&
+          w.message === 'An image was not carried over — only text converts.',
+      ),
+    ).toBe(true);
   }, 60_000);
 
   it('leaves a single-step pair’s warnings unlabelled', async () => {
     const { result } = await convert('odt', 'md', 'sample.odt');
-    expect((result.warnings ?? []).some((w) => /^\.\w+ → \.\w+: /.test(w))).toBe(false);
+    expect((result.warnings ?? []).some((w) => w.step !== undefined)).toBe(false);
+  }, 60_000);
+
+  it('keeps every warning’s severity across a route', async () => {
+    const { result } = await convert('odt', 'html', 'sample.odt');
+    const warnings = result.warnings ?? [];
+
+    // Severity is set at the point of loss and must survive the hand-off:
+    // the component groups on it and never reads the sentence.
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.every((w) => ['lost', 'changed', 'note'].includes(w.severity))).toBe(
+      true,
+    );
   }, 60_000);
 
   it('runs the second step over every file the first produced', async () => {

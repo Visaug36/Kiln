@@ -1,4 +1,5 @@
-import { describeFailure, fail, readArrayBuffer } from '../shared';
+import { describeFailure, fail, lost, readArrayBuffer } from '../shared';
+import type { ProgressFn, Warning } from '../types';
 import type { Block } from './_md';
 
 export interface PdfLine {
@@ -18,7 +19,7 @@ export interface PdfLine {
 
 export interface PdfRead {
   lines: PdfLine[];
-  warnings: string[];
+  warnings: Warning[];
 }
 
 /**
@@ -52,7 +53,7 @@ async function loadPdfjs() {
   return pdfjs;
 }
 
-export async function readPdf(input: File): Promise<PdfRead> {
+export async function readPdf(input: File, onProgress?: ProgressFn): Promise<PdfRead> {
   const buffer = await readArrayBuffer(input);
   const pdfjs = await loadPdfjs();
 
@@ -78,11 +79,16 @@ export async function readPdf(input: File): Promise<PdfRead> {
   }
 
   const lines: PdfLine[] = [];
-  const warnings: string[] = [];
+  const warnings: Warning[] = [];
   // Read before destroy() — the document is unusable afterwards.
   const pageCount = doc.numPages;
 
+  // A long PDF is the conversion people actually wait on, and it is also the
+  // one engine that knows exactly how far through it is. Reported before each
+  // page rather than after, so the count names the page being worked on.
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    onProgress?.({ phase: 'reading', unit: 'page', done: pageNumber, total: pageCount });
+
     const page = await doc.getPage(pageNumber);
     const content = await page.getTextContent();
 
@@ -128,7 +134,9 @@ export async function readPdf(input: File): Promise<PdfRead> {
   const pagesWithText = new Set(lines.map((l) => l.page)).size;
   if (pagesWithText < pageCount) {
     warnings.push(
-      `${pageCount - pagesWithText} of ${pageCount} pages had no text to extract and came through empty — those pages are probably scans.`,
+      lost(
+        `${pageCount - pagesWithText} of ${pageCount} pages had no text to extract and came through empty — those pages are probably scans.`,
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { said } from '@/test/fixtures';
 import { htmlToBlocks } from './_docx';
 import { MAX_PDF_COLUMNS, blocksToPdfContent, pdfTable } from './_blocks-to-pdf';
 import { parseRtf, rtfToBlocks, rtfToPlainText, writeRtf } from './_rtf';
@@ -253,7 +254,11 @@ describe('tables too wide for the page', () => {
     const { warnings } = blocksToPdfContent(wide(MAX_PDF_COLUMNS + 1));
 
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toMatch(new RegExp(`wider than ${MAX_PDF_COLUMNS} columns`));
+    expect(warnings[0]?.message).toMatch(
+      new RegExp(`wider than ${MAX_PDF_COLUMNS} columns`),
+    );
+    // Columns past the page edge are not in the file that comes out.
+    expect(warnings[0]?.severity).toBe('lost');
   });
 
   it('stays quiet when everything fits', () => {
@@ -328,9 +333,7 @@ describe('what the block layer admits to losing', () => {
     );
 
     expect((blocks[0] as { rows: string[][] }).rows).toEqual([['Spans two'], ['L', 'R']]);
-    expect(warnings.join(' ')).toMatch(
-      /1 table cell spanned more than one row or column/,
-    );
+    expect(said(warnings)).toMatch(/1 table cell spanned more than one row or column/);
   });
 
   it('counts rowspan too, and says how many', () => {
@@ -338,7 +341,7 @@ describe('what the block layer admits to losing', () => {
       '<table><tr><td rowspan="2">a</td><td colspan="3">b</td></tr></table>',
     );
 
-    expect(warnings.join(' ')).toMatch(/2 table cells spanned/);
+    expect(said(warnings)).toMatch(/2 table cells spanned/);
   });
 
   it('says nothing about an ordinary table', () => {
@@ -359,7 +362,7 @@ describe('what the block layer admits to losing', () => {
       const { blocks, warnings } = htmlToBlocks(html);
 
       expect(blocks, html).toHaveLength(0);
-      expect(warnings.join(' '), html).toMatch(
+      expect(said(warnings), html).toMatch(
         /sat in a layout element Recast does not read/,
       );
     }
@@ -654,7 +657,7 @@ describe('the OpenDocument reader', () => {
       ),
     );
 
-    expect(warnings.join(' ')).toContain('One footnote or endnote was');
+    expect(said(warnings)).toContain('One footnote or endnote was');
   });
 
   it('carries a merged cell’s span so the same warning fires as for Word', () => {
@@ -668,7 +671,7 @@ describe('the OpenDocument reader', () => {
     );
 
     expect(html).toContain('<td colspan="2">');
-    expect(htmlToBlocks(html).warnings.join(' ')).toContain('spanned more than one');
+    expect(said(htmlToBlocks(html).warnings)).toContain('spanned more than one');
   });
 
   it('agrees with the Markdown reader about the same nested list', async () => {
@@ -724,7 +727,7 @@ describe('the HTML reader', () => {
       '<html><head><style>p{}</style></head><body><img src="a.png"><script>x()</script>' +
         '<iframe src="b"></iframe><form></form><p>Text</p></body></html>',
     );
-    const joined = warnings.join(' ');
+    const joined = said(warnings);
     expect(joined).toContain('Stylesheets were dropped');
     expect(joined).toContain('One image was');
     expect(joined).toContain('One script was');

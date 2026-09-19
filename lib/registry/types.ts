@@ -38,14 +38,80 @@ export interface OutputFile {
   filename: string;
 }
 
-export interface ConversionResult {
-  files: OutputFile[];
-  /** Populated when the engine had to discard something. Shown after conversion. */
-  warnings?: string[];
+/**
+ * How much a warning should alarm the person reading it.
+ *
+ * The three are decided by one question — what is different between the
+ * document that went in and the one that came out?
+ *
+ * - `lost`    — something in the source is **not in the output**. An image, a
+ *               footnote, a column past the page edge, a character no font can
+ *               draw. This is the one that must never be missed, so it is never
+ *               collapsed behind a disclosure.
+ * - `changed` — everything is there, in a **different shape**. A merged cell
+ *               flattened into a plain grid, a table written as tab-separated
+ *               lines, a stylesheet that no longer applies.
+ * - `note`    — nothing was lost or reshaped; this describes **how the
+ *               conversion works** and what to check. Headings inferred from
+ *               type size, the shape of the JSON a multi-sheet workbook makes.
+ *
+ * Severity is set where the warning is written, never guessed from its wording
+ * in a component. A sentence is free to be rephrased; what it means is not.
+ */
+export type Severity = 'lost' | 'changed' | 'note';
+
+export interface Warning {
+  severity: Severity;
+  /** One sentence, true whatever format the file arrived as. */
+  message: string;
+  /**
+   * Which converter produced it, as `.docx → .md`.
+   *
+   * Set by `runRoute` and only on a routed pair, where "an image was not
+   * carried over" reads very differently depending on which half lost it.
+   */
+  step?: string;
 }
 
-/** The function an engine module hands back once it has loaded. */
-export type ConvertFn = (input: File) => Promise<ConversionResult>;
+export interface ConversionResult {
+  files: OutputFile[];
+  /** Populated when the engine had to discard or reshape something. */
+  warnings?: Warning[];
+}
+
+/**
+ * What an engine is doing right now, so a conversion that takes a while can say
+ * more than that it is running.
+ *
+ * Structured rather than a sentence: the interface owns the words, and a
+ * `done`/`total` pair can drive a bar later without the engines being touched
+ * again. An engine that cannot say where it is simply never calls this, and the
+ * interface falls back to the phase.
+ */
+export interface Progress {
+  phase: 'reading' | 'writing';
+  /** What `done` and `total` are counting, when the engine can count.  */
+  unit?: 'page' | 'sheet' | 'chapter' | 'slide';
+  done?: number;
+  total?: number;
+  /** 1-based step of a routed conversion, and how many there are. */
+  step?: number;
+  steps?: number;
+}
+
+export type ProgressFn = (progress: Progress) => void;
+
+/**
+ * The function an engine module hands back once it has loaded.
+ *
+ * `onProgress` is optional on purpose: an engine with nothing useful to report
+ * declares `(input: File)` and still satisfies this type, so adding progress
+ * did not mean touching thirty-nine engines that have nothing to say.
+ */
+export type ConvertFn = (
+  input: File,
+  onProgress?: ProgressFn,
+) => Promise<ConversionResult>;
 
 /**
  * One declared edge, as the interface sees it.
