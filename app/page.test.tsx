@@ -190,3 +190,38 @@ describe('the unsupported list', () => {
     expect(within(panel).queryByText(/\.pptx/)).not.toBeInTheDocument();
   });
 });
+
+describe('nothing on the page leads nowhere', () => {
+  it('points the About link at a section that is really there', () => {
+    render(<Home />);
+
+    const about = screen
+      .getAllByRole('link')
+      .find((link) => link.getAttribute('href') === '#about');
+
+    expect(about).toBeDefined();
+    // The one failure mode of an in-page anchor: it looks alive and moves the
+    // reader nowhere. `verify:browser` checks this against the built site too.
+    expect(document.getElementById('about')).not.toBeNull();
+  });
+
+  it('offers only the three destinations that exist', () => {
+    render(<Home />);
+
+    const hrefs = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+      .filter((href): href is string => Boolean(href));
+
+    // A language switcher and a conversion guide were both cut rather than
+    // shipped dead. If either comes back, it comes back with a page behind it.
+    expect(new Set(hrefs)).toEqual(
+      new Set([
+        '/matrix',
+        '#about',
+        'https://github.com/Visaug36/Recast',
+        'https://github.com/Visaug36/Recast/issues',
+      ]),
+    );
+  });
+});

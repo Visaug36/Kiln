@@ -367,6 +367,11 @@ import()` inside the engine.
 **Fourteen formats, 114 pairs**, all verified in a real browser
 (`pnpm verify:browser`).
 
+The site carries the same thing at `/matrix`, generated from the registry at
+build time — every pair, every refusal and its reason, with the counts computed
+rather than written down. This section is the prose version; that page cannot
+go stale.
+
 Those pairs are not 114 converters. Recast declares **44 edges** — one-step
 conversions written by hand — and computes the rest as two of them run back to
 back. Fourteen formats would otherwise be 182 hand-written converters, each with

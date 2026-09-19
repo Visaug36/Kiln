@@ -99,6 +99,80 @@ either "fix" them or trust them without checking.
 
 ---
 
+## 2026-09-19 — Five controls: three built, two cut
+
+The design carried a language switcher, a "Conversion guide" nav item, "See the
+full matrix", "Report a problem" and an About link. Most had nothing behind
+them. A control that looks live and does nothing is worse than no control, so
+each was either built or removed.
+
+### Built: the full matrix, at `/matrix`
+
+All 182 ordered pairs, worked out from the registry at build time — 44 direct,
+70 routed, 64 refused with their reasons, and four that simply need three hops.
+It is a server component, so it ships no JavaScript of its own.
+
+Every number on it is counted, never written down. `lib/registry/matrix.ts`
+walks the registry and `matrix.test.ts` asserts the totals against the numbers
+in `CLAUDE.md`, so adding an edge either updates both or fails.
+
+**Rejected:** a hand-written table, which is a third copy of the matrix to keep
+in step with `table.ts` and the routing snapshot.
+
+**Rejected:** linking to the README's matrix on GitHub instead. It is the same
+information a click away on somebody else's site, and it goes stale on its own.
+
+### Built: "Report a problem" and About
+
+"Report a problem" is a link to the repository's issues. About is an in-page
+section with what Recast is, what it refuses and why, and a link to the source.
+Both are one anchor each, and an anchor a person clicks is not a request the
+page makes, so neither costs the privacy promise anything.
+
+### Cut: the language switcher
+
+**Rejected outright.** Five languages that do nothing is a worse interface than
+one language honestly. Localisation is a stage — string extraction, a catalogue,
+translated warnings and caveats, and somebody who reads each language to check
+the output — not a dropdown.
+
+### Cut: the "Conversion guide" nav item
+
+There is no guide, and writing one is its own piece of work. What somebody
+clicking it actually wants — what converts to what, and why the rest does not —
+is on `/matrix`, which exists. A second nav item pointing at the same answer
+would be the dead control this rule is about.
+
+### `trailingSlash: true`, so a route resolves on any static host
+
+Adding `/matrix` exposed an ambiguity that had never mattered with one page.
+The export wrote `matrix.html` _and_ a `matrix/` directory holding only RSC
+payloads, so whether `/matrix` resolved depended on how a host broke that tie.
+GitHub Pages guesses well; a host that looks for `matrix/index.html` and stops
+serves a 404 on a link the site itself prints.
+
+`trailingSlash: true` writes `matrix/index.html` and removes the question.
+`pnpm verify:browser` found this on its first run, before it could ship.
+
+**Rejected:** relying on GitHub Pages resolving `/matrix` to `matrix.html`. It
+does, and this repo has already shipped one green deploy over a broken site;
+host-specific behaviour is not where the next one should come from.
+
+### `verify:browser` walks the interface's own links
+
+It collects every `<a href>` on each page, follows the internal ones against the
+built export, and checks that each in-page anchor names an element that is
+really there. It reads the links off the page rather than from a list kept
+beside them, so a route added or removed shows up without anybody remembering.
+
+Its first run found the `/matrix` 404 above. Its second found a bug in itself:
+dead links were being added to the conversion-failure counter, so the summary
+read "112/114 pairs converted" when all 114 had converted and two links were
+dead. The counters are separate now — a number that reads as one thing and
+means another is the failure this whole script exists to prevent.
+
+---
+
 ## 2026-09-18 — Kiln became Recast
 
 ### The product is named Recast

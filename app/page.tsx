@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import DropZone from '@/components/DropZone';
 import JobList from '@/components/JobList';
@@ -10,6 +11,15 @@ import { detectArchive, enqueue } from '@/lib/jobs/runner';
 import { useJobs } from '@/lib/jobs/store';
 import { FORMATS, targetsFor } from '@/lib/registry';
 import { MAX_BYTES } from '@/lib/registry/shared';
+
+/**
+ * Where the source lives, and the only address in the interface.
+ *
+ * An anchor a person clicks is not a request this page makes, so it costs the
+ * privacy promise nothing — but it is still the one outbound link here, which
+ * is why it is written once.
+ */
+const REPO_URL = 'https://github.com/Visaug36/Recast';
 
 const FORMAT_LINE = FORMATS.map((f) => f.toUpperCase()).join(' · ');
 const FORMAT_SENTENCE = 'It reads PDF, DOCX, PPTX, XLSX, CSV, MD, TXT and RTF.';
@@ -137,7 +147,67 @@ export default function Home() {
           onDownload={onDownload}
           onDownloadAll={onDownloadAll}
         />
+
+        <section
+          id="about"
+          aria-labelledby="about-heading"
+          className="mt-24 border-t border-separator pt-8"
+        >
+          <h2 id="about-heading" className="text-heading text-label">
+            About Recast
+          </h2>
+          <p className="mt-2 max-w-prose text-body text-secondary">
+            Recast converts documents in your browser. There is no server, no upload and
+            no account — the page is a static bundle, and once it has loaded you could
+            pull the network cable and every conversion would still work. That is also
+            what limits it: anything needing a rendering engine too large to ship is
+            refused rather than faked, and the{' '}
+            <Link
+              href="/matrix"
+              className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+            >
+              full matrix
+            </Link>{' '}
+            says which.
+          </p>
+          <p className="mt-2 max-w-prose text-body text-secondary">
+            The source is on{' '}
+            <a
+              href={REPO_URL}
+              className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+            >
+              GitHub
+            </a>
+            , including the reasoning behind every refusal.
+          </p>
+        </section>
       </main>
+
+      <footer className="border-t border-separator">
+        <nav
+          aria-label="About Recast"
+          className="mx-auto flex max-w-3xl flex-wrap gap-x-6 gap-y-2 px-5 py-6 text-body text-secondary"
+        >
+          <Link
+            href="/matrix"
+            className="recast-motion underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
+          >
+            The full matrix
+          </Link>
+          <a
+            href="#about"
+            className="recast-motion underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
+          >
+            About
+          </a>
+          <a
+            href={`${REPO_URL}/issues`}
+            className="recast-motion underline decoration-separator underline-offset-4 hover:text-label hover:decoration-secondary"
+          >
+            Report a problem
+          </a>
+        </nav>
+      </footer>
     </div>
   );
 }

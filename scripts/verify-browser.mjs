@@ -57,7 +57,10 @@ const missing = [];
 const server = createServer((req, res) => {
   const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
   const send404 = () => {
-    missing.push(url);
+    // Chromium asks for /favicon.ico on its own even when the page declares an
+    // icon. It is the browser's guess, not a link this site printed, so it is
+    // not a missing asset.
+    if (url !== '/favicon.ico') missing.push(url);
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');
   };
@@ -201,6 +204,11 @@ await page.goto(base, { waitUntil: 'networkidle' });
 
 const results = [];
 let failures = 0;
+
+// Kept apart from `failures`, which is the pair count. Folding these together
+// made "112/114 pairs converted" mean "114 converted and two links are dead",
+// which is a number that reads as one thing and means another.
+let brokenLinks = 0;
 
 for (const fixtureName of SOURCES) {
   // Ask the interface what it offers for this file, rather than telling it.
@@ -363,6 +371,47 @@ for (const fixtureName of SOURCES) {
   if (fontFetches.length === 0) failures += 1;
 }
 
+// --- Every link on the page has to lead somewhere ---------------------------
+//
+// A control that looks live and does nothing is worse than no control. This
+// walks the interface's own links rather than a list kept beside them, so a
+// page added or removed shows up here without anybody remembering to say so.
+{
+  const deadLinks = [];
+
+  for (const from of [base, `${base}/matrix`]) {
+    await page.goto(from, { waitUntil: 'networkidle' });
+
+    const links = await page.$$eval('a[href]', (nodes) =>
+      nodes.map((a) => ({ href: a.getAttribute('href'), text: a.textContent.trim() })),
+    );
+
+    for (const link of links) {
+      const href = link.href ?? '';
+
+      // An in-page anchor is dead unless the element it names is really there.
+      if (href.startsWith('#')) {
+        const target = await page.$(href);
+        if (!target) deadLinks.push(`${from} → ${href} (no such element)`);
+        continue;
+      }
+
+      // Off-site links are somebody else's to serve; the privacy check above
+      // already proves the page never fetches them on its own.
+      if (/^https?:/i.test(href)) continue;
+
+      const url = href.startsWith('/') ? `${origin}${href}` : new URL(href, from).href;
+      const response = await page.request.get(url);
+      if (!response.ok()) deadLinks.push(`${from} → ${href} (${response.status()})`);
+    }
+  }
+
+  console.log(
+    `\nLinks that lead nowhere: ${deadLinks.length === 0 ? 'none' : deadLinks.join(', ')}`,
+  );
+  brokenLinks = deadLinks.length;
+}
+
 // --- The page must stay usable while a conversion runs ---------------------
 await page.goto(base, { waitUntil: 'networkidle' });
 await page.setInputFiles('input[type=file]', join(fixtures, 'sample.xlsx'));
@@ -415,5 +464,11 @@ server.close();
 console.log(
   `\n${results.length - failures}/${results.length} pairs converted in the browser.`,
 );
-if (failures > 0 || offOrigin.length > 0 || uploads.length > 0 || notFound.length > 0)
+if (
+  failures > 0 ||
+  brokenLinks > 0 ||
+  offOrigin.length > 0 ||
+  uploads.length > 0 ||
+  notFound.length > 0
+)
   process.exit(1);

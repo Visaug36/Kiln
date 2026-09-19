@@ -11,6 +11,52 @@ would be two places to keep true, and the numbers below are the link.
 
 ---
 
+## Stage 8 — Recast, warnings with a severity, and no dead controls · 19 Sep
+
+**Shipped.** Three commits. The rename, on its own, with the published site
+verified at its basePath rather than assumed. Then the functional half of the
+redesign: every warning classified `lost`, `changed` or `note` where it is
+written, `lost` never collapsed, notes behind a disclosure, and the routed
+step carried as a field so the sentence stays the sentence somebody wrote.
+Progress replaced with the worker's actual state — the PDF reader counts pages,
+the workbook reader sheets, the EPUB reader chapters. Then `/matrix`, an About
+section and "Report a problem"; a language switcher and a conversion guide cut
+rather than shipped dead.
+
+**Broke.** Two bugs, known-bugs #16–#17, plus two found by new checks on their
+first run.
+
+#16 was recorded in `OPEN.md` rather than discovered: four warnings gave
+instructions about a file the reader never had. Three more had the same shape
+once anybody looked.
+
+#17 never ran: adding progress without touching the runner's timeout would have
+produced a conversion that reported its way steadily to being killed at sixty
+seconds.
+
+Then `verify:browser`'s new link walk found `/matrix` 404ing on a conservative
+host, because the export wrote `matrix.html` beside a `matrix/` directory with
+no index in it. And the same run found a bug in the check itself: dead links
+were counted into the conversion total, so it printed "112/114 pairs converted"
+when all 114 had converted.
+
+**Taught.** Three things.
+
+A classification has to live where the fact is known. Deciding severity in the
+component by matching words like "dropped" was the smaller change and fails in
+the worst direction — the first rephrasing demotes a real loss to a note, and
+nothing says so.
+
+A timeout measures the wrong thing the moment something else starts reporting
+liveness. Sixty seconds without settling meant "wedged" until progress existed;
+then it meant "wedged, or merely long".
+
+And a check written this stage found two bugs in its first two runs, one of them
+its own. A new check is worth more than the thing it was written for, and is
+itself worth distrusting until it has failed on purpose at least once.
+
+---
+
 ## Stage 7 — The repo's memory · `f323b27` · 17 Sep
 
 **Shipped.** No product code. `docs/DECISIONS.md`, `docs/STAGES.md` and
