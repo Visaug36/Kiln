@@ -125,14 +125,20 @@ do not claim more.
 
 Small, real, and waiting for the right stage rather than for a decision.
 
-### The three severities are real; their treatment is provisional
+### Per-pair pages are sketched in the design and do not exist
 
-Every warning is classified `lost`, `changed` or `note` at the point of loss,
-notes collapse and lost never does. What that looks like — the grouping
-headings, the weight of each tier — was chosen inside the existing nine-colour
-palette because `design/Recast.dc.html` was not in the repo when the work was
-done. The behaviour is settled and tested; the styling is the design's to
-decide.
+`design/Recast.dc.html` has a `/pdf-to-markdown` screen: one page per pair, with
+what survives, what does not, and a drop zone scoped to it. That is 114 pages,
+and the four "Most used" links on the home screen point at them — which is why
+those links were cut rather than built.
+
+**Why it stays open:** it is a stage, not a detail. The content is already in
+the registry, so the pages would be generated rather than written, but routing,
+titles, the sitemap and what a pair page says when a pair is refused are all
+decisions nobody has made.
+
+**What would change it:** your call on whether the matrix is enough. It answers
+the same question in one page.
 
 ### `xlsx → pdf` clipping is now a `lost` warning, and still clips
 

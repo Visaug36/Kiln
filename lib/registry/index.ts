@@ -22,7 +22,7 @@ export type {
   Route,
 } from './types';
 
-export { FAMILY, FORMATS, FORMAT_LABEL, familyOf } from './formats';
+export { FAMILY, FORMATS, FORMAT_DESCRIPTION, FORMAT_LABEL, familyOf } from './formats';
 export { converters } from './table';
 export { allRoutes, edge, find, targetsFor } from './routing';
 export {

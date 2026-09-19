@@ -63,11 +63,15 @@ describe('the screen', () => {
   it('shows the hero and the privacy promise', () => {
     render(<Home />);
 
-    expect(screen.getByRole('heading', { name: 'Drop a document' })).toBeInTheDocument();
-    expect(screen.getByText('Files never leave your browser')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Convert documents without uploading them.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Nothing is uploaded')).toBeInTheDocument();
     // Derived from the registry, so it cannot fall behind the format list.
-    expect(screen.getByText(/^PDF · DOCX · ODT · /)).toBeInTheDocument();
-    expect(screen.getByText(/ · CSV · JSON$/)).toBeInTheDocument();
+    expect(screen.getByText(/^\.pdf \.docx \.odt /)).toBeInTheDocument();
+    expect(screen.getByText(/\.csv \.json$/)).toBeInTheDocument();
   });
 
   it('has no job list until a file arrives', () => {
@@ -197,7 +201,7 @@ describe('nothing on the page leads nowhere', () => {
 
     const about = screen
       .getAllByRole('link')
-      .find((link) => link.getAttribute('href') === '#about');
+      .find((link) => link.getAttribute('href') === '/#about');
 
     expect(about).toBeDefined();
     // The one failure mode of an in-page anchor: it looks alive and moves the
@@ -215,10 +219,15 @@ describe('nothing on the page leads nowhere', () => {
 
     // A language switcher and a conversion guide were both cut rather than
     // shipped dead. If either comes back, it comes back with a page behind it.
+    // Every destination the interface offers, and nothing that leads nowhere.
+    // A language switcher and a conversion guide are both in the design and
+    // both deliberately absent: see DECISIONS.md.
     expect(new Set(hrefs)).toEqual(
       new Set([
+        '/',
+        '/#formats',
+        '/#about',
         '/matrix',
-        '#about',
         'https://github.com/Visaug36/Recast',
         'https://github.com/Visaug36/Recast/issues',
       ]),

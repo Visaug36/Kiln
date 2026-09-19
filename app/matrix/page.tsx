@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import FormatIcon from '@/components/FormatIcon';
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import { FORMATS, FORMAT_LABEL } from '@/lib/registry';
 import { matrix, totals } from '@/lib/registry/matrix';
 import { unsupported } from '@/lib/registry/unsupported';
@@ -36,23 +39,13 @@ export default function MatrixPage() {
   }
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 border-b border-separator bg-canvas-blur backdrop-blur-[20px]">
-        <div className="mx-auto flex max-w-5xl items-baseline justify-between gap-4 px-5 py-4">
-          <Link
-            href="/"
-            className="recast-motion text-heading tracking-[-0.01em] text-label"
-          >
-            Recast
-          </Link>
-          <p className="text-body text-secondary">Files never leave your browser</p>
-        </div>
-      </header>
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-5 pt-12 pb-24">
-        <h1 className="text-hero text-label">The full matrix</h1>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-16 sm:px-10">
+        <h1 className="text-title text-label">The full matrix</h1>
 
-        <p className="mt-4 max-w-prose text-body text-secondary">
+        <p className="mt-3 max-w-[640px] text-[16px]/[1.6] text-secondary">
           {counts.formats} formats and {counts.pairs} pairs — {counts.direct} converted
           directly, {counts.routed} by passing through a hub format on the way.{' '}
           {counts.refused} more are refused on purpose, with the reason for each below.
@@ -87,7 +80,9 @@ export default function MatrixPage() {
                     scope="row"
                     className="border-b border-separator py-2 pr-4 text-left font-mono text-[13px] font-normal whitespace-nowrap text-label"
                   >
-                    .{FORMATS[index]}
+                    <span className="flex items-center gap-2">
+                      <FormatIcon format={FORMATS[index]!} size={18} />.{FORMATS[index]}
+                    </span>
                   </th>
                   {cells.map((cell) => (
                     <td
@@ -104,7 +99,7 @@ export default function MatrixPage() {
         </div>
 
         <h2 className="mt-12 text-heading text-label">Why the rest are refused</h2>
-        <p className="mt-2 max-w-prose text-body text-secondary">
+        <p className="mt-2 max-w-[640px] text-small text-secondary">
           The constraint that makes Recast private is the same one that limits it, so
           these are written down rather than hidden. There is no waiting list.
         </p>
@@ -112,7 +107,7 @@ export default function MatrixPage() {
         <ul className="mt-6 space-y-6">
           {[...reasons].map(([reason, pairs]) => (
             <li key={reason}>
-              <p className="max-w-prose text-body text-label">{reason}</p>
+              <p className="max-w-[640px] text-small text-ink">{reason}</p>
               <p className="mt-1 font-mono text-[13px] leading-5 text-tertiary">
                 {pairs.join(' · ')}
               </p>
@@ -120,15 +115,17 @@ export default function MatrixPage() {
           ))}
         </ul>
 
-        <p className="mt-12 text-body text-secondary">
+        <p className="mt-12">
           <Link
             href="/"
-            className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+            className="recast-motion inline-flex h-11 items-center rounded-control bg-plum px-5 text-[15px] font-semibold text-on-plum"
           >
             Convert a document
           </Link>
         </p>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
@@ -157,5 +154,5 @@ function CellText({ cell }: { cell: Cell }) {
       </span>
     );
   }
-  return <span className="text-label">direct</span>;
+  return <span className="font-medium text-plum-text">direct</span>;
 }

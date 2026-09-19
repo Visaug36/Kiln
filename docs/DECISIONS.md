@@ -99,6 +99,113 @@ either "fix" them or trust them without checking.
 
 ---
 
+## 2026-09-19 — The approved design
+
+`design/Recast.dc.html` is committed and is the source of truth. The ember-and-
+warm-neutral palette and Inter are gone; the identity is an ink-plum, Schibsted
+Grotesk and Spline Sans Mono.
+
+### The typefaces are self-hosted, and the design file's CDN link is not copied
+
+The design links Google's stylesheet, because a design file has to render
+somewhere. The product loads both faces through `next/font`, which downloads
+them at build time and serves them from Recast's own origin.
+
+**Rejected:** the `<link>` from the design file. It would be one line and it
+would end the privacy claim — the page is supposed to contact nobody, and
+`verify:browser` fails the build on any off-origin request. Every value was
+taken from the design; the one thing that was not is the thing that would have
+made the design a lie.
+
+### `ink`, not `body`, for running-prose colour
+
+Tailwind resolves `text-<name>` against both the font-size and the colour
+namespaces, so a `--text-body` size beside a `--color-body` makes `text-body`
+mean whichever it reaches first. Caught while writing the tokens, not after.
+
+### `tokens.md` is now checked against `globals.css`
+
+`test/tokens.test.ts` parses both and compares every colour in both themes,
+plus the radii and the curve. It also asserts the forced-dark block and the
+`prefers-color-scheme` block are identical, which nothing else did.
+
+**Rejected:** trusting the reference. It is the file anybody building a
+component reads, so a value that drifts is trusted and wrong — the same failure
+as a caveat that stopped being true, one layer down. Verified by changing a hex
+digit and watching it fail.
+
+### The staff is tilted 12°, which is the ceiling and not the middle
+
+The tilt was asked for at 12–15°. Rendered at 0, 9, 10, 11, 12, 13 and 15 and
+looked at as pixels: the stone stops crowning the shaft between 12 and 13. It is
+24 units across on a 7-unit shaft, so past that its lower facet swings clear and
+opens a notch on the left — which is the silhouette of an axe, and at 15° that
+is plainly what it looks like.
+
+16px did not decide it. The head is a distinct blob above the stroke at every
+angle tried, so the deciding evidence was 512px, where the tilt changes what the
+object _is_. That costs more than a tilt costing a pixel.
+
+**Rejected:** changing the head's proportions to hold a steeper angle. The
+design specifies the geometry with its own 16px argument; the angle was the
+thing being asked about, so the angle is what moved.
+
+### The Lost block is the theme inverted
+
+From the design: `bg-label` with `text-surface`, so it is a dark block in light
+mode and a light one in dark, set at a type size nothing else on the row uses.
+It is the only element in the interface that inverts.
+
+**Rejected:** three shades of grey, which is what the treatment was before the
+design arrived. The tiers were real and tested, and looked almost identical —
+which is how a row that lost something gets skimmed past.
+
+### Markdown's tile is the one format colour with a theme
+
+Its field is near-black, which is the format's identity and is invisible against
+a dark card. It inverts rather than greying, so it stays the black-and-white one
+in both themes and does not collide with `txt`, which is already grey. Found by
+looking at the dark screenshot, not by reading the palette.
+
+### The network counter counts off-origin requests, not all of them
+
+The design's line reads "network requests since you opened this page: 0". That
+number would be false: opening Recast fetches its own scripts and fonts, and
+dropping a file fetches the engine for that pair. What is true, and is the
+actual promise, is that none of them go anywhere else.
+
+**Rejected:** printing 0 as designed. A counter that is wrong about the one
+thing it exists to demonstrate is worse than no counter.
+
+**Rejected:** dropping it. Counting is better than claiming, and this is the
+same number `verify:browser` asserts on every commit — put where somebody can
+see it without opening a network panel.
+
+### Three things in the design were not built
+
+- **The language switcher**, again. Five languages that do nothing is a worse
+  interface than one language honestly.
+- **"Conversion guide"**, again. There is no guide; what somebody clicking it
+  wants is `/matrix`, which exists.
+- **The "Most used" row** — `pdf → docx`, `pdf → md` and so on as links. They
+  point at per-pair pages the design sketches and this build does not have, and
+  a conversion shortcut with no file to convert has nowhere to go. It would be
+  four dead controls in the most prominent position on the page.
+
+Also cut: the footer's **`v1.4.2`**, because Recast has no version to state and
+inventing one to fill the space is a small untruth in a product whose whole
+claim is that it does not tell them. And the claim row's **"Engine 4.1 MB,
+cached"**, because ours is 5.2 MB and a hardcoded figure is exactly the kind of
+number this repo has watched go stale.
+
+### The offline claim gained its exception
+
+The design says "Once this page has loaded it needs nothing else." Almost true:
+a Chinese or Japanese document fetches a Noto face from Recast's own origin at
+conversion time. The claim now says so. A caveat is a promise.
+
+---
+
 ## 2026-09-19 — A deploy is only done when the site says so
 
 ### `main` is the default branch, and the site publishes from it

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { acceptAttribute } from '@/lib/files/detect';
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -73,7 +74,7 @@ export default function DropZone({ onFiles, children }: DropZoneProps) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.docx,.pptx,.xlsx,.csv,.tsv,.md,.markdown,.txt,.text,.rtf"
+        accept={acceptAttribute()}
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
@@ -90,9 +91,9 @@ export default function DropZone({ onFiles, children }: DropZoneProps) {
         aria-label="Choose a document to convert, or drop one anywhere on the page"
         onClick={() => inputRef.current?.click()}
         className={[
-          'recast-motion block w-full rounded-drop border border-dashed bg-surface',
-          'px-6 py-12 text-center shadow-recast sm:px-10 sm:py-16',
-          dragging ? 'recast-dropzone--active' : 'border-separator hover:border-tertiary',
+          'recast-motion block w-full rounded-control border-2 border-dashed',
+          'bg-plum-wash px-4 py-6 text-center sm:px-6 sm:py-8',
+          dragging ? 'recast-dropzone--active' : 'border-plum-edge hover:border-plum',
         ].join(' ')}
       >
         {children}

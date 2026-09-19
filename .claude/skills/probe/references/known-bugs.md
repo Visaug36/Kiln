@@ -499,6 +499,47 @@ same field.
 
 ---
 
+## The design stage: what the interface claimed it could do
+
+### 20. The file picker would not let you choose six of the fourteen formats
+
+**Symptom** Clicking "choose a file" and picking an `.odt` was impossible — the
+dialog greyed it out. Same for `.ods`, `.odp`, `.html`, `.epub` and `.json`.
+Dragging one in worked fine, which is why nobody hit it.
+
+**Detected** By grepping for components naming a format, while fixing the
+adjacent `FORMAT_SENTENCE` bug. Not by a test and not by a report.
+
+**Root cause** A hand-written `accept` attribute,
+`.pdf,.docx,.pptx,.xlsx,.csv,.tsv,.md,.markdown,.txt,.text,.rtf`, frozen at
+eight formats while the registry grew to fourteen. The same shape as the
+sentence beside it, and worse: the sentence described the product wrongly, the
+attribute blocked the action.
+
+**Test** `acceptAttribute()` derives it from `FORMATS` and the alias map, so a
+new format appears in the dialog when it is declared.
+
+**The shape to watch for** "No component hardcodes a format" is a rule about
+attributes too, not only about visible text. A list that is right when written
+and never asserted is a list that is wrong later.
+
+### 21. A colour token and a size token with the same name
+
+**Symptom** None yet — caught before it shipped.
+
+**Root cause** Tailwind resolves `text-<name>` against both the font-size and
+the colour namespaces. `--text-body: 15px` beside `--color-body: #35303f` makes
+`text-body` mean whichever one it reaches first, and the loser fails silently
+with the utility still applied.
+
+**Test** None directly; the colour is named `ink` so the collision cannot
+happen. `test/tokens.test.ts` would catch the drift it caused.
+
+**The shape to watch for** A design system with two namespaces and one word.
+Name the thing that is less likely to be typed.
+
+---
+
 ## Two tests that passed for the wrong reason
 
 Worth recording separately, because a test that passes against broken code is

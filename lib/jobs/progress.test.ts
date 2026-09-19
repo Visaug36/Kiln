@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { announceProgress, describeProgress } from './progress';
 
 describe('what a converting row says', () => {
-  it('falls back to a plain sentence before the worker has reported', () => {
-    expect(describeProgress(undefined, 'pdf')).toBe('Converting…');
+  it('says nothing before the worker has reported', () => {
+    // The row prints "Converting" beside this, so a fallback that repeats the
+    // word reads as "Converting… Converting".
+    expect(describeProgress(undefined, 'pdf')).toBe('');
   });
 
   it('names the page it is on', () => {

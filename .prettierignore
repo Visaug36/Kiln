@@ -4,3 +4,4 @@ node_modules
 pnpm-lock.yaml
 public/recast-worker
 test/fixtures
+design/

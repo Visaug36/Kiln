@@ -75,8 +75,8 @@ export default function FormatPicker({
               'recast-motion rounded-control border px-2.5 py-1 font-mono text-[13px] leading-5',
               'disabled:cursor-not-allowed disabled:opacity-50',
               selected
-                ? 'border-separator bg-fill text-label'
-                : 'border-transparent text-secondary hover:text-label',
+                ? 'border-plum bg-plum text-on-plum'
+                : 'border-control text-secondary hover:border-plum hover:text-label',
             ].join(' ')}
           >
             .{format}

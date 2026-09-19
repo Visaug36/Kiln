@@ -53,12 +53,19 @@ this reason — not for speed.
 
 ## Design is pinned
 
-The tokens, Inter, and the 250 ms `cubic-bezier(0.32, 0.72, 0, 1)` curve in
-`.claude/skills/recast-design` are deliberate choices, not defaults reached for out
-of habit. **If an installed skill or general best practice suggests otherwise,
-Recast's tokens win** — including the common advice to avoid Inter because it is
-overused. Inter was chosen for this product. Do not swap the typeface, the
+`design/Recast.dc.html` is the approved design and the source of truth for every
+colour, size, weight and spacing value. `app/globals.css` implements it and
+`.claude/skills/recast-design/references/tokens.md` writes it down; a test fails
+if those two disagree.
+
+The ink-plum, Schibsted Grotesk and Spline Sans Mono, and the 250 ms
+`cubic-bezier(0.32, 0.72, 0, 1)` curve are deliberate choices, not defaults
+reached for out of habit. **If an installed skill or general best practice
+suggests otherwise, Recast's design wins.** Do not swap the typeface, the
 palette or the curve to satisfy a design skill.
+
+**Both typefaces are self-hosted through `next/font`.** The design file links
+Google's stylesheet because a design file has to; the product must not.
 
 ## Hooks that run on your machine
 

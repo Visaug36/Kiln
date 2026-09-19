@@ -149,9 +149,9 @@ The same reasoning is why Recast's own committed hooks in `.claude/settings.json
 call only the repo's own package scripts — no network, no third-party service, no
 proxy.
 
-One conflict worth knowing about: `frontend-design` discourages Inter as
-overused. Inter is a deliberate choice for Recast, and `CLAUDE.md` overrides that
-advice.
+One conflict worth knowing about: a design skill will have opinions about the
+typeface and the palette. Recast's come from `design/Recast.dc.html`, which is
+approved, and `CLAUDE.md` says that wins.
 
 ### The skills in this repo
 
@@ -699,6 +699,11 @@ through `@theme inline` so they follow the live theme. There are no hardcoded
 colours in component files. Dark mode follows `prefers-color-scheme` and can be
 forced with a `.dark` or `.light` class on `<html>`.
 
-Ember — the one warm accent — is spent on at most one thing per screen: the
-single converting job. Everything else is warm neutral. Keep it that way in
-review.
+Ink-plum is the only hue: the hero field, primary buttons, the converting card
+and the focus ring. Everything else is a neutral carrying a trace of it. The one
+exception is the fourteen format tiles, which are each format's own colour so a
+row is identifiable before its label is read.
+
+`design/Recast.dc.html` is the approved design and the source of every value.
+`app/globals.css` implements it, `.claude/skills/recast-design/references/tokens.md`
+writes it down, and `test/tokens.test.ts` fails if those two disagree.

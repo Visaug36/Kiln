@@ -70,6 +70,43 @@ could have caught it is the one that fetches the URL.
 
 ---
 
+## Stage 9 — The approved design · 19 Sep
+
+**Shipped.** `design/Recast.dc.html`, and the interface rebuilt to it. Ink-plum,
+Schibsted Grotesk and Spline Sans Mono self-hosted through `next/font`; the
+staff icon at 16/32/180/512 plus an SVG favicon; fourteen format tiles from one
+table keyed on `Format`; home and `/matrix` in both themes and at 390. The three
+severity tiers got the design's treatment — the Lost block inverts the theme —
+and the converting row got a determinate bar reading the page count the worker
+already sends.
+
+**Broke.** Two bugs, known-bugs #20–#21, and three things the design did not
+cover that only showed up on screen.
+
+`FORMAT_SENTENCE` named eight formats where the registry declares fourteen. Next
+to it, worse: the file picker's `accept` list named the same eight, so somebody
+clicking "choose a file" could not select an `.odt`, `.ods`, `.odp`, `.html`,
+`.epub` or `.json` at all. The front page said Recast read them and the dialog
+would not let you pick one.
+
+Then: a `--text-body` size beside a `--color-body` makes `text-body` ambiguous;
+Markdown's near-black tile vanishes on a dark card; and "Converting…" beside the
+word "Converting" once the design split the state from the detail.
+
+**Taught.** Look at it. Every one of the three things the design did not cover
+was found in a screenshot, and none of them would have failed a test — a tile
+the same colour as its card renders perfectly, and a duplicated word is valid
+HTML. The tilt is the same lesson from the other side: 16px was legible at every
+angle tried, and the thing that decided it was 512px, where the staff stopped
+being a staff.
+
+And that a design file is a description of a product, not the product. Its CDN
+font link, its `0` network counter, its `v1.4.2` and its `4.1 MB` engine are all
+correct in a mockup and would all be untrue here. Taking the values and checking
+the claims is the whole job.
+
+---
+
 ## Stage 7 — The repo's memory · `f323b27` · 17 Sep
 
 **Shipped.** No product code. `docs/DECISIONS.md`, `docs/STAGES.md` and

@@ -1,20 +1,26 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Mono, Inter } from 'next/font/google';
+import { Schibsted_Grotesk, Spline_Sans_Mono } from 'next/font/google';
 import { THEME_COLOR } from '@/lib/theme';
 import './globals.css';
 
 /* next/font downloads these at build time and serves them from Recast's own
-   origin. No request reaches a font CDN when someone opens the page. */
-const inter = Inter({
+   origin. No request reaches a font CDN when someone opens the page — which is
+   what makes "files never leave your browser" checkable rather than asserted,
+   and what lets the page keep working with the network unplugged.
+
+   The design file links Google's stylesheet because a design file has to; the
+   product must not, and `pnpm verify:browser` fails on any off-origin request. */
+const grotesk = Schibsted_Grotesk({
   subsets: ['latin'],
-  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-grotesk',
   display: 'swap',
 });
 
-const plexMono = IBM_Plex_Mono({
+const splineMono = Spline_Sans_Mono({
   subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
+  weight: ['400', '500', '600'],
+  variable: '--font-spline-mono',
   display: 'swap',
 });
 
@@ -29,7 +35,14 @@ export const metadata: Metadata = {
   title: 'Recast — convert documents in your browser',
   description:
     'Convert between PDF, Word, OpenDocument, RTF, HTML, EPUB, Markdown, plain text, PowerPoint, Excel, CSV and JSON. Every conversion runs in your browser; files never leave your machine.',
-  icons: { icon: `${basePath}/icon.svg` },
+  icons: {
+    icon: [
+      { url: `${basePath}/icon.svg`, type: 'image/svg+xml' },
+      { url: `${basePath}/icon-32.png`, sizes: '32x32', type: 'image/png' },
+      { url: `${basePath}/icon-16.png`, sizes: '16x16', type: 'image/png' },
+    ],
+    apple: `${basePath}/icon-180.png`,
+  },
 };
 
 export const viewport: Viewport = {
@@ -41,7 +54,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${grotesk.variable} ${splineMono.variable}`}>
       <body>{children}</body>
     </html>
   );

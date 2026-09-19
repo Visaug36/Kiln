@@ -71,6 +71,31 @@ export const FORMAT_LABEL: Record<Format, string> = {
 };
 
 /**
+ * What the format is, in three or four words.
+ *
+ * Here rather than in the component that shows it, for the same reason
+ * `FORMAT_LABEL` is: a format's description is a fact about the format, and a
+ * table of them in a component is a list that falls behind the union without
+ * anything failing.
+ */
+export const FORMAT_DESCRIPTION: Record<Format, string> = {
+  pdf: 'Portable Document',
+  docx: 'Word document',
+  odt: 'OpenDocument text',
+  rtf: 'Rich text',
+  html: 'Web page',
+  epub: 'E-book',
+  md: 'Markdown',
+  txt: 'Plain text',
+  pptx: 'PowerPoint deck',
+  odp: 'OpenDocument slides',
+  xlsx: 'Excel workbook',
+  ods: 'OpenDocument sheet',
+  csv: 'Comma-separated',
+  json: 'Structured data',
+};
+
+/**
  * The format every other one in a family connects through.
  *
  * A new format needs a reader to its family's hub and a writer from it, and

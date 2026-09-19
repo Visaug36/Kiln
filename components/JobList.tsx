@@ -32,8 +32,8 @@ export default function JobList({
   );
 
   return (
-    <section aria-label="Conversions" className="mt-10">
-      <ul className="border-t border-separator">
+    <section aria-label="Conversions" className="mt-5">
+      <ul className="flex flex-col gap-3.5">
         {jobs.map((job) => (
           <JobRow
             key={job.id}
@@ -46,7 +46,7 @@ export default function JobList({
       </ul>
 
       {completed.length >= 2 && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-separator pt-4 text-body">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-separator pt-4 text-body">
           <span className="text-secondary">
             {completed.length} documents
             {fileCount > completed.length && ` · ${fileCount} files`}
@@ -54,7 +54,7 @@ export default function JobList({
           <button
             type="button"
             onClick={onDownloadAll}
-            className="recast-motion font-medium text-label underline decoration-separator underline-offset-4 hover:decoration-label"
+            className="recast-motion h-11 rounded-control border border-control px-4 text-[15px] font-semibold text-label hover:border-plum"
           >
             Download all
           </button>

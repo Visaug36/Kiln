@@ -9,7 +9,10 @@ import type { Format, Progress } from '@/lib/registry/types';
  * the same numbers without any engine being touched again.
  */
 export function describeProgress(progress: Progress | undefined, to: Format): string {
-  if (!progress) return 'Converting…';
+  // Empty rather than "Converting…", because the row already says that beside
+  // this: the design puts the state word and the detail side by side, so a
+  // fallback that repeats the word produced "Converting… Converting".
+  if (!progress) return '';
 
   const step =
     progress.step && progress.steps && progress.steps > 1

@@ -5,28 +5,46 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
-   Palette. Every colour in Recast is one of these nine. Components reference the
-   Tailwind names below, never a literal value.
+   Palette, from `design/Recast.dc.html`. Components reference the Tailwind
+   names below, never a literal value.
+
+   The brand is an ink-plum — mixed for this product, not a framework's default
+   violet. It is the one hue in the interface; everything else is a neutral
+   carrying a trace of it, so the greys sit with the purple instead of beside
+   it.
    --------------------------------------------------------------------------- */
 
 :root {
-  --canvas: #fcfcfa;
+  --canvas: #f7f6f9;
   --surface: #ffffff;
-  --fill: #f3f2ef;
-  --separator: #e6e4df;
-  --label: #1d1c1a;
-  --secondary: #6e6c68;
-  --tertiary: #a5a29c;
-  --ember: #d2551f;
-  --ember-tint: #fbeee7;
+  --fill: #f3f1f7;
+  --separator: #e4e1eb;
+  --control: #d6d2e0;
 
-  /* #d2551f reaches only 4.04:1 on canvas, short of AA for 15px text. Ember
-     as a fill, border, tint or focus ring is unchanged — this darker step is
-     used solely where ember has to carry small text. */
-  --ember-text: #b8491a;
+  --label: #16141c;
+  --ink: #35303f;
+  --secondary: #5d5866;
+  --tertiary: #8b8497;
+
+  --plum: #5b1d8e;
+  --plum-deep: #4a1570;
+  --plum-text: #6b2199;
+  --plum-edge: #d8bff0;
+  --plum-wash: #faf6fe;
+  --plum-track: #eee3f8;
+  --on-plum: #f8f5ff;
+  --on-plum-soft: #f0e7ff;
+
+  /* The one format tile that needs a theme. Markdown's field is near-black —
+     which is its identity, and which disappears against a dark card. It is
+     inverted in dark mode rather than greyed, so the tile stays the
+     black-and-white one either way. The other thirteen are saturated enough
+     to sit on both surfaces unchanged, and live in `FormatIcon.tsx`. */
+  --format-md: #1f1d26;
+  --format-md-ink: #ffffff;
 
   /* Derived once, so it follows whichever palette is active. */
-  --canvas-blur: color-mix(in srgb, var(--canvas) 80%, transparent);
+  --canvas-blur: color-mix(in srgb, var(--surface) 82%, transparent);
   --ease-recast: cubic-bezier(0.32, 0.72, 0, 1);
 
   color-scheme: light;
@@ -34,32 +52,56 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --canvas: #161513;
-    --surface: #1f1e1c;
-    --fill: #262522;
-    --separator: #33322e;
-    --label: #f5f4f1;
-    --secondary: #a5a29c;
-    --tertiary: #6e6c68;
-    --ember: #ff7a45;
-    --ember-tint: #2a1a12;
-    --ember-text: #ff7a45;
+    --canvas: #121016;
+    --surface: #1a1720;
+    --fill: #2c2836;
+    --separator: #2c2836;
+    --control: #3a3546;
+
+    --label: #f3f1f7;
+    --ink: #cdc6d8;
+    --secondary: #a29cb0;
+    --tertiary: #6b6577;
+
+    --plum: #7a34b8;
+    --plum-deep: #5a1f8a;
+    --plum-text: #c9a2f2;
+    --plum-edge: #4a2a6b;
+    --plum-wash: #1f1530;
+    --plum-track: #2a1d3d;
+    --on-plum: #f8f5ff;
+    --on-plum-soft: #f0e7ff;
+
+    --format-md: #f3f1f7;
+    --format-md-ink: #1f1d26;
 
     color-scheme: dark;
   }
 }
 
 :root.dark {
-  --canvas: #161513;
-  --surface: #1f1e1c;
-  --fill: #262522;
-  --separator: #33322e;
-  --label: #f5f4f1;
-  --secondary: #a5a29c;
-  --tertiary: #6e6c68;
-  --ember: #ff7a45;
-  --ember-tint: #2a1a12;
-  --ember-text: #ff7a45;
+  --canvas: #121016;
+  --surface: #1a1720;
+  --fill: #2c2836;
+  --separator: #2c2836;
+  --control: #3a3546;
+
+  --label: #f3f1f7;
+  --ink: #cdc6d8;
+  --secondary: #a29cb0;
+  --tertiary: #6b6577;
+
+  --plum: #7a34b8;
+  --plum-deep: #5a1f8a;
+  --plum-text: #c9a2f2;
+  --plum-edge: #4a2a6b;
+  --plum-wash: #1f1530;
+  --plum-track: #2a1d3d;
+  --on-plum: #f8f5ff;
+  --on-plum-soft: #f0e7ff;
+
+  --format-md: #f3f1f7;
+  --format-md-ink: #1f1d26;
 
   color-scheme: dark;
 }
@@ -74,35 +116,74 @@
   --color-surface: var(--surface);
   --color-fill: var(--fill);
   --color-separator: var(--separator);
+  --color-control: var(--control);
+
   --color-label: var(--label);
+  --color-ink: var(--ink);
   --color-secondary: var(--secondary);
   --color-tertiary: var(--tertiary);
-  --color-ember: var(--ember);
-  --color-ember-tint: var(--ember-tint);
-  --color-ember-text: var(--ember-text);
+
+  --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-plum-text: var(--plum-text);
+  --color-plum-edge: var(--plum-edge);
+  --color-plum-wash: var(--plum-wash);
+  --color-plum-track: var(--plum-track);
+  --color-on-plum: var(--on-plum);
+  --color-on-plum-soft: var(--on-plum-soft);
   --color-canvas-blur: var(--canvas-blur);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
 
-  /* Inter for the interface. */
-  --text-hero: 48px;
+  /* Schibsted Grotesk for the interface. */
+  --text-hero: 44px;
   --text-hero--line-height: 1.08;
-  --text-hero--font-weight: 600;
+  --text-hero--font-weight: 800;
   --text-hero--letter-spacing: -0.025em;
 
+  --text-title: 29px;
+  --text-title--line-height: 1.2;
+  --text-title--font-weight: 700;
+  --text-title--letter-spacing: -0.02em;
+
+  --text-section: 26px;
+  --text-section--line-height: 1.2;
+  --text-section--font-weight: 700;
+  --text-section--letter-spacing: -0.02em;
+
   --text-heading: 19px;
-  --text-heading--line-height: 26px;
-  --text-heading--font-weight: 500;
+  --text-heading--line-height: 1.3;
+  --text-heading--font-weight: 700;
+
+  --text-wordmark: 21px;
+  --text-wordmark--line-height: 1;
+  --text-wordmark--font-weight: 700;
+  --text-wordmark--letter-spacing: -0.015em;
+
+  --text-lead: 17px;
+  --text-lead--line-height: 1.6;
+  --text-lead--font-weight: 400;
+
+  --text-prose: 15.5px;
+  --text-prose--line-height: 1.65;
+  --text-prose--font-weight: 400;
 
   --text-body: 15px;
-  --text-body--line-height: 24px;
+  --text-body--line-height: 20px;
   --text-body--font-weight: 400;
 
-  --radius-control: 12px;
-  --radius-drop: 20px;
+  --text-small: 14.5px;
+  --text-small--line-height: 1.55;
+  --text-small--font-weight: 400;
 
-  --shadow-recast: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  /* The one warning that must not be missed, set larger than anything near it. */
+  --text-lost: 19px;
+  --text-lost--line-height: 1.4;
+  --text-lost--font-weight: 500;
+
+  --radius-control: 8px;
+  --radius-chip: 4px;
 
   --ease-recast: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -119,7 +200,7 @@
   body {
     background-color: var(--canvas);
     color: var(--label);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
     font-size: 15px;
     line-height: 24px;
     font-weight: 400;
@@ -134,38 +215,68 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--ember);
+    outline: 2px solid var(--plum);
     outline-offset: 2px;
     border-radius: 4px;
+  }
+
+  /* The disclosure marker is drawn, not inherited. */
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
   }
 }
 
 /* ---------------------------------------------------------------------------
-   Motion. One curve, one duration. Reduced motion keeps opacity only.
+   Motion. One curve for transitions; two named animations the design specifies
+   for a conversion in flight, and nothing else.
    --------------------------------------------------------------------------- */
 
 @layer components {
   .recast-motion {
-    transition-property: transform, background-color, border-color, color, opacity;
+    transition-property: color, background-color, border-color, opacity, transform;
     transition-duration: 250ms;
     transition-timing-function: var(--ease-recast);
   }
 
   .recast-dropzone--active {
-    transform: scale(1.012);
-    background-color: var(--ember-tint);
-    border-color: var(--ember);
+    border-color: var(--plum);
+    background-color: var(--plum-wash);
   }
 
   .recast-row-enter {
     animation: recast-rise 250ms var(--ease-recast) both;
+  }
+
+  /* The caret on a notes disclosure, which turns rather than swaps. */
+  .recast-caret {
+    transition: transform 150ms var(--ease-recast);
+  }
+
+  details[open] > summary .recast-caret {
+    transform: rotate(90deg);
+  }
+
+  /* A conversion that is running. Both from the design: the word breathes, and
+     a highlight travels the determinate bar so a stalled job looks different
+     from a slow one. */
+  .recast-pulse {
+    animation: recast-pulse 2.2s ease-in-out infinite;
+  }
+
+  .recast-sheen {
+    animation: recast-slide 2.4s linear infinite;
   }
 }
 
 @keyframes recast-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -173,17 +284,44 @@
   }
 }
 
+@keyframes recast-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes recast-slide {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(560%);
+  }
+}
+
+/* Reduced motion keeps colour and opacity and drops movement. A conversion in
+   flight still has to look like it is running, so the pulse stays and only the
+   travelling highlight goes. */
 @media (prefers-reduced-motion: reduce) {
   .recast-motion {
-    transition-property: opacity, background-color, border-color, color;
+    transition-property: color, background-color, border-color, opacity;
   }
 
-  .recast-dropzone--active {
-    transform: none;
+  .recast-caret {
+    transition-property: none;
   }
 
   .recast-row-enter {
     animation: recast-fade 250ms linear both;
+  }
+
+  .recast-sheen {
+    animation: none;
+    display: none;
   }
 
   @keyframes recast-fade {

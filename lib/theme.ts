@@ -7,6 +7,6 @@
  * They mirror `--canvas` in each theme. Change one, change the other.
  */
 export const THEME_COLOR = {
-  light: '#FCFCFA',
-  dark: '#161513',
+  light: '#f7f6f9',
+  dark: '#121016',
 } as const;

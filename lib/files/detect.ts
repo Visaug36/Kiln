@@ -18,6 +18,23 @@ const ALIASES: Record<string, Format> = {
   otp: 'odp',
 };
 
+/**
+ * What the file picker will offer, as an `accept` attribute.
+ *
+ * Derived, because it was hand-written and had fallen six formats behind: it
+ * listed `.pdf,.docx,.pptx,.xlsx,.csv,.tsv,.md,.markdown,.txt,.text,.rtf`,
+ * so somebody clicking "choose a file" could not select an `.odt`, `.ods`,
+ * `.odp`, `.html`, `.epub` or `.json` at all. Recast reads all six. The
+ * front page said so and the dialog disagreed, which is worse than a wrong
+ * sentence — it blocked the action rather than describing it badly.
+ */
+export function acceptAttribute(): string {
+  return [
+    ...FORMATS.map((f) => `.${f}`),
+    ...Object.keys(ALIASES).map((a) => `.${a}`),
+  ].join(',');
+}
+
 /** The part after the final dot, lowercased. Empty when there is no extension. */
 export function extensionOf(filename: string): string {
   const dot = filename.lastIndexOf('.');

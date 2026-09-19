@@ -76,8 +76,8 @@ describe('the warning hierarchy', () => {
       />,
     );
 
-    expect(screen.getByText('What was lost')).toBeInTheDocument();
-    expect(screen.getByText('What changed')).toBeInTheDocument();
+    expect(screen.getByText('Lost')).toBeInTheDocument();
+    expect(screen.getByText('Changed')).toBeInTheDocument();
     expect(screen.getByText('1 note')).toBeInTheDocument();
 
     // Two lost, two changed, one note — the note is the only one hidden.

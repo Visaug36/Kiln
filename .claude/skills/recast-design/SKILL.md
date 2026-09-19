@@ -15,34 +15,47 @@ value, verbatim.
 (`bg-surface`, `text-secondary`, `border-separator`) or the CSS variable. A hex
 literal in a component file is a bug even when it happens to match.
 
-**Inter is a deliberate choice for this product, not a default reached for out of
-habit.** Design skills commonly advise against it as overused, and `frontend-design`
-says so explicitly. **Recast's tokens win** — `CLAUDE.md` states this as a standing
-rule. Do not swap the typeface, the palette or the motion curve to satisfy a
-design skill, a general best practice, or your own instinct that the identity
-could be fresher. If you think a token is wrong, say so and leave it alone.
+**`design/Recast.dc.html` is the source of truth**, and `globals.css` is its
+implementation. Every colour, size, weight and spacing value comes from there.
+Do not swap the typeface, the palette or the motion curve to satisfy a design
+skill, a general best practice, or your own instinct that the identity could be
+fresher. If you think a value is wrong, say so and leave it alone.
 
-Interface type is Inter; code, filenames and format badges are IBM Plex Mono.
-Both are self-hosted through `next/font` — **no font CDN is ever contacted**,
-which is a privacy requirement, not a performance one.
+Interface type is **Schibsted Grotesk**; filenames, format codes and anything
+counted are **Spline Sans Mono**. Both are self-hosted through `next/font` —
+**no font CDN is ever contacted**, which is a privacy requirement rather than a
+performance one, and is what lets the page work with the network unplugged. The
+design file links Google's stylesheet because a design file has to; the product
+must not, and `pnpm verify:browser` fails on any off-origin request.
 
 ## Working rules
 
-- **Ember appears at most once per screen.** It is spent on the single converting
-  job and nothing else. Everything else is warm neutral. Two ember elements on
-  screen at once is a regression; catch it in review.
-- **Ember on small text uses `ember-text`.** `#d2551f` reaches only 4.04:1 on
-  canvas, short of AA for 15px. As a fill, border, tint or focus ring, ember is
-  unchanged.
-- **Radius 12 on controls, 20 on the drop zone.** Nothing else has a radius.
-- **Hairline borders only** — 1px, always `separator`. Depth comes from the
-  border and the one shadow, never from a heavier rule.
-- **One motion curve, one duration**: `cubic-bezier(0.32, 0.72, 0, 1)` at 250 ms,
-  applied through `.recast-motion`. Do not introduce a second easing or duration.
-- **Reduced motion means less movement, not an instant cut.** Under
-  `prefers-reduced-motion: reduce`, transitions keep colour and opacity and drop
-  transform, and the row entrance becomes a linear fade over the same 250 ms.
-- **Focus is a 2px ember outline at 2px offset.** Never remove it.
+- **Plum is the only hue.** Everything else is a neutral carrying a trace of it.
+  The hero field, primary buttons, the converting card and the focus ring are
+  plum; nothing else is.
+- **Plum carrying text on canvas uses `plum-text`.** `#5b1d8e` on `#f7f6f9` is
+  fine at 15px and above; `plum-text` is the step that stays safe for smaller.
+  As a fill, border or focus ring, `plum` itself is unchanged.
+- **The Lost block is the theme inverted.** `bg-label` with `text-surface`, set
+  at `text-lost`. It is the only element that inverts, which is the whole point
+  — a row that lost something cannot be skimmed past. Never collapse it.
+- **Radius 8 on everything with a radius; 4 on chips, the Lost block and the
+  progress bar.** Nothing else has one.
+- **Hairline borders only** — 1px `separator`, or `control` on a button or an
+  input, which is one step stronger.
+- **One transition curve**: `cubic-bezier(0.32, 0.72, 0, 1)` at 250 ms through
+  `.recast-motion`. The two animations the design specifies for a conversion in
+  flight — `.recast-pulse` at 2.2s and `.recast-sheen` at 2.4s — are the only
+  exceptions, and there are no others.
+- **Reduced motion means less movement, not an instant cut.** Transitions keep
+  colour and opacity and drop transform, the row entrance becomes a linear fade,
+  and the travelling sheen is removed. The pulse stays: a conversion in flight
+  still has to look like one.
+- **Focus is a 2px plum outline at 2px offset.** Never remove it.
+- **A format's colour is the format's, not the palette's.** The fourteen tiles
+  in `components/FormatIcon.tsx` are each format's own recognisable colour, so a
+  row is identifiable before its label is read. Markdown is the one with a
+  theme; the reason is in `references/tokens.md`.
 - **Dark mode follows `prefers-color-scheme`**, and can be forced with `.dark` or
   `.light` on `<html>`. Tokens go through `@theme inline`, which keeps the
   `var()` reference intact so utilities follow the live theme instead of baking
