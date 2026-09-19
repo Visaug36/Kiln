@@ -84,8 +84,12 @@ build time, so the published site is reproduced by giving both commands the same
 prefix:
 
 ```bash
-NEXT_PUBLIC_BASE_PATH=/Recast pnpm build
-NEXT_PUBLIC_BASE_PATH=/Recast pnpm verify:browser
+# The prefix is the repository name, the same value CI derives from
+# GITHUB_REPOSITORY. Deriving it here too means it survives a rename.
+BASE="/$(basename -s .git "$(git remote get-url origin)")"
+
+NEXT_PUBLIC_BASE_PATH="$BASE" pnpm build
+NEXT_PUBLIC_BASE_PATH="$BASE" pnpm verify:browser
 ```
 
 Any request the export makes that the prefix does not cover is reported as a

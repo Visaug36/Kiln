@@ -34,8 +34,12 @@ deploy rather than waiting to be spotted.
 ## 2. Every pair in a real browser
 
 ```bash
-NEXT_PUBLIC_BASE_PATH=/Recast pnpm build
-NEXT_PUBLIC_BASE_PATH=/Recast pnpm verify:browser
+# The prefix is the repository name, the same value CI derives from
+# GITHUB_REPOSITORY. Deriving it here too means it survives a rename.
+BASE="/$(basename -s .git "$(git remote get-url origin)")"
+
+NEXT_PUBLIC_BASE_PATH="$BASE" pnpm build
+NEXT_PUBLIC_BASE_PATH="$BASE" pnpm verify:browser
 ```
 
 The prefix matters. A Pages project site is served from `/<repo>`, and that
@@ -55,7 +59,7 @@ Four things must all appear at the end:
 Off-origin requests: none
 Requests with a body: none
 Console errors: none
-Assets served at /Recast: all found
+Assets served at /<repo>: all found
 
 114/114 pairs converted in the browser.
 ```

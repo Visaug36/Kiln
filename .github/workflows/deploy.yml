@@ -14,12 +14,14 @@ name: Deploy to GitHub Pages
 
 on:
   push:
+    # `main` is the default branch, so it is the only one Pages will publish
+    # from. Feature branches were listed here while one of them *was* the
+    # default; both have since been merged and deleted, and a trigger naming a
+    # branch that no longer exists is a line nobody can tell is dead. Add a
+    # branch back to get it built and tested in flight — the deploy job below
+    # skips it either way.
     branches:
       - main
-      # The stage-1 scaffold branch, kept so work in flight on it still deploys.
-      - claude/compassionate-lovelace-s20gwv
-      # The Recast branch, so it is built and tested while it is in flight.
-      - claude/friendly-goodall-ahpb2g
   workflow_dispatch:
 
 permissions:
