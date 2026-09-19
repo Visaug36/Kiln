@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<style>
+body{margin:0;background:#e9e5ee;font-family:'Schibsted Grotesk',system-ui,sans-serif}
+a:focus-visible,button:focus-visible,select:focus-visible,label:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid #5b1d8e;outline-offset:2px;border-radius:4px}
+summary{list-style:none;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+details[open] .rc-car{transform:rotate(90deg)}
+@keyframes rc-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes rc-slide{0%{transform:translateX(-110%)}100%{transform:translateX(560%)}}
+</style></helmet>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="f-pdf" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#c8332b"></rect><text x="12" y="16.1" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="8.4" letter-spacing="-.3" fill="#ffffff">PDF</text></symbol>
+<symbol id="f-docx" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#23509c"></rect><text x="12" y="17" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="13" fill="#ffffff">W</text></symbol>
+<symbol id="f-xlsx" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#1a6f41"></rect><text x="12" y="17" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="13" fill="#ffffff">X</text></symbol>
+<symbol id="f-pptx" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#b8431a"></rect><text x="12" y="17" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="13" fill="#ffffff">P</text></symbol>
+<symbol id="f-epub" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#17666b"></rect><text x="12" y="17" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="13" fill="#ffffff">E</text></symbol>
+<symbol id="f-odt" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#35659f"></rect><text x="12" y="16.4" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="11.5" fill="#ffffff">W</text><rect x="4.6" y="18.4" width="14.8" height="1.7" rx=".85" fill="#ffffff" opacity=".85"></rect></symbol>
+<symbol id="f-ods" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#237549"></rect><text x="12" y="16.4" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="11.5" fill="#ffffff">X</text><rect x="4.6" y="18.4" width="14.8" height="1.7" rx=".85" fill="#ffffff" opacity=".85"></rect></symbol>
+<symbol id="f-odp" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#c98a1e"></rect><text x="12" y="16.4" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="11.5" fill="#1d1a10">P</text><rect x="4.6" y="18.4" width="14.8" height="1.7" rx=".85" fill="#1d1a10" opacity=".8"></rect></symbol>
+<symbol id="f-html" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#d9731a"></rect><text x="12" y="15.9" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="6.6" letter-spacing="-.25" fill="#1d1408">HTML</text></symbol>
+<symbol id="f-md" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#1f1d26"></rect><text x="12" y="16.6" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="10.4" letter-spacing="-.4" fill="#ffffff">MD</text></symbol>
+<symbol id="f-txt" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#6b6577"></rect><text x="12" y="16.2" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="8.2" letter-spacing="-.3" fill="#ffffff">TXT</text></symbol>
+<symbol id="f-rtf" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#4a6a8c"></rect><text x="12" y="16.2" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="8.2" letter-spacing="-.3" fill="#ffffff">RTF</text></symbol>
+<symbol id="f-csv" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#5fae6b"></rect><text x="12" y="16.2" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="8.2" letter-spacing="-.3" fill="#102e16">CSV</text></symbol>
+<symbol id="f-json" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#c9a227"></rect><text x="12" y="15.9" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="700" font-size="6.6" letter-spacing="-.25" fill="#241c00">JSON</text></symbol>
+<symbol id="u-drop" viewBox="0 0 24 24"><path d="M12 2.5v11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M7.5 9.5 12 14l4.5-4.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M3.5 15.5v4a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path></symbol>
+<symbol id="u-check" viewBox="0 0 24 24"><path d="m4 12.5 5.5 5.5L20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+<symbol id="u-arrow" viewBox="0 0 24 24"><path d="M3.5 12h16M13.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+<symbol id="s-lost" viewBox="0 0 24 24"><path d="M3.5 3.5h17v10h-7v7h-10z" fill="currentColor"></path></symbol>
+<symbol id="s-changed" viewBox="0 0 24 24"><rect x="4.25" y="4.25" width="15.5" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"></rect><path d="M4.25 4.25h15.5v7.75H4.25z" fill="currentColor"></path></symbol>
+<symbol id="s-note" viewBox="0 0 24 24"><rect x="4.25" y="4.25" width="15.5" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"></rect></symbol>
+<symbol id="u-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18" fill="none" stroke="currentColor" stroke-width="2.2"></path></symbol>
+<symbol id="brand-mark" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#5b1d8e"></rect><rect x="28.5" y="24" width="7" height="34" rx="1.5" fill="#f6f0fc"></rect><path d="M32 3 44 15 32 27 20 15z" fill="#f6f0fc"></path></symbol>
+<symbol id="brand-mark-mono" viewBox="0 0 64 64"><rect x="28.5" y="24" width="7" height="34" rx="1.5" fill="currentColor"></rect><path d="M32 3 44 15 32 27 20 15z" fill="currentColor"></path></symbol>
+</svg>
+
+<div style="padding:34px 40px 12px">
+<div style="display:flex;align-items:center;gap:14px">
+<svg width="34" height="34" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<div>
+<div style="font:700 21px/1.2 'Schibsted Grotesk',sans-serif;color:#16141c">Recast — revision 2</div>
+<div style="font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866">Ink-plum <span style="font-family:'Spline Sans Mono',monospace;font-size:13px">#5b1d8e</span> · staff mark · letterform format tiles in each format's own colour · marketing furniture cut</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:44px;padding:20px 40px 60px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">Home — light · 1280</div>
+<div data-screen-label="Home light" style="width:1280px;background:#f7f6f9;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+
+<header style="display:flex;align-items:center;gap:30px;height:68px;padding:0 40px;background:#ffffff;border-bottom:1px solid #e4e1eb">
+<a href="#home" style="display:flex;align-items:center;gap:11px;text-decoration:none;padding:12px 0">
+<svg width="28" height="28" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:700 21px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">Recast</span>
+</a>
+<nav style="display:flex;align-items:center;gap:24px">
+<a href="#formats" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Conversion guide</a>
+<a href="#about" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">About</a>
+</nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<label for="lang-home" style="font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">Language</label>
+<select id="lang-home" style="height:44px;padding:0 12px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#16141c">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option><option>Français</option><option>日本語</option>
+</select>
+<a href="#source" style="display:flex;align-items:center;height:44px;padding:0 14px;border:1px solid #d6d2e0;border-radius:8px;font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#16141c;text-decoration:none">Source code</a>
+</div>
+</header>
+
+<section style="background:#5b1d8e;padding:46px 40px 50px">
+<div style="display:flex;gap:44px;align-items:flex-start">
+<div style="flex:1;min-width:0;padding:6px 0 0">
+<h1 style="margin:0;max-width:540px;font:800 44px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-.025em;color:#f8f5ff">Convert documents without uploading them.</h1>
+<p style="margin:18px 0 0;max-width:500px;font:400 17px/1.6 'Schibsted Grotesk',sans-serif;color:#f0e7ff">Recast turns a PDF into a Word file, a spreadsheet into JSON, an EPUB into Markdown — and does the whole job inside this browser tab. The file never reaches a server, because there isn't one.</p>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 0">
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#4a1570;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>Nothing is uploaded</span>
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#4a1570;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>No account</span>
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#4a1570;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>No analytics, no cookies</span>
+</div>
+<p style="margin:22px 0 0;font:400 14px/1.6 'Spline Sans Mono',monospace;color:#f0e7ff">network requests since you opened this page: 0</p>
+</div>
+
+<div style="flex:none;width:540px;background:#ffffff;border-radius:8px;padding:22px">
+<div style="border:2px dashed #d8bff0;border-radius:8px;padding:30px 24px;text-align:center;background:#faf6fe">
+<svg width="34" height="34" style="color:#5b1d8e" aria-hidden="true"><use href="#u-drop"></use></svg>
+<div style="margin:12px 0 0;font:700 20px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">Drop a document here</div>
+<div style="margin:6px 0 0;font:400 14.5px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866">Anywhere on the page works — the whole window is a drop target.</div>
+<label for="file-home" style="display:inline-flex;align-items:center;justify-content:center;height:46px;margin:18px 0 0;padding:0 22px;background:#5b1d8e;border-radius:8px;font:600 15.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Choose a file</label>
+<input id="file-home" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+<div style="margin:12px 0 0;font:400 13px/1.5 'Spline Sans Mono',monospace;color:#5d5866">.pdf .docx .xlsx .pptx .epub .odt .ods .odp .html .md .txt .rtf .csv .json</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:18px 0 0">
+<span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#35303f">Most used:</span>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">pdf → docx</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">pdf → md</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">xlsx → csv</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">epub → md</a>
+</div>
+</div>
+</div>
+</section>
+
+<section id="formats" style="padding:44px 40px 10px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:30px">
+<div>
+<h2 style="margin:0;font:700 29px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em;color:#16141c">Fourteen formats, 114 conversion pairs</h2>
+<p style="margin:9px 0 0;max-width:620px;font:400 16px/1.6 'Schibsted Grotesk',sans-serif;color:#5d5866">Every pair is a real converter, not a re-upload. Pick any two and Recast will tell you exactly what survives the trip.</p>
+</div>
+<a href="#guide" style="display:flex;align-items:center;gap:8px;padding:12px 0;font:600 15px/20px 'Schibsted Grotesk',sans-serif;color:#6b2199;text-decoration:none">See the full matrix<svg width="17" height="17" aria-hidden="true"><use href="#u-arrow"></use></svg></a>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin:24px 0 0">
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-pdf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Portable Document</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">9 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-docx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">docx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Word document</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">11 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-xlsx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">xlsx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Excel workbook</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">8 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-pptx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">pptx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">PowerPoint deck</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">5 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-epub"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">epub</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">E-book</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">7 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-odt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">odt</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">OpenDocument text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">10 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-ods"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">ods</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">OpenDocument sheet</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">8 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-odp"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">odp</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">OpenDocument slides</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">5 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-html"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">html</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Web page</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">9 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-md"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">md</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Markdown</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">9 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-txt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">txt</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Plain text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">6 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-rtf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">rtf</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Rich text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">8 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-csv"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">csv</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Comma-separated</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">6 targets</div></a>
+<a href="#formats" style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-json"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">json</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#5d5866">Structured data</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#6b2199">4 targets</div></a>
+</div>
+</section>
+
+<section style="padding:36px 40px 0">
+<div style="display:flex;gap:40px;padding:20px 22px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px">
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-drop"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">The converter comes to you.</b> The engine downloads once and runs on your machine. Open the network tab and drop a file — nothing leaves.</p></div>
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#s-lost"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">It tells you what it broke.</b> Formats disagree, so something always gives. Recast separates what was lost from what merely changed.</p></div>
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-check"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">It keeps working offline.</b> Once this page has loaded it needs nothing else. Engine 4.1 MB, cached.</p></div>
+</div>
+</section>
+
+<section id="about" style="padding:30px 40px 40px">
+<div style="display:flex;gap:16px;max-width:760px">
+<svg width="30" height="30" style="flex:none;margin-top:2px" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<div>
+<h2 style="margin:0;font:700 19px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">About</h2>
+<p style="margin:8px 0 0;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#35303f">I kept sending contracts and payslips through converter sites that quietly keep a copy, so I built one that can't. Recast is a side project, it is finished enough to use every day, and it will stay free because there is nothing to run.</p>
+<p style="margin:10px 0 0;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#35303f">The whole thing is on GitHub — issues and pull requests welcome, especially for formats I have not got to yet.</p>
+<a href="https://github.com/visaug36/Recast" style="display:inline-block;margin:10px 0 0;padding:11px 0;font:500 15px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0">github.com/visaug36/Recast</a>
+</div>
+</div>
+</section>
+
+<footer style="background:#ffffff;border-top:1px solid #e4e1eb;padding:22px 40px 24px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:22px">
+<a href="#formats" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Conversion guide</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Source code</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Report a problem</a>
+<span style="font:400 13.5px/1 'Spline Sans Mono',monospace;color:#5d5866">v1.4.2</span>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<svg width="17" height="17" style="color:#5d5866" aria-hidden="true"><use href="#u-globe"></use></svg>
+<label for="lang-foot" style="font:400 14px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">Language</label>
+<select id="lang-foot" style="height:44px;padding:0 12px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#16141c">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option><option>Français</option><option>日本語</option>
+</select>
+</div>
+</footer>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#8b8497">Home — dark · 1280</div>
+<div data-screen-label="Home dark" style="width:1280px;background:#121016;font-family:'Schibsted Grotesk',sans-serif;color:#f3f1f7;border:1px solid #3a3546;border-radius:8px;overflow:hidden">
+
+<header style="display:flex;align-items:center;gap:30px;height:68px;padding:0 40px;background:#1a1720;border-bottom:1px solid #2c2836">
+<a href="#home" style="display:flex;align-items:center;gap:11px;text-decoration:none;padding:12px 0">
+<svg width="28" height="28" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:700 21px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#f3f1f7">Recast</span>
+</a>
+<nav style="display:flex;align-items:center;gap:24px">
+<a href="#formats" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Conversion guide</a>
+<a href="#about" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">About</a>
+</nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<label for="lang-home-d" style="font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#a29cb0">Language</label>
+<select id="lang-home-d" style="height:44px;padding:0 12px;background:#1a1720;border:1px solid #3a3546;border-radius:8px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option><option>Français</option><option>日本語</option>
+</select>
+<a href="#source" style="display:flex;align-items:center;height:44px;padding:0 14px;border:1px solid #3a3546;border-radius:8px;font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7;text-decoration:none">Source code</a>
+</div>
+</header>
+
+<section style="background:#7a34b8;padding:46px 40px 50px">
+<div style="display:flex;gap:44px;align-items:flex-start">
+<div style="flex:1;min-width:0;padding:6px 0 0">
+<h1 style="margin:0;max-width:540px;font:800 44px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-.025em;color:#f8f5ff">Convert documents without uploading them.</h1>
+<p style="margin:18px 0 0;max-width:500px;font:400 17px/1.6 'Schibsted Grotesk',sans-serif;color:#f0e7ff">Recast turns a PDF into a Word file, a spreadsheet into JSON, an EPUB into Markdown — and does the whole job inside this browser tab. The file never reaches a server, because there isn't one.</p>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 0">
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#5a1f8a;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>Nothing is uploaded</span>
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#5a1f8a;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>No account</span>
+<span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#5a1f8a;border-radius:4px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff"><svg width="15" height="15" style="color:#f8f5ff" aria-hidden="true"><use href="#u-check"></use></svg>No analytics, no cookies</span>
+</div>
+<p style="margin:22px 0 0;font:400 14px/1.6 'Spline Sans Mono',monospace;color:#f0e7ff">network requests since you opened this page: 0</p>
+</div>
+
+<div style="flex:none;width:540px;background:#1a1720;border-radius:8px;padding:22px">
+<div style="border:2px dashed #4a2a6b;border-radius:8px;padding:30px 24px;text-align:center;background:#1f1530">
+<svg width="34" height="34" style="color:#7a34b8" aria-hidden="true"><use href="#u-drop"></use></svg>
+<div style="margin:12px 0 0;font:700 20px/1.3 'Schibsted Grotesk',sans-serif;color:#f3f1f7">Drop a document here</div>
+<div style="margin:6px 0 0;font:400 14.5px/1.5 'Schibsted Grotesk',sans-serif;color:#a29cb0">Anywhere on the page works — the whole window is a drop target.</div>
+<label for="file-home-d" style="display:inline-flex;align-items:center;justify-content:center;height:46px;margin:18px 0 0;padding:0 22px;background:#7a34b8;border-radius:8px;font:600 15.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Choose a file</label>
+<input id="file-home-d" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+<div style="margin:12px 0 0;font:400 13px/1.5 'Spline Sans Mono',monospace;color:#a29cb0">.pdf .docx .xlsx .pptx .epub .odt .ods .odp .html .md .txt .rtf .csv .json</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:18px 0 0">
+<span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Most used:</span>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b;padding:12px 0">pdf → docx</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b;padding:12px 0">pdf → md</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b;padding:12px 0">xlsx → csv</a>
+<a href="#pdf-to-markdown" style="font:500 14.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b;padding:12px 0">epub → md</a>
+</div>
+</div>
+</div>
+</section>
+
+<section id="formats" style="padding:44px 40px 10px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:30px">
+<div>
+<h2 style="margin:0;font:700 29px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em;color:#f3f1f7">Fourteen formats, 114 conversion pairs</h2>
+<p style="margin:9px 0 0;max-width:620px;font:400 16px/1.6 'Schibsted Grotesk',sans-serif;color:#a29cb0">Every pair is a real converter, not a re-upload. Pick any two and Recast will tell you exactly what survives the trip.</p>
+</div>
+<a href="#guide" style="display:flex;align-items:center;gap:8px;padding:12px 0;font:600 15px/20px 'Schibsted Grotesk',sans-serif;color:#c9a2f2;text-decoration:none">See the full matrix<svg width="17" height="17" aria-hidden="true"><use href="#u-arrow"></use></svg></a>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin:24px 0 0">
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-pdf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">pdf</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Portable Document</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">9 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-docx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">docx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Word document</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">11 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-xlsx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">xlsx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Excel workbook</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">8 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-pptx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">pptx</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">PowerPoint deck</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">5 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-epub"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">epub</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">E-book</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">7 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-odt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">odt</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">OpenDocument text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">10 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-ods"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">ods</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">OpenDocument sheet</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">8 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-odp"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">odp</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">OpenDocument slides</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">5 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-html"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">html</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Web page</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">9 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-md"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">md</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Markdown</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">9 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-txt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">txt</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Plain text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">6 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-rtf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">rtf</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Rich text</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">8 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-csv"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">csv</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Comma-separated</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">6 targets</div></a>
+<a href="#formats" style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:14px;text-decoration:none;display:block"><svg width="30" height="30" aria-hidden="true"><use href="#f-json"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#f3f1f7">json</div><div style="margin:5px 0 0;font:400 13px/1.35 'Schibsted Grotesk',sans-serif;color:#a29cb0">Structured data</div><div style="margin:8px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#c9a2f2">4 targets</div></a>
+</div>
+</section>
+
+<section style="padding:36px 40px 0">
+<div style="display:flex;gap:40px;padding:20px 22px;background:#1a1720;border:1px solid #2c2836;border-radius:8px">
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#7a34b8;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-drop"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#cdc6d8"><b style="font-weight:600;color:#f3f1f7">The converter comes to you.</b> The engine downloads once and runs on your machine. Open the network tab and drop a file — nothing leaves.</p></div>
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#7a34b8;flex:none;margin-top:2px" aria-hidden="true"><use href="#s-lost"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#cdc6d8"><b style="font-weight:600;color:#f3f1f7">It tells you what it broke.</b> Formats disagree, so something always gives. Recast separates what was lost from what merely changed.</p></div>
+<div style="flex:1;display:flex;gap:11px"><svg width="18" height="18" style="color:#7a34b8;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-check"></use></svg><p style="margin:0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#cdc6d8"><b style="font-weight:600;color:#f3f1f7">It keeps working offline.</b> Once this page has loaded it needs nothing else. Engine 4.1 MB, cached.</p></div>
+</div>
+</section>
+
+<section id="about" style="padding:30px 40px 40px">
+<div style="display:flex;gap:16px;max-width:760px">
+<svg width="30" height="30" style="flex:none;margin-top:2px" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<div>
+<h2 style="margin:0;font:700 19px/1.3 'Schibsted Grotesk',sans-serif;color:#f3f1f7">About</h2>
+<p style="margin:8px 0 0;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#cdc6d8">I kept sending contracts and payslips through converter sites that quietly keep a copy, so I built one that can't. Recast is a side project, it is finished enough to use every day, and it will stay free because there is nothing to run.</p>
+<p style="margin:10px 0 0;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#cdc6d8">The whole thing is on GitHub — issues and pull requests welcome, especially for formats I have not got to yet.</p>
+<a href="https://github.com/visaug36/Recast" style="display:inline-block;margin:10px 0 0;padding:11px 0;font:500 15px/1 'Spline Sans Mono',monospace;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b">github.com/visaug36/Recast</a>
+</div>
+</div>
+</section>
+
+<footer style="background:#1a1720;border-top:1px solid #2c2836;padding:22px 40px 24px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:22px">
+<a href="#formats" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Conversion guide</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Source code</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Report a problem</a>
+<span style="font:400 13.5px/1 'Spline Sans Mono',monospace;color:#a29cb0">v1.4.2</span>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<svg width="17" height="17" style="color:#a29cb0" aria-hidden="true"><use href="#u-globe"></use></svg>
+<label for="lang-foot-d" style="font:400 14px/1 'Schibsted Grotesk',sans-serif;color:#a29cb0">Language</label>
+<select id="lang-foot-d" style="height:44px;padding:0 12px;background:#1a1720;border:1px solid #3a3546;border-radius:8px;font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option><option>Français</option><option>日本語</option>
+</select>
+</div>
+</footer>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">Converting — light · 1280</div>
+<div data-screen-label="Converting light" style="width:1280px;background:#f7f6f9;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+
+<header style="display:flex;align-items:center;gap:30px;height:68px;padding:0 40px;background:#ffffff;border-bottom:1px solid #e4e1eb">
+<a href="#home" style="display:flex;align-items:center;gap:11px;text-decoration:none;padding:12px 0">
+<svg width="28" height="28" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:700 21px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">Recast</span>
+</a>
+<nav style="display:flex;align-items:center;gap:24px">
+<a href="#formats" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Conversion guide</a>
+<a href="#about" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">About</a>
+</nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<span style="font:400 13.5px/1 'Spline Sans Mono',monospace;color:#5d5866">0 bytes sent</span>
+<a href="#source" style="display:flex;align-items:center;height:44px;padding:0 14px;border:1px solid #d6d2e0;border-radius:8px;font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#16141c;text-decoration:none">Source code</a>
+</div>
+</header>
+
+<div style="padding:30px 40px 0;display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+<div>
+<h1 style="margin:0;font:700 26px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em;color:#16141c">Four documents in this tab</h1>
+<p style="margin:7px 0 0;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#5d5866">Nothing here has been uploaded. Closing the tab discards the queue — download what you need first.</p>
+</div>
+<label for="file-queue" style="display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border:1px solid #d6d2e0;border-radius:8px;background:#ffffff;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#16141c;cursor:pointer">Add another file</label>
+<input id="file-queue" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+</div>
+
+<div style="padding:22px 40px 0;display:flex;flex-direction:column;gap:14px">
+
+<div style="background:#faf6fe;border:1px solid #d8bff0;border-left:3px solid #5b1d8e;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-docx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">quarterly_report.docx</span>
+<svg width="16" height="16" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">.pdf</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#6b2199">page 3 of 12</span>
+<span style="font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#6b2199;animation:rc-pulse 2.2s ease-in-out infinite">Converting</span>
+</div>
+</div>
+<div style="position:relative;height:6px;background:#eee3f8;border-radius:4px;margin:16px 0 0;overflow:hidden">
+<div style="position:absolute;left:0;top:0;bottom:0;width:25%;background:#5b1d8e;border-radius:4px"></div>
+<div style="position:absolute;left:0;top:0;bottom:0;width:14%;background:#f8f5ff;opacity:.5;animation:rc-slide 2.4s linear infinite"></div>
+</div>
+</div>
+
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:18px 22px 20px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">lease_agreement.pdf</span>
+<svg width="16" height="16" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-md"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">.md</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#5d5866">0.9s · 48 KB</span>
+<button type="button" style="height:44px;padding:0 20px;background:#5b1d8e;border:none;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download</button>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-start;gap:14px;margin:18px 0 0;background:#16141c;border-radius:4px;padding:16px 18px">
+<svg width="20" height="20" style="color:#ffffff;flex:none;margin-top:3px" aria-hidden="true"><use href="#s-lost"></use></svg>
+<div>
+<div style="font:700 15px/1 'Schibsted Grotesk',sans-serif;color:#ffffff">Lost</div>
+<div style="margin:7px 0 0;font:500 19px/1.4 'Schibsted Grotesk',sans-serif;color:#ffffff">12 columns were clipped.</div>
+<div style="margin:6px 0 0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#e4e1eb">Markdown tables have no page width, so columns past the thirteenth were dropped rather than wrapped. The original PDF still has them.</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-start;gap:14px;margin:14px 0 0;border-left:3px solid #35303f;padding:2px 0 2px 15px">
+<svg width="18" height="18" style="color:#35303f;flex:none;margin-top:2px" aria-hidden="true"><use href="#s-changed"></use></svg>
+<div>
+<div style="font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#35303f">Changed</div>
+<div style="margin:6px 0 0;font:400 16px/1.5 'Schibsted Grotesk',sans-serif;color:#35303f">Headings were inferred from text size.</div>
+</div>
+</div>
+
+<details style="margin:14px 0 0;border-top:1px solid #e4e1eb;padding:10px 0 0">
+<summary style="display:flex;align-items:center;gap:9px;min-height:32px">
+<span class="rc-car" style="display:inline-block;font:400 10px/1 'Spline Sans Mono',monospace;color:#5d5866;transition:transform .15s">▶</span>
+<svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#s-note"></use></svg>
+<span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">1 note</span>
+</summary>
+<div style="padding:8px 0 4px 23px;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#5d5866">Some formats aren't available for PDF.</div>
+</details>
+</div>
+
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-xlsx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">budget.xlsx</span>
+<svg width="16" height="16" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-json"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#16141c">.json</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#5d5866">0.3s · 12 KB</span>
+<button type="button" style="height:44px;padding:0 20px;background:#5b1d8e;border:none;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download</button>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:9px;margin:12px 0 0">
+<svg width="16" height="16" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg>
+<span style="font:400 15px/1.5 'Schibsted Grotesk',sans-serif;color:#35303f">Nothing was lost or changed. Every row, column and cell type came across.</span>
+</div>
+</div>
+
+<div style="background:#f2f0f6;border:1px solid #e4e1eb;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0;opacity:.7">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pptx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#4a4553">pitch_deck.pptx</span>
+<svg width="16" height="16" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#4a4553">.pdf</span>
+</div>
+<span style="flex:none;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#35303f">Unavailable</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 0">
+<p style="margin:0;max-width:760px;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f">Rendering slide layouts needs software too large to run in a browser.</p>
+<a href="#guide" style="font:500 15px/1.55 'Schibsted Grotesk',sans-serif;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0">What you can do instead</a>
+</div>
+</div>
+
+</div>
+
+<div style="margin:24px 0 0;background:#ffffff;border-top:1px solid #e4e1eb;padding:18px 40px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+<div style="display:flex;align-items:baseline;gap:14px">
+<span style="font:600 16px/1 'Schibsted Grotesk',sans-serif;color:#16141c">4 documents</span>
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#5d5866">2 ready · 1 converting · 1 unavailable</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<button type="button" style="height:44px;padding:0 16px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#16141c;cursor:pointer">Clear finished</button>
+<button type="button" style="height:44px;padding:0 22px;background:#5b1d8e;border:none;border-radius:8px;font:600 15.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download all</button>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#8b8497">Converting — dark · 1280</div>
+<div data-screen-label="Converting dark" style="width:1280px;background:#121016;font-family:'Schibsted Grotesk',sans-serif;color:#f3f1f7;border:1px solid #3a3546;border-radius:8px;overflow:hidden">
+
+<header style="display:flex;align-items:center;gap:30px;height:68px;padding:0 40px;background:#1a1720;border-bottom:1px solid #2c2836">
+<a href="#home" style="display:flex;align-items:center;gap:11px;text-decoration:none;padding:12px 0">
+<svg width="28" height="28" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:700 21px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#f3f1f7">Recast</span>
+</a>
+<nav style="display:flex;align-items:center;gap:24px">
+<a href="#formats" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">Conversion guide</a>
+<a href="#about" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#cdc6d8;text-decoration:none">About</a>
+</nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<span style="font:400 13.5px/1 'Spline Sans Mono',monospace;color:#a29cb0">0 bytes sent</span>
+<a href="#source" style="display:flex;align-items:center;height:44px;padding:0 14px;border:1px solid #3a3546;border-radius:8px;font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7;text-decoration:none">Source code</a>
+</div>
+</header>
+
+<div style="padding:30px 40px 0;display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+<div>
+<h1 style="margin:0;font:700 26px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em;color:#f3f1f7">Four documents in this tab</h1>
+<p style="margin:7px 0 0;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#a29cb0">Nothing here has been uploaded. Closing the tab discards the queue — download what you need first.</p>
+</div>
+<label for="file-queue-d" style="display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border:1px solid #3a3546;border-radius:8px;background:#1a1720;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7;cursor:pointer">Add another file</label>
+<input id="file-queue-d" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+</div>
+
+<div style="padding:22px 40px 0;display:flex;flex-direction:column;gap:14px">
+
+<div style="background:#1f1530;border:1px solid #4a2a6b;border-left:3px solid #7a34b8;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-docx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">quarterly_report.docx</span>
+<svg width="16" height="16" style="color:#a29cb0" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">.pdf</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#c9a2f2">page 3 of 12</span>
+<span style="font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#c9a2f2;animation:rc-pulse 2.2s ease-in-out infinite">Converting</span>
+</div>
+</div>
+<div style="position:relative;height:6px;background:#2a1d3d;border-radius:4px;margin:16px 0 0;overflow:hidden">
+<div style="position:absolute;left:0;top:0;bottom:0;width:25%;background:#7a34b8;border-radius:4px"></div>
+<div style="position:absolute;left:0;top:0;bottom:0;width:14%;background:#f8f5ff;opacity:.5;animation:rc-slide 2.4s linear infinite"></div>
+</div>
+</div>
+
+<div style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:18px 22px 20px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">lease_agreement.pdf</span>
+<svg width="16" height="16" style="color:#a29cb0" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-md"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">.md</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#a29cb0">0.9s · 48 KB</span>
+<button type="button" style="height:44px;padding:0 20px;background:#7a34b8;border:none;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download</button>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-start;gap:14px;margin:18px 0 0;background:#f3f1f7;border-radius:4px;padding:16px 18px">
+<svg width="20" height="20" style="color:#1a1720;flex:none;margin-top:3px" aria-hidden="true"><use href="#s-lost"></use></svg>
+<div>
+<div style="font:700 15px/1 'Schibsted Grotesk',sans-serif;color:#1a1720">Lost</div>
+<div style="margin:7px 0 0;font:500 19px/1.4 'Schibsted Grotesk',sans-serif;color:#1a1720">12 columns were clipped.</div>
+<div style="margin:6px 0 0;font:400 14.5px/1.55 'Schibsted Grotesk',sans-serif;color:#2c2836">Markdown tables have no page width, so columns past the thirteenth were dropped rather than wrapped. The original PDF still has them.</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-start;gap:14px;margin:14px 0 0;border-left:3px solid #cdc6d8;padding:2px 0 2px 15px">
+<svg width="18" height="18" style="color:#cdc6d8;flex:none;margin-top:2px" aria-hidden="true"><use href="#s-changed"></use></svg>
+<div>
+<div style="font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Changed</div>
+<div style="margin:6px 0 0;font:400 16px/1.5 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Headings were inferred from text size.</div>
+</div>
+</div>
+
+<details style="margin:14px 0 0;border-top:1px solid #2c2836;padding:10px 0 0">
+<summary style="display:flex;align-items:center;gap:9px;min-height:32px">
+<span class="rc-car" style="display:inline-block;font:400 10px/1 'Spline Sans Mono',monospace;color:#a29cb0;transition:transform .15s">▶</span>
+<svg width="14" height="14" style="color:#a29cb0" aria-hidden="true"><use href="#s-note"></use></svg>
+<span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#a29cb0">1 note</span>
+</summary>
+<div style="padding:8px 0 4px 23px;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#a29cb0">Some formats aren't available for PDF.</div>
+</details>
+</div>
+
+<div style="background:#1a1720;border:1px solid #2c2836;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-xlsx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">budget.xlsx</span>
+<svg width="16" height="16" style="color:#a29cb0" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-json"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#f3f1f7">.json</span>
+</div>
+<div style="display:flex;align-items:center;gap:16px;flex:none">
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#a29cb0">0.3s · 12 KB</span>
+<button type="button" style="height:44px;padding:0 20px;background:#7a34b8;border:none;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download</button>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:9px;margin:12px 0 0">
+<svg width="16" height="16" style="color:#7a34b8" aria-hidden="true"><use href="#u-check"></use></svg>
+<span style="font:400 15px/1.5 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Nothing was lost or changed. Every row, column and cell type came across.</span>
+</div>
+</div>
+
+<div style="background:#201c28;border:1px solid #2c2836;border-radius:8px;padding:18px 22px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0;opacity:.7">
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pptx"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#8b8497">pitch_deck.pptx</span>
+<svg width="16" height="16" style="color:#a29cb0" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="22" height="22" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<span style="font:500 16px/1.3 'Spline Sans Mono',monospace;color:#8b8497">.pdf</span>
+</div>
+<span style="flex:none;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Unavailable</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 0">
+<p style="margin:0;max-width:760px;font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#cdc6d8">Rendering slide layouts needs software too large to run in a browser.</p>
+<a href="#guide" style="font:500 15px/1.55 'Schibsted Grotesk',sans-serif;color:#c9a2f2;text-decoration:none;border-bottom:1px solid #4a2a6b">What you can do instead</a>
+</div>
+</div>
+
+</div>
+
+<div style="margin:24px 0 0;background:#1a1720;border-top:1px solid #2c2836;padding:18px 40px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+<div style="display:flex;align-items:baseline;gap:14px">
+<span style="font:600 16px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">4 documents</span>
+<span style="font:400 14px/1 'Spline Sans Mono',monospace;color:#a29cb0">2 ready · 1 converting · 1 unavailable</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<button type="button" style="height:44px;padding:0 16px;background:#1a1720;border:1px solid #3a3546;border-radius:8px;font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7;cursor:pointer">Clear finished</button>
+<button type="button" style="height:44px;padding:0 22px;background:#7a34b8;border:none;border-radius:8px;font:600 15.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Download all</button>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">Format pair page — /pdf-to-markdown · 1280</div>
+<div data-screen-label="Pair page" style="width:1280px;background:#f7f6f9;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+
+<header style="display:flex;align-items:center;gap:30px;height:68px;padding:0 40px;background:#ffffff;border-bottom:1px solid #e4e1eb">
+<a href="#home" style="display:flex;align-items:center;gap:11px;text-decoration:none;padding:12px 0">
+<svg width="28" height="28" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:700 21px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">Recast</span>
+</a>
+<nav style="display:flex;align-items:center;gap:24px">
+<a href="#formats" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:600 15px/20px 'Schibsted Grotesk',sans-serif;color:#6b2199;text-decoration:none;border-bottom:2px solid #5b1d8e">Conversion guide</a>
+<a href="#about" style="padding:12px 0;font:500 15px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">About</a>
+</nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<label for="lang-pair" style="font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">Language</label>
+<select id="lang-pair" style="height:44px;padding:0 12px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#16141c">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option>
+</select>
+</div>
+</header>
+
+<div style="padding:22px 40px 0;display:flex;align-items:center;gap:8px;font:400 14px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">
+<a href="#home" style="color:#6b2199;text-decoration:none;padding:12px 0">Home</a><span>/</span>
+<a href="#formats" style="color:#6b2199;text-decoration:none;padding:12px 0">Formats</a><span>/</span>
+<a href="#formats" style="color:#6b2199;text-decoration:none;padding:12px 0;font-family:'Spline Sans Mono',monospace">pdf</a><span>/</span>
+<span style="font-family:'Spline Sans Mono',monospace;color:#35303f">pdf → md</span>
+</div>
+
+<div style="display:flex;gap:44px;padding:6px 40px 0;align-items:flex-start">
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:12px">
+<svg width="40" height="40" aria-hidden="true"><use href="#f-pdf"></use></svg>
+<svg width="20" height="20" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg>
+<svg width="40" height="40" aria-hidden="true"><use href="#f-md"></use></svg>
+</div>
+<h1 style="margin:16px 0 0;font:800 40px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-.025em;color:#16141c">PDF to Markdown</h1>
+<p style="margin:14px 0 0;max-width:640px;font:400 18px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Pull the words out of a PDF and get a Markdown file you can edit anywhere — in a text editor, a notes app, or a repository. The PDF is read by your browser and never sent anywhere.</p>
+
+<h2 style="margin:36px 0 0;font:700 22px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">What to expect from this pair</h2>
+<p style="margin:8px 0 0;max-width:640px;font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#5d5866">A PDF describes a printed page; Markdown describes structure. Some of the page cannot survive that move, so here is the honest account before you start.</p>
+
+<div style="margin:20px 0 0;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:9px">
+<svg width="18" height="18" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg>
+<span style="font:700 16px/1 'Schibsted Grotesk',sans-serif;color:#16141c">Kept</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px 28px;margin:12px 0 0;max-width:620px">
+<span style="font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Body text and paragraph order</span>
+<span style="font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Lists and their nesting</span>
+<span style="font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Links and their targets</span>
+<span style="font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Bold and italic</span>
+<span style="font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Footnote text, moved to the end</span>
+</div>
+</div>
+
+<div style="margin:12px 0 0;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:9px">
+<svg width="18" height="18" style="color:#35303f" aria-hidden="true"><use href="#s-changed"></use></svg>
+<span style="font:700 16px/1 'Schibsted Grotesk',sans-serif;color:#16141c">Changed</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;margin:12px 0 0;max-width:640px">
+<div style="border-left:3px solid #35303f;padding:1px 0 1px 14px;font:400 15.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f">Headings are inferred from text size, since a PDF has no heading tags.</div>
+<div style="border-left:3px solid #35303f;padding:1px 0 1px 14px;font:400 15.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f">Tables become pipe tables, and merged cells are flattened into separate rows.</div>
+<div style="border-left:3px solid #35303f;padding:1px 0 1px 14px;font:400 15.5px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f">Images are extracted next to the file and referenced by name.</div>
+</div>
+</div>
+
+<div style="margin:12px 0 0;background:#16141c;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:9px">
+<svg width="18" height="18" style="color:#ffffff" aria-hidden="true"><use href="#s-lost"></use></svg>
+<span style="font:700 16px/1 'Schibsted Grotesk',sans-serif;color:#ffffff">Lost</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin:13px 0 0;max-width:640px">
+<div style="font:500 18px/1.4 'Schibsted Grotesk',sans-serif;color:#ffffff">Page layout, columns and fixed positions.</div>
+<div style="font:500 18px/1.4 'Schibsted Grotesk',sans-serif;color:#ffffff">Fonts, colours and anything decorative.</div>
+<div style="font:500 18px/1.4 'Schibsted Grotesk',sans-serif;color:#ffffff">Wide tables past the thirteenth column.</div>
+</div>
+<p style="margin:14px 0 0;max-width:600px;font:400 14.5px/1.6 'Schibsted Grotesk',sans-serif;color:#e4e1eb">Recast lists these again on the finished file, with the exact count from your document.</p>
+</div>
+
+<details style="margin:14px 0 0;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px 20px">
+<summary style="display:flex;align-items:center;gap:9px;min-height:32px">
+<span class="rc-car" style="display:inline-block;font:400 10px/1 'Spline Sans Mono',monospace;color:#5d5866;transition:transform .15s">▶</span>
+<svg width="15" height="15" style="color:#5d5866" aria-hidden="true"><use href="#s-note"></use></svg>
+<span style="font:500 15px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">2 notes about scanned PDFs and encryption</span>
+</summary>
+<div style="padding:8px 0 4px 24px;display:flex;flex-direction:column;gap:8px;max-width:620px">
+<div style="font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#5d5866">A scanned PDF is a picture of a page. Recast has no text recognition, so it will tell you the file is an image and stop rather than guess.</div>
+<div style="font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#5d5866">Password-protected PDFs must be unlocked in the tool that made them first.</div>
+</div>
+</details>
+
+<h2 style="margin:34px 0 0;font:700 22px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">Other things a PDF can become</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 26px">
+<a href="#pdf-to-markdown" style="display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none"><svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-docx"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">docx</span></a>
+<a href="#pdf-to-markdown" style="display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none"><svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-txt"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">txt</span></a>
+<a href="#pdf-to-markdown" style="display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:14px;text-decoration:none"><svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-html"></use></svg><span style="font:600 14px/1 'Spline Sans Mono',monospace;color:#16141c">html</span></a>
+</div>
+</div>
+
+<div style="flex:none;width:400px;padding:12px 0 0">
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:20px">
+<div style="border:2px dashed #d8bff0;border-radius:8px;background:#faf6fe;padding:26px 20px;text-align:center">
+<svg width="30" height="30" style="color:#5b1d8e" aria-hidden="true"><use href="#u-drop"></use></svg>
+<div style="margin:10px 0 0;font:700 18px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">Drop your PDF here</div>
+<div style="margin:5px 0 0;font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866">It stays on your machine.</div>
+<label for="file-pair" style="display:inline-flex;align-items:center;justify-content:center;height:46px;margin:16px 0 0;padding:0 22px;background:#5b1d8e;border-radius:8px;font:600 15.5px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Choose a PDF</label>
+<input id="file-pair" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:16px 0 0">
+<label for="target-pair" style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#35303f">Convert to</label>
+<select id="target-pair" style="flex:1;height:44px;padding:0 12px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:500 14.5px/1 'Spline Sans Mono',monospace;color:#16141c">
+<option>.md — Markdown</option><option>.docx — Word</option><option>.txt — Plain text</option><option>.html — Web page</option><option>.epub — E-book</option>
+</select>
+</div>
+<div style="margin:14px 0 0;padding:12px 0 0;border-top:1px solid #e4e1eb;display:flex;flex-direction:column;gap:7px">
+<div style="display:flex;align-items:center;gap:8px;font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866"><svg width="14" height="14" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg>Runs entirely in this tab</div>
+<div style="display:flex;align-items:center;gap:8px;font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866"><svg width="14" height="14" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg>Typical file: under two seconds</div>
+<div style="display:flex;align-items:center;gap:8px;font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866"><svg width="14" height="14" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg>Works with no connection</div>
+</div>
+</div>
+<div style="margin:14px 0 0;background:#f3eafb;border-radius:8px;padding:16px 18px">
+<div style="font:600 15px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">Why is this page not a server?</div>
+<p style="margin:7px 0 0;font:400 14px/1.6 'Schibsted Grotesk',sans-serif;color:#35303f">Converters that upload your file keep a copy, however briefly. A lease, a payslip or a contract is nobody else's business — so Recast does the work here instead.</p>
+<a href="#about" style="display:inline-block;margin:10px 0 0;padding:10px 0;font:600 14.5px/1 'Schibsted Grotesk',sans-serif;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0">How that works</a>
+</div>
+</div>
+</div>
+
+<div style="background:#ffffff;border-top:1px solid #e4e1eb;margin:26px 0 0;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div style="display:flex;align-items:center;gap:10px"><svg width="24" height="24" aria-hidden="true"><use href="#brand-mark"></use></svg><span style="font:400 14.5px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866">Recast v1.4.2 — a side project, kept in the open.</span></div>
+<div style="display:flex;align-items:center;gap:20px">
+<a href="#formats" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Conversion guide</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Source code</a>
+<a href="#source" style="padding:12px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Report a problem</a>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">The icon set — 14 formats at 64px and 20px</div>
+<div data-screen-label="Icon set" style="width:1280px;background:#ffffff;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+<div style="padding:30px 36px 0">
+<h2 style="margin:0;font:700 24px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">One tile, one letterform, fourteen colours</h2>
+<p style="margin:8px 0 0;max-width:740px;font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#5d5866">Same square, same radius, same weight — only the letters and the colour change, so the colour does the identifying before anyone reads the label. Hues are picked by association with each format's own software, not copied from it. The three OpenDocument formats carry the Writer, Calc and Impress letter over a baseline bar, which keeps them related to their counterparts and distinct from them.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:14px;padding:26px 36px 0">
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-pdf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">document red</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-docx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">docx</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">word-processor blue</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-xlsx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">xlsx</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">spreadsheet green</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-pptx"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">pptx</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">slideware orange</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-epub"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">epub</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">reading teal</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-odt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">odt</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">open blue</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-ods"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">ods</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">open green</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-odp"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">odp</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">open amber</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-html"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">html</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">markup orange</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-md"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">md</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">near-black</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-txt"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">txt</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">neutral grey</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-rtf"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">rtf</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">muted blue</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-csv"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">csv</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">light green</div></div>
+<div style="background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:18px 14px;text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#f-json"></use></svg><div style="margin:12px 0 0;font:600 15px/1 'Spline Sans Mono',monospace;color:#16141c">json</div><div style="margin:5px 0 0;font:400 12.5px/1.3 'Schibsted Grotesk',sans-serif;color:#5d5866">data gold</div></div>
+</div>
+
+<div style="margin:26px 36px 0;padding:18px 20px;background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px">
+<div style="font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#16141c">All fourteen at 20px</div>
+<div style="display:flex;align-items:center;gap:22px;margin:14px 0 0;flex-wrap:wrap">
+<svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-docx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-xlsx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-pptx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-epub"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-odt"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-ods"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-odp"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-html"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-md"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-txt"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-rtf"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-csv"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-json"></use></svg>
+</div>
+</div>
+
+<div style="margin:14px 36px 0;padding:18px 20px;background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px">
+<div style="font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#16141c">At 20px in job rows</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin:14px 0 0">
+<div style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:12px 14px"><svg width="20" height="20" aria-hidden="true"><use href="#f-docx"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">quarterly_report.docx</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">.pdf</span></div>
+<div style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:12px 14px"><svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">lease_agreement.pdf</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-md"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">.md</span></div>
+<div style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:12px 14px"><svg width="20" height="20" aria-hidden="true"><use href="#f-xlsx"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">budget.xlsx</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-json"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">.json</span></div>
+<div style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:12px 14px"><svg width="20" height="20" aria-hidden="true"><use href="#f-epub"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">field_guide.epub</span><svg width="14" height="14" style="color:#5d5866" aria-hidden="true"><use href="#u-arrow"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-odt"></use></svg><span style="font:500 15px/1 'Spline Sans Mono',monospace;color:#16141c">.odt</span></div>
+</div>
+</div>
+
+<div style="margin:14px 36px 30px;padding:18px 20px;background:#121016;border-radius:8px">
+<div style="font:600 15px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">The same tiles on a dark ground — unchanged, and the severity marks beside them</div>
+<div style="display:flex;align-items:center;gap:22px;margin:14px 0 0;flex-wrap:wrap">
+<svg width="20" height="20" aria-hidden="true"><use href="#f-pdf"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-docx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-xlsx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-pptx"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-epub"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-odt"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-ods"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-odp"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-html"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-md"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-txt"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-rtf"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-csv"></use></svg><svg width="20" height="20" aria-hidden="true"><use href="#f-json"></use></svg>
+</div>
+<div style="display:flex;align-items:center;gap:26px;margin:20px 0 0;padding:16px 0 0;border-top:1px solid #2c2836">
+<div style="display:flex;align-items:center;gap:10px"><svg width="20" height="20" style="color:#f3f1f7" aria-hidden="true"><use href="#s-lost"></use></svg><span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">Lost — a square with a piece missing</span></div>
+<div style="display:flex;align-items:center;gap:10px"><svg width="20" height="20" style="color:#f3f1f7" aria-hidden="true"><use href="#s-changed"></use></svg><span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#f3f1f7">Changed — half filled</span></div>
+<div style="display:flex;align-items:center;gap:10px"><svg width="20" height="20" style="color:#a29cb0" aria-hidden="true"><use href="#s-note"></use></svg><span style="font:500 14.5px/1 'Schibsted Grotesk',sans-serif;color:#a29cb0">Note — outline only</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">App icon — the staff · 16 / 32 / 64 / 512</div>
+<div data-screen-label="App icon" style="width:1280px;background:#ffffff;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+<div style="display:flex;gap:36px;padding:30px 36px 34px;align-items:flex-start">
+
+<div style="flex:none">
+<svg width="512" height="512" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<div style="margin:12px 0 0;font:400 12.5px/1 'Spline Sans Mono',monospace;color:#5d5866">512</div>
+</div>
+
+<div style="flex:1;min-width:0;padding:4px 0 0">
+<h2 style="margin:0;font:700 24px/1.2 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">A staff, drawn as an instrument</h2>
+<p style="margin:9px 0 0;max-width:600px;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#35303f">Recast, as in recasting a spell. The mark is a staff: a shaft with a cut stone at the head. Two primitives, no ornament — the idea carries the joke, the drawing stays as precise as the rest of the interface.</p>
+<p style="margin:12px 0 0;max-width:600px;font:400 15.5px/1.65 'Schibsted Grotesk',sans-serif;color:#35303f">Two elements, because 16px is the constraint that decides everything: a 24-unit cut stone mounted on a 34-unit shaft, 7 units wide, ending square like a rod. At 16px that is a 6px diamond over a 1.75px stem — the head is wide enough for its facets to survive rasterisation, and there is no third part small enough to fuse with anything. A ring would fill in at that size and a circle would read as a map pin.</p>
+
+<div style="display:flex;align-items:flex-end;gap:34px;margin:26px 0 0">
+<div style="text-align:center"><svg width="16" height="16" aria-hidden="true"><use href="#brand-mark"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#5d5866">16</div></div>
+<div style="text-align:center"><svg width="32" height="32" aria-hidden="true"><use href="#brand-mark"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#5d5866">32</div></div>
+<div style="text-align:center"><svg width="64" height="64" aria-hidden="true"><use href="#brand-mark"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#5d5866">64</div></div>
+<div style="width:1px;height:64px;background:#e4e1eb"></div>
+<div style="display:flex;align-items:flex-end;gap:26px;background:#121016;border-radius:8px;padding:14px 20px">
+<div style="text-align:center"><svg width="16" height="16" aria-hidden="true"><use href="#brand-mark"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#a29cb0">16</div></div>
+<div style="text-align:center"><svg width="32" height="32" aria-hidden="true"><use href="#brand-mark"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#a29cb0">32</div></div>
+<div style="text-align:center"><svg width="64" height="64" style="color:#f3f1f7" aria-hidden="true"><use href="#brand-mark-mono"></use></svg><div style="margin:9px 0 0;font:400 12px/1 'Spline Sans Mono',monospace;color:#a29cb0">mono</div></div>
+</div>
+</div>
+
+<div style="margin:26px 0 0;background:#f7f6f9;border:1px solid #e4e1eb;border-radius:8px;padding:14px 16px">
+<div style="display:flex;align-items:center;gap:9px;background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:9px 12px;width:280px">
+<svg width="16" height="16" aria-hidden="true"><use href="#brand-mark"></use></svg>
+<span style="font:400 13.5px/1 'Schibsted Grotesk',sans-serif;color:#16141c;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Recast — PDF to Markdown</span>
+<span style="margin-left:auto;font:400 13px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">✕</span>
+</div>
+<div style="margin:11px 0 0;font:400 13.5px/1.55 'Schibsted Grotesk',sans-serif;color:#5d5866">In a tab, at the size that actually matters.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px/1 'Schibsted Grotesk',sans-serif;color:#4a4553">Mobile home — light · 390</div>
+<div data-screen-label="Mobile home light" style="width:390px;background:#f7f6f9;font-family:'Schibsted Grotesk',sans-serif;color:#16141c;border:1px solid #d6d2e0;border-radius:8px;overflow:hidden">
+<header style="display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;background:#ffffff;border-bottom:1px solid #e4e1eb">
+<a href="#home" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:12px 0"><svg width="26" height="26" aria-hidden="true"><use href="#brand-mark"></use></svg><span style="font:700 19px/1 'Schibsted Grotesk',sans-serif;color:#16141c">Recast</span></a>
+<button type="button" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;cursor:pointer">
+<span style="display:block;width:18px;height:2px;background:#16141c;box-shadow:0 -6px 0 #16141c,0 6px 0 #16141c"></span>
+</button>
+</header>
+<section style="background:#5b1d8e;padding:26px 16px 28px">
+<h1 style="margin:0;font:800 30px/1.12 'Schibsted Grotesk',sans-serif;letter-spacing:-.025em;color:#f8f5ff">Convert documents without uploading them.</h1>
+<p style="margin:12px 0 0;font:400 15.5px/1.6 'Schibsted Grotesk',sans-serif;color:#f0e7ff">The whole conversion happens in this tab. Your file never reaches a server, because there isn't one.</p>
+<div style="background:#ffffff;border-radius:8px;padding:16px;margin:20px 0 0">
+<div style="border:2px dashed #d8bff0;border-radius:8px;background:#faf6fe;padding:22px 16px;text-align:center">
+<svg width="30" height="30" style="color:#5b1d8e" aria-hidden="true"><use href="#u-drop"></use></svg>
+<div style="margin:10px 0 0;font:700 18px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">Pick a document</div>
+<div style="margin:5px 0 0;font:400 14px/1.5 'Schibsted Grotesk',sans-serif;color:#5d5866">14 formats, 114 pairs.</div>
+<label for="file-mob" style="display:flex;align-items:center;justify-content:center;height:48px;margin:14px 0 0;background:#5b1d8e;border-radius:8px;font:600 16px/1 'Schibsted Grotesk',sans-serif;color:#f8f5ff;cursor:pointer">Choose a file</label>
+<input id="file-mob" type="file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+</div>
+<div style="display:flex;align-items:center;gap:8px;margin:12px 0 0"><svg width="15" height="15" style="color:#5b1d8e" aria-hidden="true"><use href="#u-check"></use></svg><span style="font:400 13.5px/1.4 'Schibsted Grotesk',sans-serif;color:#5d5866">Nothing uploaded · no account · no analytics</span></div>
+</div>
+</section>
+<section style="padding:24px 16px 0">
+<h2 style="margin:0;font:700 20px/1.25 'Schibsted Grotesk',sans-serif;letter-spacing:-.015em;color:#16141c">Fourteen formats</h2>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 0">
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-pdf"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">pdf</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-docx"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">docx</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-xlsx"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">xlsx</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-pptx"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">pptx</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-epub"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">epub</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-odt"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">odt</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-ods"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">ods</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-odp"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">odp</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-html"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">html</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-md"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">md</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-txt"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">txt</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-rtf"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">rtf</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-csv"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">csv</div></div>
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:10px 8px;text-align:center"><svg width="26" height="26" aria-hidden="true"><use href="#f-json"></use></svg><div style="margin:6px 0 0;font:600 12.5px/1 'Spline Sans Mono',monospace;color:#16141c">json</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;margin:12px 0 0;flex-wrap:wrap">
+<span style="font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#35303f">Most used:</span>
+<a href="#pdf-to-markdown" style="font:500 14px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">pdf → docx</a>
+<a href="#pdf-to-markdown" style="font:500 14px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">pdf → md</a>
+<a href="#pdf-to-markdown" style="font:500 14px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0;padding:12px 0">xlsx → csv</a>
+</div>
+</section>
+<section style="padding:20px 16px 0">
+<div style="background:#ffffff;border:1px solid #e4e1eb;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px"><svg width="17" height="17" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-drop"></use></svg><p style="margin:0;font:400 14px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">The converter comes to you.</b> The engine runs on your machine, not a server.</p></div>
+<div style="display:flex;gap:10px"><svg width="17" height="17" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#s-lost"></use></svg><p style="margin:0;font:400 14px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">It tells you what it broke.</b> What was lost, kept apart from what merely changed.</p></div>
+<div style="display:flex;gap:10px"><svg width="17" height="17" style="color:#5b1d8e;flex:none;margin-top:2px" aria-hidden="true"><use href="#u-check"></use></svg><p style="margin:0;font:400 14px/1.55 'Schibsted Grotesk',sans-serif;color:#35303f"><b style="font-weight:600;color:#16141c">It keeps working offline.</b> Once loaded, it needs nothing else.</p></div>
+</div>
+</section>
+<section style="padding:20px 16px 0">
+<h2 style="margin:0;font:700 18px/1.3 'Schibsted Grotesk',sans-serif;color:#16141c">About</h2>
+<p style="margin:8px 0 0;font:400 14.5px/1.65 'Schibsted Grotesk',sans-serif;color:#35303f">I kept sending contracts and payslips through converter sites that quietly keep a copy, so I built one that can't. Recast is a side project, finished enough to use every day, and free because there is nothing to run.</p>
+<a href="https://github.com/visaug36/Recast" style="display:inline-block;margin:8px 0 0;padding:11px 0;font:500 14.5px/1 'Spline Sans Mono',monospace;color:#6b2199;text-decoration:none;border-bottom:1px solid #d8bff0">github.com/visaug36/Recast</a>
+</section>
+<footer style="margin:20px 0 0;background:#ffffff;border-top:1px solid #e4e1eb;padding:16px 16px 22px">
+<div style="display:flex;flex-wrap:wrap;gap:0 22px">
+<a href="#formats" style="padding:11px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Formats</a>
+<a href="#guide" style="padding:11px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Conversion guide</a>
+<a href="#source" style="padding:11px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Source code</a>
+<a href="#source" style="padding:11px 0;font:400 14.5px/20px 'Schibsted Grotesk',sans-serif;color:#35303f;text-decoration:none">Report a problem</a>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:10px 0 0">
+<svg width="16" height="16" style="color:#5d5866" aria-hidden="true"><use href="#u-globe"></use></svg>
+<label for="lang-mob" style="font:400 14px/1 'Schibsted Grotesk',sans-serif;color:#5d5866">Language</label>
+<select id="lang-mob" style="flex:1;height:44px;padding:0 12px;background:#ffffff;border:1px solid #d6d2e0;border-radius:8px;font:500 14px/1 'Schibsted Grotesk',sans-serif;color:#16141c">
+<option>English</option><option>Português</option><option>Español</option><option>Deutsch</option>
+</select>
+</div>
+<p style="margin:12px 0 0;font:400 13px/1.6 'Spline Sans Mono',monospace;color:#5d5866">v1.4.2 · engine 4.1 MB</p>
+</footer>
+</div>
+</div>
+
+<div id="boards-end" style="display:none"></div>
+</div>
+
+</x-dc>
+</body>
+</html>
